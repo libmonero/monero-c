@@ -97,7 +97,8 @@ typedef enum monero_utils_network_type {
  *
  * @return the error message, or "" if none. The pointer is owned by monero-c
  *   and stays valid only until the next monero_utils_* call on this thread;
- *   copy it if you need to keep it.
+ *   copy it if you need to keep it. Unlike other monero_utils_* out params,
+ *   do not pass this pointer to monero_utils_free().
  */
 MONERO_EXPORT const char* monero_utils_last_error(void);
 
