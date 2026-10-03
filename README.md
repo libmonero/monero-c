@@ -7,7 +7,7 @@
 >
 > monero-c is currently under maintenance and unfunded, expect bugs and breaking changes.
 
-A C ABI for creating Monero applications using RPC and FFI bindings to [monero v0.18.5.1 'Fluorine Fermi'](https://github.com/monero-project/monero/tree/v0.18.5.1).
+A C ABI for creating Monero applications using RPC and FFI bindings to [monero-project](https://github.com/woodser/monero/tree/c76165e5407a27881eb223bb689c5b8d3b0d076d), based on Monero v0.18.2.2.
 
 * Supports wallet and daemon RPC clients.
 * Supports client-side wallets using native bindings.
@@ -29,6 +29,7 @@ A C ABI for creating Monero applications using RPC and FFI bindings to [monero v
 ## Sample code
 
 ```c
+#include <stdio.h>
 #include "monero_c.h"
 
 if (!monero_utils_is_valid_address(address, MONERO_UTILS_NETWORK_MAINNET)) {
@@ -60,18 +61,13 @@ if (monero_utils_get_integrated_address(MONERO_UTILS_NETWORK_STAGENET, address, 
    ```bash
    git clone --recurse-submodules https://github.com/libmonero/monero-c.git
    ```
-2. Build monero-project and monero-cpp, located as a submodule at `./external/monero-cpp`:
+2. Build monero-project, monero-cpp and monero-c. Extra arguments are passed to cmake, e.g. `-DBUILD_TESTS=ON`:
    ```bash
-   cd monero-c/external/monero-cpp
-   ./bin/build_libmonero_cpp.sh
-   cd ../..
+   cd monero-c
+   ./bin/build_libmonero_c.sh -DBUILD_TESTS=ON
    ```
-3. Build monero-c:
-   ```bash
-   mkdir -p build && cd build
-   cmake -DBUILD_TESTS=ON ..
-   cmake --build .
-   ```
+
+Flags are cached in `./build/CMakeCache.txt`, so pass them on every build to change them. To sync submodules after pulling new changes, run `./bin/update_submodules.sh`.
 
 ### Windows
 
@@ -87,17 +83,10 @@ if (monero_utils_get_integrated_address(MONERO_UTILS_NETWORK_STAGENET, address, 
    pacman -U mingw-w64-x86_64-boost-1.87.0-3-any.pkg.tar.zst
    ```
 5. Clone the repo: `git clone --recurse-submodules https://github.com/libmonero/monero-c.git`
-6. Build monero-project and monero-cpp:
+6. Build monero-project, monero-cpp and monero-c. Extra arguments are passed to cmake, e.g. `-DBUILD_TESTS=ON`:
    ```
-   cd monero-c/external/monero-cpp
-   ./bin/build_libmonero_cpp.sh
-   cd ../..
-   ```
-7. Build monero-c:
-   ```
-   mkdir -p build && cd build
-   cmake -DBUILD_TESTS=ON ..
-   cmake --build .
+   cd monero-c
+   ./bin/build_libmonero_c.sh -DBUILD_TESTS=ON
    ```
 
 ## Running tests

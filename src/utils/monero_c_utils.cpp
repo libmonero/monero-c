@@ -58,6 +58,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <memory>
+#include <new>
 #include <stdexcept>
 #include <string>
 

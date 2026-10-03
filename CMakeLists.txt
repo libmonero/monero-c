@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.20)
 project(monero_c LANGUAGES CXX C)
 
 if (NOT CMAKE_BUILD_TYPE)
@@ -16,7 +16,7 @@ if (WIN32)
 endif()
 
 ##############################################################################
-# monero-cpp / monero-project (linked statically, like Git/monero-python's)
+# monero-cpp / monero-project
 ##############################################################################
 
 set(MONERO_CPP "${CMAKE_SOURCE_DIR}/external/monero-cpp" CACHE PATH "monero-cpp source directory")
@@ -166,7 +166,9 @@ endif()
 find_package(Unbound REQUIRED)
 
 find_library(usb_LIBRARY NAMES usb-1.0 libusb usb)
-set(LibUSB_LIBRARIES ${usb_LIBRARY})
+if (usb_LIBRARY)
+  set(LibUSB_LIBRARIES ${usb_LIBRARY})
+endif()
 
 find_package(HIDAPI REQUIRED)
 
@@ -271,6 +273,13 @@ set(MONERO_C_LINK_LIBS
 
 target_link_libraries(monero_c PRIVATE ${MONERO_C_LINK_LIBS})
 target_link_libraries(monero_c-static PRIVATE ${MONERO_C_LINK_LIBS})
+
+# monero-project's ge25519 asm lacks .note.GNU-stack. Keep the stack non-executable (GNU ld/lld only)
+if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
+  target_link_options(monero_c PRIVATE -Wl,-z,noexecstack)
+  # the static lib has no link step, so its consumers must get the flag
+  target_link_options(monero_c-static INTERFACE -Wl,-z,noexecstack)
+endif()
 
 ##############################################################################
 # tests
