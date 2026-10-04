@@ -7,7 +7,7 @@
 >
 > monero-c is currently under maintenance and unfunded, expect bugs and breaking changes.
 
-A C ABI for creating Monero applications using RPC and FFI bindings to [monero-project](https://github.com/woodser/monero/tree/c76165e5407a27881eb223bb689c5b8d3b0d076d), based on Monero v0.18.2.2.
+A C ABI for creating Monero applications using RPC and FFI bindings to [monero v0.18.5.3 'Fluorine Fermi'](https://github.com/monero-project/monero/tree/v0.18.5.3).
 
 * Supports wallet and daemon RPC clients.
 * Supports client-side wallets using native bindings.
