@@ -10,6 +10,13 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 add_definitions(-DBOOST_UUID_DISABLE_ALIGNMENT) # match monero-project/monero-cpp so shared struct layouts agree
 
 option(BUILD_TESTS "Build monero-c tests" OFF)
+option(ENABLE_COVERAGE "Enable coverage" OFF)
+
+if(ENABLE_COVERAGE)
+  message(STATUS "Coverage enabled")
+  add_compile_options(--coverage -O0 -g -fprofile-update=atomic)
+  add_link_options(--coverage)
+endif()
 
 if (WIN32)
   set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
@@ -197,12 +204,16 @@ endif()
 ##############################################################################
 
 set(MONERO_C_SRC_FILES
+    src/common/monero_c_common.cpp
     src/utils/monero_c_utils.cpp
+    src/daemon/monero_c_daemon.cpp
 )
 
 # compile once, build both shared and static from the objects (same as monero-cpp's own CMakeLists.txt)
 add_library(monero_c-obj OBJECT ${MONERO_C_SRC_FILES})
-set_target_properties(monero_c-obj PROPERTIES POSITION_INDEPENDENT_CODE ON)
+# hide internal helpers: only MONERO_EXPORT functions are exported from these objects
+set_target_properties(monero_c-obj PROPERTIES POSITION_INDEPENDENT_CODE ON
+    CXX_VISIBILITY_PRESET hidden C_VISIBILITY_PRESET hidden VISIBILITY_INLINES_HIDDEN ON)
 target_compile_definitions(monero_c-obj PRIVATE MONERO_C_BUILD)
 
 target_include_directories(monero_c-obj

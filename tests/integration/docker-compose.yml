@@ -1,0 +1,26 @@
+# regtest node for the integration tests, same image as monero-python's tests/docker-compose.yml
+services:
+
+  node:
+    image: lalanza808/monero:v0.18.5.1
+    container_name: monero_c_node
+    # --fixed-difficulty: otherwise the difficulty grows about 10x per block, and generateblocks times out
+    command: [
+      "monerod",
+      "--regtest",
+      "--offline",
+      "--fixed-difficulty=1",
+      "--non-interactive",
+      "--log-level=0",
+      "--hide-my-port",
+      "--no-zmq",
+      "--rpc-bind-ip=0.0.0.0",
+      "--rpc-bind-port=18081",
+      "--rpc-access-control-origins=*",
+      "--rpc-ssl=disabled",
+      "--disable-rpc-ban",
+      "--confirm-external-bind"
+    ]
+    ports:
+      - "18081:18081"
+    restart: "no"

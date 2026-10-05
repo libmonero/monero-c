@@ -20,56 +20,13 @@
  * SOFTWARE.
  */
 
-#include "monero_c.h"
+#include "monero_c_test.h"
 
 #include <math.h>
-#include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 
-static int g_checks = 0;
-static int g_failures = 0;
-
-#define CHECK(cond) do { \
-  g_checks++; \
-  if (!(cond)) { \
-    g_failures++; \
-    fprintf(stderr, "FAIL %s:%d: %s\n", __FILE__, __LINE__, #cond); \
-  } \
-} while (0)
-
-#define EXPECT_OK(expr) do { \
-  monero_result _r = (expr); \
-  g_checks++; \
-  if (_r != MONERO_OK) { \
-    g_failures++; \
-    fprintf(stderr, "FAIL %s:%d: expected OK, got error: %s\n", __FILE__, __LINE__, monero_utils_last_error()); \
-  } \
-} while (0)
-
-#define EXPECT_ERR(expr) do { \
-  monero_result _r = (expr); \
-  g_checks++; \
-  if (_r != MONERO_ERROR) { \
-    g_failures++; \
-    fprintf(stderr, "FAIL %s:%d: expected ERROR, call unexpectedly succeeded\n", __FILE__, __LINE__); \
-  } \
-} while (0)
-
-#define EXPECT_ERR_MSG(expr, expected_msg) do { \
-  monero_result _r = (expr); \
-  g_checks++; \
-  if (_r != MONERO_ERROR) { \
-    g_failures++; \
-    fprintf(stderr, "FAIL %s:%d: expected ERROR, call unexpectedly succeeded\n", __FILE__, __LINE__); \
-  } else if (strcmp(monero_utils_last_error(), (expected_msg)) != 0) { \
-    g_failures++; \
-    fprintf(stderr, "FAIL %s:%d: expected error \"%s\", got \"%s\"\n", __FILE__, __LINE__, (expected_msg), monero_utils_last_error()); \
-  } \
-} while (0)
-
-// Finds "key":"value" in a compact JSON string and copies value into out.
-// Good enough for asserting on this test's own known-shape output; not a general JSON parser.
+// finds "key":"value" in a compact JSON string and copies value into out.
+// only good enough for this test's known output shape, not a general JSON parser
 static int extract_json_string(const char* json, const char* key, char* out, size_t out_cap) {
   char needle[128];
   snprintf(needle, sizeof(needle), "\"%s\"", key);
@@ -90,7 +47,7 @@ static int extract_json_string(const char* json, const char* key, char* out, siz
 }
 
 // ------------------------------- TEST DATA ----------------------------------
-// Reused from monero-python's tests/config/test_monero_utils.ini (public, funds-free).
+// reused from monero-python's tests/config/test_monero_utils.ini (public, funds-free)
 
 static const char* MAINNET_PRIMARY_1 = "42U9v3qs5CjZEePHBZHwuSckQXebuZu299NSmVEmQ41YJZQhKcPyujyMSzpDH4VMMVSBo3U3b54JaNvQLwAjqDhKS3rvM3L";
 static const char* MAINNET_PRIMARY_2 = "48ZxX3Y2y5s4nJ8fdz2w65TrTEp9PRsv5J8iHSShkHQcE2V31FhnWptioNst1K9oeDY4KpWZ7v8V2BZNVa4Wdky89iqmPz2";

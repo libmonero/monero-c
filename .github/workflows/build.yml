@@ -18,6 +18,9 @@ jobs:
     runs-on: ${{ matrix.os }}
     # debian:12 provides a supported build environment with a glibc 2.36 baseline
     container: ${{ matrix.container }}
+    env:
+      # coverage runs on pull requests and on main
+      COVERAGE: ${{ matrix.arch == 'linux-x86_64' && (github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/main')) }}
 
     strategy:
       fail-fast: false
@@ -144,7 +147,7 @@ jobs:
             echo "library is not standalone: unexpected dynamic dependencies above"; exit 1
           fi
           nm -D --defined-only external/monero-cpp/build/libmonero-cpp.so | grep -q monero_wallet_full || { echo "missing monero-cpp api exports"; exit 1; }
-          # --exclude-libs hides the static closure; check for leaked dependency symbols
+          # --exclude-libs hides the static closure, so check for leaked dependency symbols
           if nm -D --defined-only external/monero-cpp/build/libmonero-cpp.so | grep -E ' (SSL_|EVP_|BN_)'; then
             echo "static closure symbols are exported"; exit 1
           fi
@@ -158,8 +161,74 @@ jobs:
           cmake --build . -j3
           cd ..
 
-      - name: Run monero_c tests
-        run: ctest --test-dir build --output-on-failure
+      - name: Stage monero_c build
+        run: |
+          mkdir -p dist
+          cp build/libmonero_c.so dist/
+          cp build/tests/unit/monero_c_utils_unit_tests build/tests/unit/monero_c_daemon_unit_tests build/tests/integration/monero_c_daemon_integration_tests dist/
+
+      - name: Upload monero_c build
+        uses: actions/upload-artifact@v7
+        with:
+          name: monero-c-${{ matrix.arch }}
+          path: dist/
+          if-no-files-found: error
+          retention-days: 1
+
+      - name: Build monero_c with coverage
+        if: env.COVERAGE == 'true'
+        run: |
+          cmake -S . -B build-coverage -DBUILD_TESTS=ON -DENABLE_COVERAGE=ON -DBOOST_ROOT=/usr/local -DBoost_NO_SYSTEM_PATHS=ON
+          cmake --build build-coverage -j3
+
+      - name: Build monerod for the integration tests
+        if: env.COVERAGE == 'true'
+        run: |
+          cd external/monero-cpp/external/monero-project/build/release
+          make -j3 daemon
+
+      - name: Run tests with coverage
+        if: env.COVERAGE == 'true'
+        run: |
+          # regtest monerod with the same settings as tests/integration/docker-compose.yml
+          mkdir -p "$RUNNER_TEMP/regtest"
+          external/monero-cpp/external/monero-project/build/release/bin/monerod --regtest --offline --fixed-difficulty=1 --non-interactive --log-level=0 --hide-my-port --no-zmq --rpc-bind-ip=127.0.0.1 --rpc-bind-port=18081 --rpc-access-control-origins=* --rpc-ssl=disabled --disable-rpc-ban --p2p-bind-port=18080 --no-igd --data-dir "$RUNNER_TEMP/regtest" &
+          node_pid=$!
+          for _ in $(seq 1 60); do
+            if curl -fsS -m 5 -X POST http://127.0.0.1:18081/json_rpc -d '{"jsonrpc":"2.0","id":"0","method":"get_block_count"}' | grep -q '"count"'; then break; fi
+            sleep 2
+          done
+          build-coverage/tests/unit/monero_c_utils_unit_tests
+          build-coverage/tests/unit/monero_c_daemon_unit_tests
+          MONERO_C_TEST_DAEMON_URI=http://127.0.0.1:18081 build-coverage/tests/integration/monero_c_daemon_integration_tests
+          kill "$node_pid"
+
+      - name: Generate coverage report
+        if: env.COVERAGE == 'true'
+        run: |
+          apt-get install -y lcov
+          cd build-coverage
+          lcov --capture --directory . --ignore-errors gcov,source --output-file coverage_full.info
+          lcov --extract coverage_full.info "$GITHUB_WORKSPACE/src/*" --output-file coverage.info
+          sed -i "s|$GITHUB_WORKSPACE/||g" coverage.info
+          genhtml coverage.info --output-directory coverage_html --ignore-errors source --title "monero-c coverage @ $(printf '%.7s' "$GITHUB_SHA")"
+          lcov --summary coverage.info
+
+      - name: Stage coverage report
+        if: env.COVERAGE == 'true'
+        run: |
+          mkdir -p coverage-report
+          cp build-coverage/coverage.info coverage-report/
+          cp -r build-coverage/coverage_html coverage-report/
+
+      - name: Upload coverage report
+        if: env.COVERAGE == 'true'
+        uses: actions/upload-artifact@v7
+        with:
+          name: coverage-reports
+          path: coverage-report/
+          if-no-files-found: error
+          retention-days: 7
 
   windows:
     name: windows
@@ -255,7 +324,7 @@ jobs:
             echo "library is not standalone: unexpected dynamic dependencies above"; exit 1
           fi
           objdump -p external/monero-cpp/build/libmonero-cpp.dll | grep -q monero_wallet_full || { echo "missing monero-cpp api exports"; exit 1; }
-          # --exclude-libs hides the static closure; check for leaked dependency symbols
+          # --exclude-libs hides the static closure, so check for leaked dependency symbols
           if objdump -p external/monero-cpp/build/libmonero-cpp.dll | grep -E '\s(SSL_|EVP_|BN_)'; then
             echo "static closure symbols are exported"; exit 1
           fi
@@ -270,9 +339,21 @@ jobs:
           cmake --build .
           cd ..
 
-      - name: Run monero_c tests
+      - name: Stage monero_c build
         shell: msys2 {0}
-        run: ctest --test-dir build --output-on-failure
+        run: |
+          mkdir -p dist
+          cp build/libmonero_c.dll dist/
+          # on Windows CMake puts the executables in the build root, see CMakeLists.txt
+          cp build/monero_c_utils_unit_tests.exe build/monero_c_daemon_unit_tests.exe dist/
+
+      - name: Upload monero_c build
+        uses: actions/upload-artifact@v7
+        with:
+          name: monero-c-windows
+          path: dist/
+          if-no-files-found: error
+          retention-days: 1
 
   mac-os:
     name: ${{ matrix.arch }}
@@ -308,7 +389,7 @@ jobs:
 
       - name: Install hidapi (static)
         run: |
-          # brew ships no static hidapi; build from source so the library is standalone
+          # brew has no static hidapi, so build it from source to get a standalone library
           curl -fsSLO https://github.com/libusb/hidapi/archive/refs/tags/hidapi-0.14.0.tar.gz
           echo "a5714234abe6e1f53647dd8cba7d69f65f71c558b7896ed218864ffcf405bcbd  hidapi-0.14.0.tar.gz" | shasum -a 256 -c
           tar xzf hidapi-0.14.0.tar.gz
@@ -319,7 +400,7 @@ jobs:
 
       - name: Install boost
         run: |
-          # brew ships no static boost; build from source (also keeps its objects at the 11.0 deployment target)
+          # brew has no static boost, so build it from source at the 11.0 deployment target
           curl -fsSLO https://archives.boost.io/release/1.85.0/source/boost_1_85_0.tar.bz2
           echo "7009fe1faa1697476bdc7027703a2badb84e849b7b0baad5086b087b971f8617  boost_1_85_0.tar.bz2" | shasum -a 256 -c
           tar xf boost_1_85_0.tar.bz2
@@ -366,5 +447,35 @@ jobs:
           cmake --build . -j3
           cd ..
 
-      - name: Run monero_c tests
-        run: ctest --test-dir build --output-on-failure
+      - name: Stage monero_c build
+        run: |
+          mkdir -p dist
+          cp build/libmonero_c.dylib dist/
+          cp build/tests/unit/monero_c_utils_unit_tests build/tests/unit/monero_c_daemon_unit_tests dist/
+
+      - name: Upload monero_c build
+        uses: actions/upload-artifact@v7
+        with:
+          name: monero-c-${{ matrix.arch }}
+          path: dist/
+          if-no-files-found: error
+          retention-days: 1
+
+  codacy:
+    name: codacy
+    # uploads the coverage report to Codacy: main, and pull requests from this repository
+    if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
+    needs: ubuntu
+    uses: ./.github/workflows/codacy.yml
+    secrets: inherit
+
+  docs:
+    name: docs
+    # builds the docs on pull requests, publishes them with the coverage report from main only
+    if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
+    needs: ubuntu
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    uses: ./.github/workflows/docs.yml

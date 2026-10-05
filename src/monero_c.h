@@ -55,6 +55,7 @@
 #ifndef MONERO_C_H
 #define MONERO_C_H
 
+#include "daemon/monero_c_daemon.h"
 #include "utils/monero_c_utils.h"
 
 #endif // MONERO_C_H

@@ -1,4 +1,6 @@
-add_executable(monero_c_utils_tests monero_c_utils_tests.c)
-target_link_libraries(monero_c_utils_tests PRIVATE monero_c)
+# headers shared by the unit and integration tests
+add_library(monero_c_test_common INTERFACE)
+target_include_directories(monero_c_test_common INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/common)
 
-add_test(NAME monero_c_utils_tests COMMAND monero_c_utils_tests)
+add_subdirectory(unit)
+add_subdirectory(integration)

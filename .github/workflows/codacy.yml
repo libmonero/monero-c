@@ -1,0 +1,27 @@
+name: Codacy
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  coverage:
+    runs-on: ubuntu-24.04
+    env:
+      CODACY_PROJECT_TOKEN: ${{ secrets.CODACY_PROJECT_TOKEN }}
+      # on pull requests GITHUB_SHA is the merge commit, so the head commit is passed explicitly
+      COMMIT_UUID: ${{ github.event.pull_request.head.sha || github.sha }}
+    steps:
+      - name: Download coverage report
+        uses: actions/download-artifact@v8
+        with:
+          name: coverage-reports
+          path: coverage-reports
+
+      - name: Report c++ coverage
+        shell: bash
+        run: |
+          bash <(curl -Ls https://coverage.codacy.com/get.sh) report --language cpp --coverage-reports coverage-reports/coverage.info --partial --commit-uuid "$COMMIT_UUID"
+          bash <(curl -Ls https://coverage.codacy.com/get.sh) final --commit-uuid "$COMMIT_UUID"

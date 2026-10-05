@@ -38,7 +38,7 @@ if (!monero_utils_is_valid_address(address, MONERO_UTILS_NETWORK_MAINNET)) {
 
 uint64_t atomic_units;
 if (monero_utils_xmr_to_atomic_units(0.25, &atomic_units) != MONERO_OK) {
-  fprintf(stderr, "%s\n", monero_utils_last_error());
+  fprintf(stderr, "%s\n", monero_last_error());
 }
 // atomic_units == 250000000000
 
@@ -95,17 +95,33 @@ Flags are cached in `./build/CMakeCache.txt`, so pass them on every build to cha
 ctest --test-dir build --output-on-failure
 ```
 
-[tests/monero_c_utils_tests.c](tests/monero_c_utils_tests.c) is a black-box test: it includes only the public header and calls only exported functions, the same way a real FFI consumer would.
+The unit tests in [tests/unit](tests/unit/) need nothing else. The integration tests in [tests/integration](tests/integration/) call a regtest `monerod`, so they are skipped unless `MONERO_C_TEST_DAEMON_URI` points at one. The compose file starts the same node image that monero-python uses:
+
+```
+docker compose -f tests/integration/docker-compose.yml up -d
+MONERO_C_TEST_DAEMON_URI=http://127.0.0.1:18081 ctest --test-dir build --output-on-failure
+docker compose -f tests/integration/docker-compose.yml down -v
+```
+
+All the tests include only the public header and call only exported functions, the same way a real FFI consumer would.
 
 ## Memory Ownership
 
-Any `out_*` parameter that receives a string or byte buffer (`char**`, `uint8_t**`) is heap-allocated by monero_c and must be freed by the caller with `monero_utils_free()`, as shown above -- the sample's `monero_utils_free(json)` call is not optional. Fixed-size out-params (e.g. `uint8_t out_payment_id[32]`) write into a buffer the caller already owns, so there's nothing to free. See [src/utils/monero_c_utils.h](src/utils/monero_c_utils.h) for the one exception (`monero_utils_last_error()`).
+Any `out_*` parameter that receives a string or byte buffer (`char**`, `uint8_t**`) is heap-allocated by monero_c and must be freed by the caller with `monero_utils_free()`, as shown above -- the sample's `monero_utils_free(json)` call is not optional. Fixed-size out-params (e.g. `uint8_t out_payment_id[32]`) write into a buffer the caller already owns, so there's nothing to free. See [src/utils/monero_c_utils.h](src/utils/monero_c_utils.h) for the one exception (`monero_last_error()`). Handles, such as the `monero_daemon` returned by `monero_daemon_connect()`, are released with their matching `*_free()` function.
 
-## Memory Growth
+## Thread Safety
 
-monero_c links monero-cpp and monero-project statically, so any process embedding `libmonero_c.*` inherits their allocation patterns -- heavy multi-threaded alloc/free during wallet sync and RPC handling can fragment glibc's malloc arenas and make RSS grow without bound, even though nothing is actually leaking. [jemalloc](https://jemalloc.net/) avoids this.
+> [!WARNING]
+>
+> Thread safety is incomplete. Some concurrent uses are still unsafe.
 
-For example: `export LD_PRELOAD=/path/to/libjemalloc.so` then run your app.
+What holds today:
+
+- monero-cpp serializes calls on one `monero_daemon` handle, so they don't run in parallel.
+- Listener callbacks run on a thread owned by monero-cpp. Inside a callback, `monero_daemon_remove_listener()` and `monero_daemon_remove_listeners()` are safe.
+- Different listeners on one daemon can be managed from different threads.
+- `monero_daemon_wait_for_next_block_header()` blocks only its calling thread, and other calls on the handle run meanwhile.
+- `monero_last_error()` is per thread: it returns the last error of the calling thread.
 
 ## Related projects
 

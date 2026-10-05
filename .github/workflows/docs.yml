@@ -1,18 +1,14 @@
 name: Docs
 
+# Called from build.yml. Builds the docs on pull requests, and publishes them with the coverage report from main only.
 on:
-  push:
-    branches: [ main ]
+  workflow_call:
   workflow_dispatch:
 
 permissions:
   contents: read
   pages: write
   id-token: write
-
-concurrency:
-  group: pages
-  cancel-in-progress: false
 
 jobs:
   build:
@@ -29,6 +25,21 @@ jobs:
       - name: Build docs
         run: doxygen Doxyfile
 
+      # only when called from build.yml. A manual run publishes the docs without coverage.
+      - name: Download coverage report
+        id: coverage
+        continue-on-error: true
+        uses: actions/download-artifact@v8
+        with:
+          name: coverage-reports
+          path: coverage-reports
+
+      - name: Add coverage report to the docs
+        if: steps.coverage.outcome == 'success'
+        run: |
+          mkdir -p docs/html/coverage
+          cp -r coverage-reports/coverage_html/. docs/html/coverage/
+
       - name: Setup Pages
         uses: actions/configure-pages@v5
 
@@ -39,10 +50,14 @@ jobs:
 
   deploy:
     needs: build
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
+    concurrency:
+      group: pages
+      cancel-in-progress: false
     steps:
       - name: Deploy to GitHub Pages
         id: deployment

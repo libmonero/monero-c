@@ -1,0 +1,236 @@
+name: Tests
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: tests-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  wait-build:
+    name: wait for Build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 300
+
+    outputs:
+      run-id: ${{ steps.wait.outputs.run-id }}
+
+    steps:
+      - name: Wait for the Build run of this commit
+        id: wait
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          EVENT: ${{ github.event_name }}
+        run: |
+          RUN_ID=""
+          for _ in $(seq 1 30); do
+            RUN_ID=$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/build.yml/runs?head_sha=$SHA&event=$EVENT&per_page=1" --jq '.workflow_runs[0].id // empty' || true)
+            if [ -n "$RUN_ID" ]; then break; fi
+            sleep 20
+          done
+          if [ -z "$RUN_ID" ]; then echo "no Build run for $SHA"; exit 1; fi
+          until [ "$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$RUN_ID" --jq .status || true)" = "completed" ]; do
+            sleep 60
+          done
+          COUNT=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$RUN_ID/artifacts" --jq '[.artifacts[] | select(.name | startswith("monero-c-")) | select(.expired | not)] | length' || echo 0)
+          echo "Build run $RUN_ID has $COUNT monero-c artifacts"
+          if [ "$COUNT" -eq 0 ]; then echo "Build produced no monero-c artifacts"; exit 1; fi
+          echo "run-id=$RUN_ID" >> "$GITHUB_OUTPUT"
+
+  linux:
+    name: ${{ matrix.arch }}
+    needs: wait-build
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            arch: linux-x86_64
+          - os: ubuntu-24.04-arm
+            arch: linux-arm64
+
+    steps:
+      - name: Download monero_c build
+        uses: actions/download-artifact@v8
+        with:
+          name: monero-c-${{ matrix.arch }}
+          path: artifact
+          run-id: ${{ needs.wait-build.outputs.run-id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install runtime libraries
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libsodium23 libunbound8
+          ldd_out=$(ldd artifact/libmonero_c.so || true)
+          if grep -q 'not found' <<< "$ldd_out"; then
+            echo "$ldd_out"
+            echo "missing runtime libraries above"; exit 1
+          fi
+
+      - name: Run unit tests
+        env:
+          LD_LIBRARY_PATH: ${{ github.workspace }}/artifact
+        run: |
+          chmod +x artifact/monero_c_utils_unit_tests artifact/monero_c_daemon_unit_tests
+          artifact/monero_c_utils_unit_tests
+          artifact/monero_c_daemon_unit_tests
+
+  integration:
+    name: integration
+    # needs a regtest monerod from docker-compose.yml, so only linux-x86_64 runs it
+    needs: wait-build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+
+    env:
+      # regtest monerod from tests/integration/docker-compose.yml, published on this host port
+      MONERO_C_TEST_DAEMON_URI: http://127.0.0.1:18081
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Download monero_c build
+        uses: actions/download-artifact@v8
+        with:
+          name: monero-c-linux-x86_64
+          path: artifact
+          run-id: ${{ needs.wait-build.outputs.run-id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install runtime libraries
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libsodium23 libunbound8
+          ldd_out=$(ldd artifact/libmonero_c.so || true)
+          if grep -q 'not found' <<< "$ldd_out"; then
+            echo "$ldd_out"
+            echo "missing runtime libraries above"; exit 1
+          fi
+
+      - name: Start regtest monerod
+        run: docker compose -f tests/integration/docker-compose.yml up -d
+
+      - name: Wait for monerod
+        run: |
+          for _ in $(seq 1 60); do
+            if curl -fsS -m 5 -X POST "$MONERO_C_TEST_DAEMON_URI/json_rpc" -d '{"jsonrpc":"2.0","id":"0","method":"get_block_count"}' | grep -q '"count"'; then
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "monerod did not answer"; exit 1
+
+      - name: Run integration tests
+        env:
+          LD_LIBRARY_PATH: ${{ github.workspace }}/artifact
+        run: |
+          chmod +x artifact/monero_c_daemon_integration_tests
+          artifact/monero_c_daemon_integration_tests
+
+      - name: Show monerod logs on failure
+        if: failure()
+        run: docker compose -f tests/integration/docker-compose.yml logs
+
+      - name: Stop regtest monerod
+        if: always()
+        run: docker compose -f tests/integration/docker-compose.yml down -v
+
+  windows:
+    name: windows
+    needs: wait-build
+    runs-on: windows-latest
+
+    defaults:
+      run:
+        shell: msys2 {0}
+
+    steps:
+      - name: Download monero_c build
+        uses: actions/download-artifact@v8
+        with:
+          name: monero-c-windows
+          path: artifact
+          run-id: ${{ needs.wait-build.outputs.run-id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      # the MINGW64 packages that provide the DLLs monero_c.dll loads, the same ones the build job links
+      - name: Setup MSYS2 MINGW64
+        uses: msys2/setup-msys2@ec48f7c5447b3140e2b088413ae3a55687bccb6e # v2.33.0
+        with:
+          msystem: MINGW64
+          install: >-
+            mingw-w64-x86_64-gcc-libs
+            mingw-w64-x86_64-ntldd
+            mingw-w64-x86_64-openssl
+            mingw-w64-x86_64-hidapi
+            mingw-w64-x86_64-libsodium
+            mingw-w64-x86_64-unbound
+
+      - name: Check runtime dependencies
+        run: |
+          # ntldd reports the Windows API sets and some system DLLs as not found, so only the MinGW libraries are checked
+          ntldd_out=$(ntldd -R artifact/libmonero_c.dll || true)
+          if grep -qE '^[[:space:]]*lib[^[:space:]]*\.dll => not found' <<< "$ntldd_out"; then
+            echo "$ntldd_out"
+            echo "missing runtime libraries above"; exit 1
+          fi
+
+      - name: Run unit tests
+        run: |
+          artifact/monero_c_utils_unit_tests.exe
+          artifact/monero_c_daemon_unit_tests.exe
+
+  mac-os:
+    name: ${{ matrix.arch }}
+    needs: wait-build
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-15
+            arch: mac-arm64
+          - os: macos-15-intel
+            arch: mac-x86_64
+
+    steps:
+      - name: Download monero_c build
+        uses: actions/download-artifact@v8
+        with:
+          name: monero-c-${{ matrix.arch }}
+          path: artifact
+          run-id: ${{ needs.wait-build.outputs.run-id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install runtime libraries
+        run: |
+          HOMEBREW_NO_AUTO_UPDATE=1 brew install libsodium openssl@3 libusb unbound
+          # the library links these Homebrew dylibs, so each one must exist before the tests run
+          for dep in $(otool -L artifact/libmonero_c.dylib | tail -n +2 | awk '{print $1}'); do
+            case "$dep" in
+              @rpath/*|/usr/lib/*|/System/Library/*) ;;
+              *) test -e "$dep" || { echo "missing dependency: $dep"; exit 1; } ;;
+            esac
+          done
+
+      - name: Run unit tests
+        env:
+          DYLD_LIBRARY_PATH: ${{ github.workspace }}/artifact
+        run: |
+          chmod +x artifact/monero_c_utils_unit_tests artifact/monero_c_daemon_unit_tests
+          artifact/monero_c_utils_unit_tests
+          artifact/monero_c_daemon_unit_tests

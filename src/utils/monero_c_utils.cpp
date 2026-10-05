@@ -53,6 +53,7 @@
  */
 
 #include "monero_c_utils.h"
+#include "common/monero_c_common.h"
 #include "utils/monero_utils.h"
 #include "crypto/hash.h"
 #include <cstdlib>
@@ -64,15 +65,10 @@
 
 namespace {
 
-thread_local std::string g_last_error;
-
-void set_last_error(const std::string& msg) {
-  g_last_error = msg;
-}
-
-std::string safe_str(const char* s) {
-  return s ? std::string(s) : std::string();
-}
+using monero_c::dup_string;
+using monero_c::guard;
+using monero_c::safe_str;
+using monero_c::set_last_error;
 
 std::string safe_bin(const uint8_t* data, size_t len) {
   return data ? std::string(reinterpret_cast<const char*>(data), len) : std::string();
@@ -84,15 +80,6 @@ bool to_network_type(int32_t v, monero_network_type& out) {
   return true;
 }
 
-// mallocs at least 1 byte so a successful zero-length allocation is never
-// mistaken for malloc() failure (which is the only case this throws).
-char* dup_string(const std::string& s) {
-  char* out = static_cast<char*>(std::malloc(s.size() + 1));
-  if (out == nullptr) throw std::bad_alloc();
-  std::memcpy(out, s.c_str(), s.size() + 1);
-  return out;
-}
-
 uint8_t* dup_buffer(const std::string& bin, size_t* out_len) {
   uint8_t* out = static_cast<uint8_t*>(std::malloc(bin.empty() ? 1 : bin.size()));
   if (out == nullptr) throw std::bad_alloc();
@@ -101,25 +88,10 @@ uint8_t* dup_buffer(const std::string& bin, size_t* out_len) {
   return out;
 }
 
-// Runs fn, converting any thrown exception into MONERO_ERROR + last_error.
-template <class F>
-monero_result guard(F&& fn) {
-  try {
-    fn();
-    return MONERO_OK;
-  } catch (const std::exception& e) {
-    set_last_error(e.what());
-    return MONERO_ERROR;
-  } catch (...) {
-    set_last_error("unknown error");
-    return MONERO_ERROR;
-  }
-}
-
 using binary_to_json_fn = void (*)(const std::string&, std::string&);
 
-// Shared by the monero_utils_binary*_to_json wrappers below, which differ
-// only in which monero_utils converter they call.
+// shared by the monero_utils_binary*_to_json wrappers below, which differ
+// only in which monero_utils converter they call
 monero_result binary_to_json_impl(binary_to_json_fn fn, const uint8_t* data, size_t len, char** out_json) {
   if (out_json == nullptr) { set_last_error("out_json must not be null"); return MONERO_ERROR; }
   *out_json = nullptr;
@@ -136,8 +108,8 @@ extern "C" {
 
 // ---------------------------- ERROR / MEMORY --------------------------------
 
-const char* monero_utils_last_error(void) {
-  return g_last_error.c_str();
+const char* monero_last_error(void) {
+  return monero_c::last_error().c_str();
 }
 
 void monero_utils_free(void* ptr) {
@@ -311,9 +283,9 @@ bool monero_utils_parse_payment_id_short(const char* payment_id_str, uint8_t out
   return true;
 }
 
-// monero-cpp itself only exposes parse_payment_id_long/short (bool + out-ref); these
-// is_valid_/validate_ wrappers mirror what downstream bindings (e.g. monero-python's
-// PyMoneroUtils) layer on top, including their exact "Invalid {long,short} payment id" messages.
+// monero-cpp only exposes parse_payment_id_long/short, which return a bool and an out-ref.
+// the is_valid_ and validate_ wrappers match the checks of downstream bindings such as
+// monero-python's PyMoneroUtils, including the "Invalid {long,short} payment id" messages
 
 bool monero_utils_is_valid_payment_id_long(const char* payment_id_str) {
   crypto::hash h;
