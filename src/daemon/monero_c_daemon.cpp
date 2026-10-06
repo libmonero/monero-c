@@ -150,8 +150,29 @@ monero_result monero_daemon_connect(const char* uri, const char* username, const
   });
 }
 
+monero_result monero_daemon_connect_with(::monero_rpc_connection* connection, monero_daemon** out_daemon) {
+  if (!require(connection, "connection") || !require(out_daemon, "out_daemon")) return MONERO_ERROR;
+  *out_daemon = nullptr;
+  return guard([&] {
+    std::unique_ptr<monero_daemon> daemon(new monero_daemon());
+    daemon->rpc = std::make_shared<monero::monero_daemon_rpc>(monero_c::connection_of(connection));
+    *out_daemon = daemon.release();
+  });
+}
+
 void monero_daemon_free(monero_daemon* daemon) {
   delete daemon;
+}
+
+monero_result monero_daemon_get_rpc_connection(monero_daemon* daemon, char** out_json) {
+  if (!require(daemon, "daemon") || !require(out_json, "out_json")) return MONERO_ERROR;
+  *out_json = nullptr;
+  return guard([&] { *out_json = dup_string(daemon->rpc->get_rpc_connection()->serialize()); });
+}
+
+monero_result monero_daemon_set_poll_period(monero_daemon* daemon, uint64_t period_ms) {
+  if (!require(daemon, "daemon")) return MONERO_ERROR;
+  return guard([&] { daemon->rpc->set_poll_period_in_ms(period_ms); });
 }
 
 // -------------------------------- LISTENERS ---------------------------------

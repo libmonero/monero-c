@@ -205,6 +205,7 @@ endif()
 
 set(MONERO_C_SRC_FILES
     src/common/monero_c_common.cpp
+    src/common/monero_c_rpc_connection.cpp
     src/utils/monero_c_utils.cpp
     src/daemon/monero_c_daemon.cpp
     src/wallet/monero_c_wallet.cpp

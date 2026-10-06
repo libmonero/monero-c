@@ -65,6 +65,7 @@
 
 namespace {
 
+using monero_c::dup_buffer;
 using monero_c::dup_string;
 using monero_c::guard;
 using monero_c::safe_str;
@@ -78,14 +79,6 @@ bool to_network_type(int32_t v, monero_network_type& out) {
   if (v < MONERO_UTILS_NETWORK_MAINNET || v > MONERO_UTILS_NETWORK_REGTEST) return false;
   out = v == MONERO_UTILS_NETWORK_REGTEST ? monero_network_type::MAINNET : static_cast<monero_network_type>(v);
   return true;
-}
-
-uint8_t* dup_buffer(const std::string& bin, size_t* out_len) {
-  uint8_t* out = static_cast<uint8_t*>(std::malloc(bin.empty() ? 1 : bin.size()));
-  if (out == nullptr) throw std::bad_alloc();
-  if (!bin.empty()) std::memcpy(out, bin.data(), bin.size());
-  *out_len = bin.size();
-  return out;
 }
 
 using binary_to_json_fn = void (*)(const std::string&, std::string&);

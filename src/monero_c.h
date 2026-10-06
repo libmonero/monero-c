@@ -55,6 +55,7 @@
 #ifndef MONERO_C_H
 #define MONERO_C_H
 
+#include "common/monero_c_rpc_connection.h"
 #include "daemon/monero_c_daemon.h"
 #include "utils/monero_c_utils.h"
 #include "wallet/monero_c_wallet.h"

@@ -1117,6 +1117,22 @@ monero_result monero_wallet_submit_multisig_tx_hex(::monero_wallet* wallet, cons
 
 // -------------------------------- RPC WALLETS -------------------------------
 
+monero_result monero_wallet_rpc_connect(::monero_rpc_connection* connection, ::monero_wallet** out_wallet) {
+  if (!require(connection, "connection") || !require(out_wallet, "out_wallet")) return MONERO_ERROR;
+  *out_wallet = nullptr;
+  return guard([&] { *out_wallet = wrap_shared(std::make_shared<monero::monero_wallet_rpc>(monero_c::connection_of(connection))); });
+}
+
+monero_result monero_wallet_rpc_open_wallet(::monero_wallet* wallet, const char* name, const char* wallet_password) {
+  if (!require(wallet, "wallet") || !require(name, "name")) return MONERO_ERROR;
+  return guard([&] { as_rpc(wallet).open_wallet(std::string(name), safe_str(wallet_password)); });
+}
+
+monero_result monero_wallet_rpc_create_wallet(::monero_wallet* wallet, const char* config_json) {
+  if (!require(wallet, "wallet") || !require(config_json, "config_json")) return MONERO_ERROR;
+  return guard([&] { as_rpc(wallet).create_wallet(model_json<monero::monero_wallet_config>(config_json, "config")); });
+}
+
 monero_result monero_wallet_rpc_open(const char* uri, const char* username, const char* password, const char* name, const char* wallet_password, ::monero_wallet** out_wallet) {
   if (!require(uri, "uri") || !require(name, "name") || !require(out_wallet, "out_wallet")) return MONERO_ERROR;
   *out_wallet = nullptr;

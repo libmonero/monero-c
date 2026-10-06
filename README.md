@@ -118,6 +118,7 @@ Any `out_*` parameter that receives a string or byte buffer (`char**`, `uint8_t*
 What holds today:
 
 - monero-cpp serializes calls on one `monero_daemon` handle, so they don't run in parallel.
+- monero-cpp locks a `monero_rpc_connection`, so one handle can be shared by several threads and by the daemons and RPC wallets created from it.
 - Listener callbacks run on a thread owned by monero-cpp. Inside a callback, `monero_daemon_remove_listener()` and `monero_daemon_remove_listeners()` are safe.
 - Different listeners on one daemon can be managed from different threads.
 - `monero_daemon_wait_for_next_block_header()` blocks only its calling thread, and other calls on the handle run meanwhile.

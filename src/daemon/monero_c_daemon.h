@@ -24,6 +24,7 @@
 #define MONERO_C_DAEMON_H
 
 #include "utils/monero_c_utils.h"
+#include "common/monero_c_rpc_connection.h"
 
 #include <stddef.h>
 
@@ -106,11 +107,40 @@ typedef enum monero_key_image_spent_status {
 MONERO_EXPORT monero_result monero_daemon_connect(const char* uri, const char* username, const char* password, const char* proxy_uri, uint32_t timeout_ms, monero_daemon** out_daemon);
 
 /**
+ * Create a daemon RPC client that shares a connection, with its proxy, timeout and TLS
+ * settings. It checks the connection if it isn't online yet, and succeeds even if the
+ * daemon is unreachable.
+ *
+ * @param connection is the connection to the daemon. It can be freed after the call
+ * @param out_daemon receives the new handle, released with monero_daemon_free()
+ * @return MONERO_OK or MONERO_ERROR
+ */
+MONERO_EXPORT monero_result monero_daemon_connect_with(monero_rpc_connection* connection, monero_daemon** out_daemon);
+
+/**
  * Release a handle returned by monero_daemon_connect(). Passing NULL does nothing.
  *
  * @param daemon is the handle to release
  */
 MONERO_EXPORT void monero_daemon_free(monero_daemon* daemon);
+
+/**
+ * Get the connection to the daemon.
+ *
+ * @param daemon is the handle returned by monero_daemon_connect()
+ * @param out_json receives the JSON-serialized monero_rpc_connection, with the password. Free with monero_utils_free()
+ * @return MONERO_OK or MONERO_ERROR
+ */
+MONERO_EXPORT monero_result monero_daemon_get_rpc_connection(monero_daemon* daemon, char** out_json);
+
+/**
+ * Set how often the listeners poll the daemon for new blocks.
+ *
+ * @param daemon is the handle returned by monero_daemon_connect()
+ * @param period_ms is the poll period in milliseconds
+ * @return MONERO_OK or MONERO_ERROR
+ */
+MONERO_EXPORT monero_result monero_daemon_set_poll_period(monero_daemon* daemon, uint64_t period_ms);
 
 // -------------------------------- LISTENERS ---------------------------------
 

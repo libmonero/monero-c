@@ -24,6 +24,7 @@
 #define MONERO_C_WALLET_H
 
 #include "utils/monero_c_utils.h"
+#include "common/monero_c_rpc_connection.h"
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -1467,6 +1468,38 @@ MONERO_EXPORT monero_result monero_wallet_submit_multisig_tx_hex(monero_wallet* 
 // -------------------------------- RPC WALLETS --------------------------------
 // a wallet on a monero-wallet-rpc server. It has the same handle as the other wallets, so the
 // methods above work on it. The functions below need an RPC wallet and fail for the others
+
+/**
+ * Connect to a monero-wallet-rpc server through a shared connection, with its proxy, timeout
+ * and TLS settings. No wallet is open until monero_wallet_rpc_open_wallet() or
+ * monero_wallet_rpc_create_wallet(). Free the handle with monero_wallet_free().
+ *
+ * @param connection is the connection to the server. It can be freed after the call
+ * @param out_wallet receives the handle
+ * @return MONERO_OK or MONERO_ERROR
+ */
+MONERO_EXPORT monero_result monero_wallet_rpc_connect(monero_rpc_connection* connection, monero_wallet** out_wallet);
+
+/**
+ * Open a wallet on the server of an RPC wallet.
+ *
+ * @param wallet is the wallet handle of an RPC wallet
+ * @param name is the name of the wallet on the server
+ * @param wallet_password is the password of the wallet. NULL or "" for none
+ * @return MONERO_OK or MONERO_ERROR
+ */
+MONERO_EXPORT monero_result monero_wallet_rpc_open_wallet(monero_wallet* wallet, const char* name, const char* wallet_password);
+
+/**
+ * Create a wallet on the server of an RPC wallet and open it. A config with a seed restores the
+ * wallet from the seed, a config with keys restores it from the keys, and a config with neither
+ * creates a random wallet. The server has its own network, so the config has no network type.
+ *
+ * @param wallet is the wallet handle of an RPC wallet
+ * @param config_json is the JSON-serialized monero_wallet_config, with the wallet name in "path"
+ * @return MONERO_OK or MONERO_ERROR
+ */
+MONERO_EXPORT monero_result monero_wallet_rpc_create_wallet(monero_wallet* wallet, const char* config_json);
 
 /**
  * Open a wallet on a monero-wallet-rpc server. Free the handle with monero_wallet_free().

@@ -24,11 +24,13 @@
 #define MONERO_C_COMMON_H
 
 #include "utils/monero_c_utils.h"
+#include "common/monero_c_rpc_connection.h"
 
 #include "rapidjson/stringbuffer.h"
 #include "rapidjson/writer.h"
 
 #include <boost/optional.hpp>
+#include <algorithm>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -40,8 +42,15 @@
 #include <type_traits>
 #include <vector>
 
+namespace monero {
+class monero_rpc_connection;
+}
+
 // helpers shared by the monero_* translation units. Not part of the public ABI
 namespace monero_c {
+
+// the monero-cpp connection behind a handle, shared with the daemons and wallets created from it
+std::shared_ptr<monero::monero_rpc_connection> connection_of(::monero_rpc_connection* connection);
 
 // records msg as the calling thread's last error
 void set_last_error(const std::string& msg);
@@ -58,7 +67,7 @@ inline std::string safe_str(const char* s) {
 inline char* dup_string(const std::string& s) {
   char* out = static_cast<char*>(std::malloc(s.size() + 1));
   if (out == nullptr) throw std::bad_alloc();
-  std::memcpy(out, s.c_str(), s.size() + 1);
+  std::copy(s.c_str(), s.c_str() + s.size() + 1, out);
   return out;
 }
 
@@ -109,6 +118,16 @@ template <class T>
 boost::optional<T> optional_of(const T* value) {
   boost::optional<T> out;
   if (value != nullptr) out = *value;
+  return out;
+}
+
+// copies binary data into a new buffer that monero_utils_free() releases. The buffer is
+// never NULL, so an empty result is still a valid pointer
+inline uint8_t* dup_buffer(const std::string& bin, size_t* out_len) {
+  uint8_t* out = static_cast<uint8_t*>(std::malloc(bin.empty() ? 1 : bin.size()));
+  if (out == nullptr) throw std::bad_alloc();
+  std::copy(bin.begin(), bin.end(), out);
+  *out_len = bin.size();
   return out;
 }
 

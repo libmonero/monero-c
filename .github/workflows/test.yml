@@ -83,13 +83,14 @@ jobs:
         env:
           LD_LIBRARY_PATH: ${{ github.workspace }}/artifact
         run: |
-          chmod +x artifact/monero_c_utils_unit_tests artifact/monero_c_daemon_unit_tests artifact/monero_c_wallet_unit_tests artifact/monero_c_wallet_keys_unit_tests artifact/monero_c_wallet_offline_unit_tests artifact/monero_c_wallet_multisig_unit_tests
+          chmod +x artifact/monero_c_utils_unit_tests artifact/monero_c_daemon_unit_tests artifact/monero_c_wallet_unit_tests artifact/monero_c_wallet_keys_unit_tests artifact/monero_c_wallet_offline_unit_tests artifact/monero_c_wallet_multisig_unit_tests artifact/monero_c_rpc_connection_unit_tests
           artifact/monero_c_utils_unit_tests
           artifact/monero_c_daemon_unit_tests
           artifact/monero_c_wallet_unit_tests
           artifact/monero_c_wallet_keys_unit_tests
           artifact/monero_c_wallet_offline_unit_tests
           artifact/monero_c_wallet_multisig_unit_tests
+          artifact/monero_c_rpc_connection_unit_tests
 
   integration:
     name: integration
@@ -201,6 +202,7 @@ jobs:
           artifact/monero_c_wallet_keys_unit_tests.exe
           artifact/monero_c_wallet_offline_unit_tests.exe
           artifact/monero_c_wallet_multisig_unit_tests.exe
+          artifact/monero_c_rpc_connection_unit_tests.exe
 
   mac-os:
     name: ${{ matrix.arch }}
@@ -240,10 +242,11 @@ jobs:
         env:
           DYLD_LIBRARY_PATH: ${{ github.workspace }}/artifact
         run: |
-          chmod +x artifact/monero_c_utils_unit_tests artifact/monero_c_daemon_unit_tests artifact/monero_c_wallet_unit_tests artifact/monero_c_wallet_keys_unit_tests artifact/monero_c_wallet_offline_unit_tests artifact/monero_c_wallet_multisig_unit_tests
+          chmod +x artifact/monero_c_utils_unit_tests artifact/monero_c_daemon_unit_tests artifact/monero_c_wallet_unit_tests artifact/monero_c_wallet_keys_unit_tests artifact/monero_c_wallet_offline_unit_tests artifact/monero_c_wallet_multisig_unit_tests artifact/monero_c_rpc_connection_unit_tests
           artifact/monero_c_utils_unit_tests
           artifact/monero_c_daemon_unit_tests
           artifact/monero_c_wallet_unit_tests
           artifact/monero_c_wallet_keys_unit_tests
           artifact/monero_c_wallet_offline_unit_tests
           artifact/monero_c_wallet_multisig_unit_tests
+          artifact/monero_c_rpc_connection_unit_tests

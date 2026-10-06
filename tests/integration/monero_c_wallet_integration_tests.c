@@ -460,6 +460,30 @@ static void test_rpc(const char* daemon_uri, const char* rpc_uri) {
     monero_wallet_free(keys);
   }
 
+  // a client from a connection creates a wallet from a config, then opens another one
+  char rpc_config[256];
+  monero_rpc_connection* rpc_connection = NULL;
+  monero_wallet* client = NULL;
+  snprintf(rpc_config, sizeof(rpc_config), "{\"uri\":\"%s\",\"timeoutMs\":60000}", rpc_uri);
+  EXPECT_OK(monero_rpc_connection_create(rpc_config, &rpc_connection));
+  EXPECT_OK(monero_wallet_rpc_connect(rpc_connection, &client));
+  monero_rpc_connection_free(rpc_connection);
+  CHECK(client != NULL);
+  if (client != NULL) {
+    EXPECT_OK(monero_wallet_rpc_create_wallet(client, "{\"path\":\"rpc_config\",\"password\":\"" PASSWORD "\",\"seed\":\"" SEED "\",\"restoreHeight\":0}"));
+    EXPECT_OK(monero_wallet_get_primary_address(client, &json));
+    CHECK(json != NULL && strcmp(json, ADDRESS) == 0);
+    monero_utils_free(json);
+    json = NULL;
+    EXPECT_ERR(monero_wallet_rpc_create_wallet(client, "{\"path\":\"rpc_config\",\"networkType\":0}"));
+    EXPECT_OK(monero_wallet_rpc_open_wallet(client, "rpc_random", PASSWORD));
+    EXPECT_OK(monero_wallet_get_primary_address(client, &json));
+    CHECK(json != NULL && strcmp(json, address) == 0);
+    monero_utils_free(json);
+    json = NULL;
+    monero_wallet_free(client);
+  }
+
   // the server stops with the last wallet, so this comes last
   EXPECT_OK(monero_wallet_rpc_stop(rpc));
   monero_wallet_free(rpc);

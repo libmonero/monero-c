@@ -166,11 +166,13 @@ static void test_mining(monero_daemon* daemon) {
   // the hash rate can only be shown while mining
   EXPECT_ERR(monero_daemon_set_log_hash_rate(daemon, true));
 
-  // start and stop at once, so the node doesn't keep mining while the other tests run
+  // stop soon, so the node doesn't keep mining while the other tests run
   uint64_t threads = 1;
   EXPECT_OK(monero_daemon_start_mining(daemon, ADDRESS, &threads, NULL, NULL));
   EXPECT_OK(monero_daemon_set_log_hash_rate(daemon, true));
   EXPECT_OK(monero_daemon_set_log_hash_rate(daemon, false));
+  // the daemon takes a few seconds to start its miner thread, and stop_mining() waits for it
+  sleep(3);
   EXPECT_OK(monero_daemon_stop_mining(daemon));
 
   EXPECT_ERR(monero_daemon_submit_block(daemon, "00"));
@@ -524,6 +526,75 @@ static void test_admin(monero_daemon* daemon) {
   CHECK(after + 1 == before);
 }
 
+// ------------------------------- CONNECTION ---------------------------------
+
+static void test_rpc_connection(const char* uri) {
+  char config[256];
+  char* json = NULL;
+  uint8_t* data = NULL;
+  size_t len = 0;
+  bool changed = false;
+  monero_optional_bool status = MONERO_OPTIONAL_BOOL_UNSET;
+  monero_rpc_connection* connection = NULL;
+  snprintf(config, sizeof(config), "{\"uri\":\"%s\",\"timeoutMs\":30000}", uri);
+  EXPECT_OK(monero_rpc_connection_create(config, &connection));
+  if (connection == NULL) return;
+
+  EXPECT_OK(monero_rpc_connection_check_connection(connection, NULL, &changed));
+  CHECK(changed);
+  EXPECT_OK(monero_rpc_connection_is_online(connection, &status));
+  CHECK(status == MONERO_OPTIONAL_BOOL_TRUE);
+  EXPECT_OK(monero_rpc_connection_is_authenticated(connection, &status));
+  CHECK(status == MONERO_OPTIONAL_BOOL_TRUE);
+  EXPECT_OK(monero_rpc_connection_is_connected(connection, &status));
+  CHECK(status == MONERO_OPTIONAL_BOOL_TRUE);
+  EXPECT_OK(monero_rpc_connection_serialize(connection, &json));
+  CHECK(has_key(json, "responseTime"));
+  monero_utils_free(json);
+  json = NULL;
+
+  // numbers and bools of the response are not strings
+  EXPECT_OK(monero_rpc_connection_send_json_request(connection, "get_block_count", NULL, NULL, &json));
+  CHECK(json != NULL && strstr(json, "\"count\":") != NULL && strstr(json, "\"count\":\"") == NULL);
+  CHECK(json != NULL && strstr(json, "\"status\":\"OK\"") != NULL);
+  monero_utils_free(json);
+  json = NULL;
+  EXPECT_OK(monero_rpc_connection_send_json_request(connection, "get_block_header_by_height", "{\"height\":0}", NULL, &json));
+  CHECK(has_key(json, "block_header"));
+  CHECK(json != NULL && strstr(json, "\"orphan_status\":false") != NULL);
+  monero_utils_free(json);
+  json = NULL;
+  EXPECT_ERR(monero_rpc_connection_send_json_request(connection, "no_such_method", NULL, NULL, &json));
+  CHECK(json == NULL);
+
+  EXPECT_OK(monero_rpc_connection_send_path_request(connection, "get_height", NULL, NULL, &json));
+  CHECK(has_key(json, "height"));
+  monero_utils_free(json);
+  json = NULL;
+
+  EXPECT_OK(monero_rpc_connection_send_binary_request(connection, "get_blocks_by_height.bin", "{\"heights\":[0]}", NULL, &data, &len));
+  CHECK(data != NULL && len > 0);
+  if (data != NULL) {
+    EXPECT_OK(monero_utils_binary_blocks_to_json(data, len, &json));
+    CHECK(has_key(json, "blocks"));
+    monero_utils_free(json);
+    json = NULL;
+  }
+  monero_utils_free(data);
+
+  // a daemon from the connection uses it, and the status is shared
+  monero_daemon* daemon = NULL;
+  EXPECT_OK(monero_daemon_connect_with(connection, &daemon));
+  monero_rpc_connection_free(connection);
+  if (daemon == NULL) return;
+  CHECK(current_height(daemon) > 0);
+  EXPECT_OK(monero_daemon_get_rpc_connection(daemon, &json));
+  CHECK(json != NULL && strstr(json, "\"isOnline\":true") != NULL);
+  monero_utils_free(json);
+  EXPECT_OK(monero_daemon_set_poll_period(daemon, 500));
+  monero_daemon_free(daemon);
+}
+
 // ---------------------------------- MAIN ------------------------------------
 
 int main(void) {
@@ -555,6 +626,7 @@ int main(void) {
   test_listener_receives_blocks(daemon);
   test_wait_for_next_block_header(daemon);
   test_admin(daemon);
+  test_rpc_connection(uri);
   // monero_daemon_stop() isn't called here, since it would shut the node down for the next run
 
   monero_daemon_free(daemon);
