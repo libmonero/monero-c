@@ -1,4 +1,4 @@
-# regtest node for the integration tests, same image as monero-python's tests/docker-compose.yml
+# regtest node and wallet RPC server for the integration tests, same image as monero-python's tests/docker-compose.yml
 services:
 
   node:
@@ -23,4 +23,33 @@ services:
     ]
     ports:
       - "18081:18081"
+      # the wallet RPC server shares the network of the node, so its port is published here
+      - "18082:18082"
     restart: "no"
+
+  wallet_rpc:
+    image: lalanza808/monero:v0.18.5.1
+    container_name: monero_c_wallet_rpc
+    # the tests give the server the daemon URI http://127.0.0.1:18081, which reaches monerod on this network
+    network_mode: "service:node"
+    command: [
+      "monero-wallet-rpc",
+      "--daemon-address=127.0.0.1:18081",
+      "--trusted-daemon",
+      "--allow-mismatched-daemon-version",
+      "--rpc-bind-ip=0.0.0.0",
+      "--rpc-bind-port=18082",
+      "--confirm-external-bind",
+      "--disable-rpc-login",
+      "--rpc-access-control-origins=*",
+      "--wallet-dir=/wallet",
+      "--non-interactive"
+    ]
+    volumes:
+      - wallet_rpc_data:/wallet
+    depends_on:
+      - node
+    restart: "no"
+
+volumes:
+  wallet_rpc_data:

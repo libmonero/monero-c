@@ -95,13 +95,15 @@ Flags are cached in `./build/CMakeCache.txt`, so pass them on every build to cha
 ctest --test-dir build --output-on-failure
 ```
 
-The unit tests in [tests/unit](tests/unit/) need nothing else. The integration tests in [tests/integration](tests/integration/) call a regtest `monerod`, so they are skipped unless `MONERO_C_TEST_DAEMON_URI` points at one. The compose file starts the same node image that monero-python uses:
+The unit tests in [tests/unit](tests/unit/) need nothing else. The integration tests in [tests/integration](tests/integration/) call a regtest `monerod` and a `monero-wallet-rpc` server, so they are skipped unless `MONERO_C_TEST_DAEMON_URI` and `MONERO_C_TEST_WALLET_RPC_URI` point at them. The compose file starts both, with the same image that monero-python uses:
 
 ```
 docker compose -f tests/integration/docker-compose.yml up -d
-MONERO_C_TEST_DAEMON_URI=http://127.0.0.1:18081 ctest --test-dir build --output-on-failure
+MONERO_C_TEST_DAEMON_URI=http://127.0.0.1:18081 MONERO_C_TEST_WALLET_RPC_URI=http://127.0.0.1:18082 ctest --test-dir build --output-on-failure
 docker compose -f tests/integration/docker-compose.yml down -v
 ```
+
+The wallet tests stop the wallet RPC server when they end, and the wallets they create stay in its volume, so run `down -v` and `up -d` before the next run.
 
 All the tests include only the public header and call only exported functions, the same way a real FFI consumer would.
 
