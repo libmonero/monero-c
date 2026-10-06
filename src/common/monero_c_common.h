@@ -25,10 +25,15 @@
 
 #include "utils/monero_c_utils.h"
 
+#include "rapidjson/stringbuffer.h"
+#include "rapidjson/writer.h"
+
 #include <boost/optional.hpp>
+#include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <exception>
+#include <memory>
 #include <new>
 #include <stdexcept>
 #include <string>
@@ -117,6 +122,38 @@ T* dup_array(const std::vector<T>& items, size_t* out_count) {
   for (size_t i = 0; i < items.size(); i++) out[i] = items[i];
   *out_count = items.size();
   return out;
+}
+
+// serializes a list of monero-cpp objects as a JSON array. Null items stay null
+template <class T>
+std::string json_of_list(const std::vector<std::shared_ptr<T>>& items) {
+  std::string json = "[";
+  for (size_t i = 0; i < items.size(); i++) {
+    if (i > 0) json += ",";
+    json += items[i] ? items[i]->serialize() : std::string("null");
+  }
+  return json + "]";
+}
+
+// serializes a list of monero-cpp objects that are held by value
+template <class T>
+std::string json_of_list(const std::vector<T>& items) {
+  std::string json = "[";
+  for (size_t i = 0; i < items.size(); i++) {
+    if (i > 0) json += ",";
+    json += items[i].serialize();
+  }
+  return json + "]";
+}
+
+// serializes a JSON array of strings, e.g. hashes or hexes
+inline std::string json_of_strings(const std::vector<std::string>& items) {
+  rapidjson::StringBuffer buffer;
+  rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+  writer.StartArray();
+  for (const auto& item : items) writer.String(item.c_str(), static_cast<rapidjson::SizeType>(item.size()));
+  writer.EndArray();
+  return buffer.GetString();
 }
 
 } // namespace monero_c

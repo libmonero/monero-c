@@ -72,4 +72,55 @@ static int g_failures = 0;
   } \
 } while (0)
 
+// the wallet file, plus path + ".keys" and path + ".address.txt"
+static inline void remove_files(const char* path) {
+  char keys[256];
+  char address[256];
+  snprintf(keys, sizeof(keys), "%s.keys", path);
+  snprintf(address, sizeof(address), "%s.address.txt", path);
+  remove(path);
+  remove(keys);
+  remove(address);
+}
+
+// skips spaces, tabs and line breaks
+static inline const char* skip_space(const char* p) {
+  while (*p == ' ' || *p == '\t' || *p == '\r' || *p == '\n') p++;
+  return p;
+}
+
+// copies the value of a JSON string key, with or without spaces around the colon. Returns 0 if
+// the key is missing, is not a string, or is too long
+static inline int json_string(const char* json, const char* key, char* out, size_t size) {
+  char pattern[128];
+  const char* start = NULL;
+  const char* end = NULL;
+  int pattern_len = snprintf(pattern, sizeof(pattern), "\"%s\"", key);
+  if (pattern_len < 0 || (size_t) pattern_len >= sizeof(pattern)) return 0;
+  start = strstr(json, pattern);
+  if (start == NULL) return 0;
+  start = skip_space(start + pattern_len);
+  if (*start != ':') return 0;
+  start = skip_space(start + 1);
+  if (*start != '"') return 0;
+  start++;
+  end = strchr(start, '"');
+  if (end == NULL) return 0;
+  size_t len = (size_t) (end - start);
+  if (len >= size) return 0;
+  snprintf(out, size, "%.*s", (int) len, start);
+  return 1;
+}
+
+// counts the words of a seed, which are separated by spaces. Returns 0 for an empty seed
+static inline size_t count_words(const char* seed) {
+  size_t words = 0;
+  if (seed == NULL || seed[0] == '\0') return 0;
+  words = 1;
+  for (const char* p = seed; *p != '\0'; p++) {
+    if (*p == ' ') words++;
+  }
+  return words;
+}
+
 #endif // MONERO_C_TEST_H

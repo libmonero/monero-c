@@ -75,8 +75,8 @@ std::string safe_bin(const uint8_t* data, size_t len) {
 }
 
 bool to_network_type(int32_t v, monero_network_type& out) {
-  if (v < MONERO_UTILS_NETWORK_MAINNET || v > MONERO_UTILS_NETWORK_STAGENET) return false;
-  out = static_cast<monero_network_type>(v);
+  if (v < MONERO_UTILS_NETWORK_MAINNET || v > MONERO_UTILS_NETWORK_REGTEST) return false;
+  out = v == MONERO_UTILS_NETWORK_REGTEST ? monero_network_type::MAINNET : static_cast<monero_network_type>(v);
   return true;
 }
 

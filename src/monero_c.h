@@ -57,5 +57,6 @@
 
 #include "daemon/monero_c_daemon.h"
 #include "utils/monero_c_utils.h"
+#include "wallet/monero_c_wallet.h"
 
 #endif // MONERO_C_H

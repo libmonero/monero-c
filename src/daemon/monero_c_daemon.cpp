@@ -49,6 +49,8 @@ using monero_c::array_of;
 using monero_c::dup_array;
 using monero_c::dup_string;
 using monero_c::guard;
+using monero_c::json_of_list;
+using monero_c::json_of_strings;
 using monero_c::optional_of;
 using monero_c::require;
 using monero_c::safe_str;
@@ -79,40 +81,6 @@ std::vector<std::shared_ptr<T>> parse_list(const std::string& json) {
     items.push_back(gen_utils::deserialize<T>(item));
   }
   return items;
-}
-
-// serializes a JSON array of strings, e.g. hashes or hexes
-std::string json_of_strings(const std::vector<std::string>& items) {
-  std::string json = "[";
-  for (size_t i = 0; i < items.size(); i++) {
-    if (i > 0) json += ",";
-    json += "\"";
-    for (char c : items[i]) {
-      if (c == '"' || c == '\\') {
-        json += '\\';
-        json += c;
-      } else if (static_cast<unsigned char>(c) < 0x20) {
-        char escaped[8];
-        std::snprintf(escaped, sizeof(escaped), "\\u%04x", static_cast<unsigned char>(c));
-        json += escaped;
-      } else {
-        json += c;
-      }
-    }
-    json += "\"";
-  }
-  return json + "]";
-}
-
-// serializes a list of monero-cpp objects as a JSON array. Null items stay null
-template <class T>
-std::string json_of_list(const std::vector<std::shared_ptr<T>>& items) {
-  std::string json = "[";
-  for (size_t i = 0; i < items.size(); i++) {
-    if (i > 0) json += ",";
-    json += items[i] ? items[i]->serialize() : std::string("null");
-  }
-  return json + "]";
 }
 
 // monero-cpp's monero_tx_backlog_entry has no fields yet, so each entry is an empty object

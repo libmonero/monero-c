@@ -207,6 +207,7 @@ set(MONERO_C_SRC_FILES
     src/common/monero_c_common.cpp
     src/utils/monero_c_utils.cpp
     src/daemon/monero_c_daemon.cpp
+    src/wallet/monero_c_wallet.cpp
 )
 
 # compile once, build both shared and static from the objects (same as monero-cpp's own CMakeLists.txt)

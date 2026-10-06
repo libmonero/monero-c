@@ -84,10 +84,13 @@ typedef enum monero_result {
 
 // mirrors monero_network_type in monero-cpp (daemon/monero_daemon_model.h):
 // values must stay numerically identical since they're cast directly across the bridge
+// REGTEST has no monero-cpp value. It maps to mainnet, whose address format a regtest node uses, and
+// the wallets on it are created with the regtest flag of monero-cpp
 typedef enum monero_utils_network_type {
   MONERO_UTILS_NETWORK_MAINNET = 0,
   MONERO_UTILS_NETWORK_TESTNET = 1,
-  MONERO_UTILS_NETWORK_STAGENET = 2
+  MONERO_UTILS_NETWORK_STAGENET = 2,
+  MONERO_UTILS_NETWORK_REGTEST = 3
 } monero_utils_network_type;
 
 // ---------------------------- ERROR / MEMORY --------------------------------
