@@ -120,6 +120,7 @@ typedef struct monero_wallet_listener_callbacks {
 
 /**
  * Create a wallet with a new random seed and save it to disk. The keys are written to path + ".keys".
+ * The wallet scans from an estimate of the current height, or from 0 on regtest.
  *
  * @param path is the path of the wallet file
  * @param password encrypts the wallet files. NULL or "" for no password
