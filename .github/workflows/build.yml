@@ -469,14 +469,6 @@ jobs:
           if-no-files-found: error
           retention-days: 1
 
-  codacy:
-    name: codacy
-    # uploads the coverage report to Codacy: main, and pull requests from this repository
-    if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
-    needs: ubuntu
-    uses: ./.github/workflows/codacy.yml
-    secrets: inherit
-
   docs:
     name: docs
     # builds the docs on pull requests, publishes them with the coverage report from main only

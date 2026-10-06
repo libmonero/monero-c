@@ -1,27 +1,39 @@
-name: Codacy
+name: Codacy Coverage Reporter
 
 on:
-  workflow_call:
+  workflow_run:
+    workflows:
+      - Build
+    types:
+      - completed
 
 permissions:
   contents: read
+  actions: read
 
 jobs:
-  coverage:
+  report-coverage-linux:
+    if: github.repository == 'libmonero/monero-c' && github.event.workflow_run.conclusion == 'success' && (github.event.workflow_run.event == 'pull_request' || (github.event.workflow_run.event == 'push' && github.event.workflow_run.head_branch == 'main'))
     runs-on: ubuntu-24.04
     env:
       CODACY_PROJECT_TOKEN: ${{ secrets.CODACY_PROJECT_TOKEN }}
-      # on pull requests GITHUB_SHA is the merge commit, so the head commit is passed explicitly
-      COMMIT_UUID: ${{ github.event.pull_request.head.sha || github.sha }}
+      # the commit that Build tested, which is the head of the pull request
+      COMMIT_UUID: ${{ github.event.workflow_run.head_sha }}
     steps:
       - name: Download coverage report
+        id: download
+        continue-on-error: true
         uses: actions/download-artifact@v8
         with:
           name: coverage-reports
           path: coverage-reports
+          github-token: ${{ github.token }}
+          run-id: ${{ github.event.workflow_run.id }}
 
-      - name: Report c++ coverage
+      - name: Report c++ and c coverage
+        if: steps.download.outcome == 'success'
         shell: bash
         run: |
           bash <(curl -Ls https://coverage.codacy.com/get.sh) report --language cpp --coverage-reports coverage-reports/coverage.info --partial --commit-uuid "$COMMIT_UUID"
+          bash <(curl -Ls https://coverage.codacy.com/get.sh) report --language c --coverage-reports coverage-reports/coverage.info --partial --commit-uuid "$COMMIT_UUID"
           bash <(curl -Ls https://coverage.codacy.com/get.sh) final --commit-uuid "$COMMIT_UUID"
