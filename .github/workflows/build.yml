@@ -256,7 +256,7 @@ jobs:
         if: env.COVERAGE == 'true'
         env:
           ASAN_OPTIONS: detect_leaks=1:halt_on_error=1
-          LSAN_OPTIONS: suppressions=${{ github.workspace }}/tests/sanitizers/lsan.supp
+          LSAN_OPTIONS: suppressions=tests/sanitizers/lsan.supp
           UBSAN_OPTIONS: print_stacktrace=1:halt_on_error=1
         run: |
           for test in utils daemon wallet wallet_keys wallet_offline wallet_multisig rpc_connection abi cpp; do

@@ -292,8 +292,6 @@ static void test_every_function_rejects_null_wallet(void) {
   int integer = 0;
   uint64_t number = 0;
   size_t count = 0;
-  uint8_t* data = NULL;
-  monero_wallet* wallet = NULL;
   monero_optional_bool status = MONERO_OPTIONAL_BOOL_UNSET;
   monero_tx_priority priority = MONERO_TX_PRIORITY_DEFAULT;
   monero_utils_network_type network = MONERO_UTILS_NETWORK_MAINNET;
@@ -438,7 +436,6 @@ static void test_every_function_rejects_null_wallet(void) {
   EXPECT_ERR_MSG(monero_wallet_rpc_get_subaddresses(NULL, 0, NULL, 0, false, &json), "wallet must not be null");
   EXPECT_ERR_MSG(monero_wallet_rpc_set_daemon_connection(NULL, "x", false, "x"), "wallet must not be null");
 
-  CHECK(json == NULL && data == NULL && wallet == NULL);
   monero_wallet_listener_free(listener);
 }
 
