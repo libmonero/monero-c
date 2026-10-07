@@ -1,0 +1,3 @@
+# monero-cpp's wallet factories leak the wallet when they throw, e.g. on a wrong password
+# remove once fixed in monero-cpp, see TODO.md
+leak:monero::monero_wallet_full::open_wallet
