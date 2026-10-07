@@ -27,7 +27,7 @@
 
 // finds "key":"value" in a compact JSON string and copies value into out.
 // only good enough for this test's known output shape, not a general JSON parser
-static int extract_json_string(const char* json, const char* key, char* out, size_t out_cap) {
+static int extract_json_string(const char* json, const char* key, char* out, size_t out_cap, size_t* out_len) {
   char needle[128];
   snprintf(needle, sizeof(needle), "\"%s\"", key);
   const char* p = strstr(json, needle);
@@ -43,6 +43,7 @@ static int extract_json_string(const char* json, const char* key, char* out, siz
   if (len >= out_cap) return 0;
   memcpy(out, p, len);
   out[len] = '\0';
+  if (out_len) *out_len = len;
   return 1;
 }
 
@@ -243,14 +244,15 @@ static void test_get_ring_size(void) {
 static void test_get_integrated_address(void) {
   char* json = NULL;
   char value[256];
+  size_t value_len;
 
   // random payment id
   EXPECT_OK(monero_utils_get_integrated_address(MONERO_UTILS_NETWORK_STAGENET, STAGENET_PRIMARY_4, "", &json));
   CHECK(json != NULL);
   if (json != NULL) {
-    CHECK(extract_json_string(json, "standardAddress", value, sizeof(value)) && strcmp(value, STAGENET_PRIMARY_4) == 0);
-    CHECK(extract_json_string(json, "paymentId", value, sizeof(value)) && strlen(value) == 16);
-    CHECK(extract_json_string(json, "integratedAddress", value, sizeof(value)) && strlen(value) == 106);
+    CHECK(extract_json_string(json, "standardAddress", value, sizeof(value), &value_len) && strcmp(value, STAGENET_PRIMARY_4) == 0);
+    CHECK(extract_json_string(json, "paymentId", value, sizeof(value), &value_len) && value_len == 16);
+    CHECK(extract_json_string(json, "integratedAddress", value, sizeof(value), &value_len) && value_len == 106);
     monero_utils_free(json);
     json = NULL;
   }
@@ -258,7 +260,7 @@ static void test_get_integrated_address(void) {
   // specific payment id
   EXPECT_OK(monero_utils_get_integrated_address(MONERO_UTILS_NETWORK_STAGENET, STAGENET_PRIMARY_4, "03284e41c342f036", &json));
   if (json != NULL) {
-    CHECK(extract_json_string(json, "paymentId", value, sizeof(value)) && strcmp(value, "03284e41c342f036") == 0);
+    CHECK(extract_json_string(json, "paymentId", value, sizeof(value), &value_len) && strcmp(value, "03284e41c342f036") == 0);
     monero_utils_free(json);
     json = NULL;
   }
@@ -266,7 +268,7 @@ static void test_get_integrated_address(void) {
   // with a subaddress
   EXPECT_OK(monero_utils_get_integrated_address(MONERO_UTILS_NETWORK_STAGENET, STAGENET_SUBADDR_4, "03284e41c342f036", &json));
   if (json != NULL) {
-    CHECK(extract_json_string(json, "standardAddress", value, sizeof(value)) && strcmp(value, STAGENET_SUBADDR_4) == 0);
+    CHECK(extract_json_string(json, "standardAddress", value, sizeof(value), &value_len) && strcmp(value, STAGENET_SUBADDR_4) == 0);
     monero_utils_free(json);
     json = NULL;
   }
