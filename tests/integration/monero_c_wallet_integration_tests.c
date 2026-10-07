@@ -230,14 +230,69 @@ static void test_daemon(const char* daemon_uri) {
   CHECK(json != NULL);
   monero_utils_free(json);
   json = NULL;
+
+  // tx and spend proofs of the sent tx
+  char* proof = NULL;
+  bool good = false;
+  EXPECT_OK(monero_wallet_get_tx_proof(a, tx_hash, ADDRESS, "message", &proof));
+  CHECK(proof != NULL);
+  if (proof != NULL) {
+    EXPECT_OK(monero_wallet_check_tx_proof(a, tx_hash, ADDRESS, "message", proof, &json));
+    CHECK(has(json, "\"isGood\":true"));
+    monero_utils_free(json);
+    json = NULL;
+    EXPECT_OK(monero_wallet_check_tx_proof(a, tx_hash, ADDRESS, "other", proof, &json));
+    CHECK(has(json, "\"isGood\":false"));
+    monero_utils_free(json);
+    json = NULL;
+    monero_utils_free(proof);
+    proof = NULL;
+  }
+  EXPECT_OK(monero_wallet_get_spend_proof(a, tx_hash, "message", &proof));
+  CHECK(proof != NULL);
+  if (proof != NULL) {
+    EXPECT_OK(monero_wallet_check_spend_proof(a, tx_hash, "message", proof, &good));
+    CHECK(good);
+    EXPECT_OK(monero_wallet_check_spend_proof(a, tx_hash, "other", proof, &good));
+    CHECK(!good);
+    monero_utils_free(proof);
+  }
   monero_utils_free(tx_hash);
   tx_hash = NULL;
+
+  // sweeps without relay, so the funds stay
+  char key_image[128];
+  char sweep_config[512];
+  EXPECT_OK(monero_wallet_get_outputs(a, "{\"isSpent\":false,\"txQuery\":{\"isLocked\":false}}", &json));
+  CHECK(json_string(json, "hex", key_image, sizeof(key_image)));
+  monero_utils_free(json);
+  json = NULL;
+  snprintf(sweep_config, sizeof(sweep_config), "{\"keyImage\":\"%s\",\"destinations\":[{\"address\":\"" ADDRESS "\"}],\"relay\":false}", key_image);
+  EXPECT_OK(monero_wallet_sweep_output(a, sweep_config, &json));
+  CHECK(has(json, "\"fee\":"));
+  monero_utils_free(json);
+  json = NULL;
+  EXPECT_ERR(monero_wallet_sweep_output(a, "{\"keyImage\":\"00\",\"destinations\":[{\"address\":\"" ADDRESS "\"}],\"relay\":false}", &json));
+  CHECK(json == NULL);
+  EXPECT_OK(monero_wallet_sweep_unlocked(a, "{\"accountIndex\":0,\"destinations\":[{\"address\":\"" ADDRESS "\"}],\"relay\":false}", &json));
+  CHECK(is_list(json) && has(json, "\"fee\":"));
+  monero_utils_free(json);
+  json = NULL;
 
   // bad metadata and bad tx JSON fail
   EXPECT_ERR(monero_wallet_relay_tx(a, "00", &json));
   CHECK(json == NULL);
   EXPECT_ERR(monero_wallet_relay_tx_json(a, "{}", &tx_hash));
   CHECK(tx_hash == NULL);
+  const char* const bad_metadatas[] = {"00"};
+  EXPECT_ERR(monero_wallet_relay_txs(a, bad_metadatas, 1, &json));
+  CHECK(json == NULL);
+  EXPECT_OK(monero_wallet_relay_txs(a, NULL, 0, &json));
+  CHECK(is_list(json));
+  monero_utils_free(json);
+  json = NULL;
+  EXPECT_ERR(monero_wallet_submit_multisig_tx_hex(a, "00", &json));
+  CHECK(json == NULL);
   EXPECT_OK(monero_wallet_relay_txs_json(a, "[]", &json));
   CHECK(is_list(json));
   monero_utils_free(json);

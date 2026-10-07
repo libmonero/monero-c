@@ -105,7 +105,9 @@ static void test_key_validation(void) {
   CHECK(!monero_utils_is_valid_public_view_key(""));
 
   CHECK(monero_utils_is_valid_private_spend_key(PRIVATE_SPEND_KEY));
+  EXPECT_OK(monero_utils_validate_private_spend_key(PRIVATE_SPEND_KEY));
   CHECK(!monero_utils_is_valid_private_spend_key(""));
+  EXPECT_ERR_MSG(monero_utils_validate_private_spend_key(""), "private spend key expected to be 64 hex characters");
 
   CHECK(monero_utils_is_valid_public_spend_key(PUBLIC_SPEND_KEY));
   EXPECT_OK(monero_utils_validate_public_spend_key(PUBLIC_SPEND_KEY));
@@ -345,6 +347,46 @@ static void test_json_binary_roundtrip(void) {
   }
 }
 
+// both converters read a get_blocks.bin response
+static void test_binary_blocks_to_json(void) {
+  uint8_t* bin = NULL;
+  size_t bin_len = 0;
+  char* json = NULL;
+  const uint8_t garbage[] = {1, 2, 3};
+
+  EXPECT_OK(monero_utils_json_to_binary("{\"blocks\":[],\"status\":\"OK\"}", &bin, &bin_len));
+  if (bin != NULL) {
+    EXPECT_OK(monero_utils_binary_blocks_to_json(bin, bin_len, &json));
+    CHECK(json != NULL && strstr(json, "\"status\":\"OK\"") != NULL);
+    monero_utils_free(json);
+    json = NULL;
+    EXPECT_OK(monero_utils_binary_blocks_fast_to_json(bin, bin_len, &json));
+    CHECK(json != NULL && strstr(json, "\"current_height\"") != NULL);
+    monero_utils_free(json);
+    json = NULL;
+    monero_utils_free(bin);
+  }
+  EXPECT_ERR_MSG(monero_utils_binary_blocks_fast_to_json(garbage, sizeof(garbage), &json), "failed to parse get_blocks.bin response");
+  CHECK(json == NULL);
+}
+
+// the log setters return nothing, so check the log file
+static void test_logging(void) {
+  const char* path = "monero_c_utils_unit_tests.log";
+  FILE* file = NULL;
+  remove(path);
+  monero_utils_set_log_level(1);
+  monero_utils_set_log_categories("");
+  monero_utils_set_log_categories(NULL);
+  monero_utils_configure_logging(path, false);
+  monero_utils_set_log_level(0);
+  file = fopen(path, "r");
+  CHECK(file != NULL);
+  if (file != NULL) fclose(file);
+  monero_utils_configure_logging(NULL, false);
+  remove(path);
+}
+
 // ---------------------------------- MAIN ------------------------------------
 
 int main(void) {
@@ -364,6 +406,8 @@ int main(void) {
   test_get_payment_uri();
   test_parse_payment_uri_wrong_scheme();
   test_json_binary_roundtrip();
+  test_binary_blocks_to_json();
+  test_logging();
 
   printf("%d/%d checks passed\n", g_checks - g_failures, g_checks);
   return g_failures == 0 ? EXIT_SUCCESS : EXIT_FAILURE;

@@ -204,6 +204,29 @@ static void test_rpc_wallet_from_connection(void) {
   monero_wallet_free(wallet);
 }
 
+// every function rejects a NULL connection
+static void test_every_function_rejects_null_connection(void) {
+  char* json = NULL;
+  bool flag = false;
+  size_t count = 0;
+  uint8_t* data = NULL;
+  monero_optional_bool status = MONERO_OPTIONAL_BOOL_UNSET;
+  EXPECT_ERR_MSG(monero_rpc_connection_serialize(NULL, &json), "connection must not be null");
+  EXPECT_ERR_MSG(monero_rpc_connection_set_credentials(NULL, "x", "x"), "connection must not be null");
+  EXPECT_ERR_MSG(monero_rpc_connection_set_attribute(NULL, "x", "x"), "connection must not be null");
+  EXPECT_ERR_MSG(monero_rpc_connection_get_attribute(NULL, "x", &json), "connection must not be null");
+  EXPECT_ERR_MSG(monero_rpc_connection_is_onion(NULL, &flag), "connection must not be null");
+  EXPECT_ERR_MSG(monero_rpc_connection_is_i2p(NULL, &flag), "connection must not be null");
+  EXPECT_ERR_MSG(monero_rpc_connection_is_online(NULL, &status), "connection must not be null");
+  EXPECT_ERR_MSG(monero_rpc_connection_is_authenticated(NULL, &status), "connection must not be null");
+  EXPECT_ERR_MSG(monero_rpc_connection_is_connected(NULL, &status), "connection must not be null");
+  EXPECT_ERR_MSG(monero_rpc_connection_check_connection(NULL, NULL, &flag), "connection must not be null");
+  EXPECT_ERR_MSG(monero_rpc_connection_send_json_request(NULL, "x", "x", NULL, &json), "connection must not be null");
+  EXPECT_ERR_MSG(monero_rpc_connection_send_path_request(NULL, "x", "x", NULL, &json), "connection must not be null");
+  EXPECT_ERR_MSG(monero_rpc_connection_send_binary_request(NULL, "x", "x", NULL, &data, &count), "connection must not be null");
+  CHECK(json == NULL && data == NULL);
+}
+
 #if !defined(_WIN32)
 
 #include <netinet/in.h>
@@ -397,6 +420,7 @@ int main(void) {
   test_check_unreachable();
   test_daemon_from_connection();
   test_rpc_wallet_from_connection();
+  test_every_function_rejects_null_connection();
 #if !defined(_WIN32)
   // a client that closes its socket while the server writes must not stop the program
   signal(SIGPIPE, SIG_IGN);
