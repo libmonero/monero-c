@@ -222,8 +222,8 @@ jobs:
           cd build-coverage
           lcov --capture --directory . --ignore-errors gcov,source --output-file coverage_full.info
           lcov --extract coverage_full.info "$GITHUB_WORKSPACE/src/*" --output-file coverage.info
+          genhtml coverage.info --output-directory coverage_html --title "monero-c coverage @ $(printf '%.7s' "$GITHUB_SHA")"
           sed -i "s|$GITHUB_WORKSPACE/||g" coverage.info
-          genhtml coverage.info --output-directory coverage_html --ignore-errors source --title "monero-c coverage @ $(printf '%.7s' "$GITHUB_SHA")"
           lcov --summary coverage.info
 
       - name: Stage coverage report
