@@ -201,7 +201,8 @@ static void test_invalid_arguments(void) {
   CHECK(wallet == NULL);
   EXPECT_ERR_MSG(monero_wallet_keys_create_from_keys(MAINNET, NULL, VIEW_KEY, NULL, NULL, &wallet), "address must not be null");
   EXPECT_ERR(monero_wallet_keys_create_from_keys(MAINNET, ADDRESS, "not hex", NULL, NULL, &wallet));
-  EXPECT_ERR_MSG(monero_wallet_keys_create_random((monero_utils_network_type) 9, NULL, &wallet), "unknown network type");
+  EXPECT_ERR_MSG(monero_wallet_keys_create_random(9, NULL, &wallet), "unknown network type");
+  EXPECT_ERR_MSG(monero_wallet_keys_create_random(-1, NULL, &wallet), "unknown network type");
   EXPECT_ERR(monero_wallet_keys_create_random(MAINNET, "Klingon", &wallet));
   CHECK(wallet == NULL);
 }
@@ -333,6 +334,9 @@ static void test_sign_and_verify(void) {
   if (wallet == NULL) return;
 
   char* signature = NULL;
+  EXPECT_ERR_MSG(monero_wallet_sign_message(wallet, "hello", 2, 0, 0, &signature), "unknown signature type");
+  EXPECT_ERR_MSG(monero_wallet_sign_message(wallet, "hello", -1, 0, 0, &signature), "unknown signature type");
+  CHECK(signature == NULL);
   EXPECT_OK(monero_wallet_sign_message(wallet, "hello", MONERO_MESSAGE_SIGN_WITH_SPEND_KEY, 0, 0, &signature));
   CHECK(signature != NULL && strncmp(signature, "Sig", 3) == 0);
 

@@ -91,14 +91,14 @@ public:
 };
 
 // monero-cpp's network enum has the same values as the C enum, except regtest, which is mainnet with the regtest flag
-monero::monero_network_type to_network(monero_utils_network_type network_type) {
-  if (network_type > MONERO_UTILS_NETWORK_REGTEST) throw std::runtime_error("unknown network type");
+monero::monero_network_type to_network(int32_t network_type) {
+  if (network_type < MONERO_UTILS_NETWORK_MAINNET || network_type > MONERO_UTILS_NETWORK_REGTEST) throw std::runtime_error("unknown network type");
   if (network_type == MONERO_UTILS_NETWORK_REGTEST) return monero::monero_network_type::MAINNET;
   return static_cast<monero::monero_network_type>(network_type);
 }
 
 // monero-cpp reads most fields with get(), so every field is set, empty when unused
-monero::monero_wallet_config make_config(const char* path, const char* password, monero_utils_network_type network_type, const char* language) {
+monero::monero_wallet_config make_config(const char* path, const char* password, int32_t network_type, const char* language) {
   monero::monero_wallet_config config;
   config.m_path = safe_str(path);
   config.m_password = safe_str(password);
@@ -118,7 +118,7 @@ monero::monero_wallet_config make_config(const char* path, const char* password,
 }
 
 // takes ownership of a wallet returned by monero-cpp, created or opened on network_type
-::monero_wallet* wrap(std::unique_ptr<monero::monero_wallet> wallet, monero_utils_network_type network_type) {
+::monero_wallet* wrap(std::unique_ptr<monero::monero_wallet> wallet, int32_t network_type) {
   std::unique_ptr<::monero_wallet> handle(new ::monero_wallet());
   handle->wallet = std::shared_ptr<monero::monero_wallet>(std::move(wallet));
   handle->regtest = network_type == MONERO_UTILS_NETWORK_REGTEST;
@@ -126,8 +126,8 @@ monero::monero_wallet_config make_config(const char* path, const char* password,
 }
 
 // monero-cpp's signature key enum has the same values as the C enum
-monero::monero_message_signature_type to_signature_type(::monero_message_signature_type signature_type) {
-  if (signature_type > MONERO_MESSAGE_SIGN_WITH_VIEW_KEY) throw std::runtime_error("unknown signature type");
+monero::monero_message_signature_type to_signature_type(int32_t signature_type) {
+  if (signature_type < MONERO_MESSAGE_SIGN_WITH_SPEND_KEY || signature_type > MONERO_MESSAGE_SIGN_WITH_VIEW_KEY) throw std::runtime_error("unknown signature type");
   return static_cast<monero::monero_message_signature_type>(signature_type);
 }
 
@@ -254,7 +254,7 @@ extern "C" {
 
 // -------------------------------- WALLET ------------------------------------
 
-monero_result monero_wallet_create_random(const char* path, const char* password, monero_utils_network_type network_type, const char* language, ::monero_wallet** out_wallet) {
+monero_result monero_wallet_create_random(const char* path, const char* password, int32_t network_type, const char* language, ::monero_wallet** out_wallet) {
   if (!require(path, "path") || !require(out_wallet, "out_wallet")) return MONERO_ERROR;
   *out_wallet = nullptr;
   return guard([&] {
@@ -269,7 +269,7 @@ monero_result monero_wallet_create_random(const char* path, const char* password
   });
 }
 
-monero_result monero_wallet_create_from_seed(const char* path, const char* password, monero_utils_network_type network_type, const char* seed, const char* seed_offset, uint64_t restore_height, const char* language, ::monero_wallet** out_wallet) {
+monero_result monero_wallet_create_from_seed(const char* path, const char* password, int32_t network_type, const char* seed, const char* seed_offset, uint64_t restore_height, const char* language, ::monero_wallet** out_wallet) {
   if (!require(path, "path") || !require(seed, "seed") || !require(out_wallet, "out_wallet")) return MONERO_ERROR;
   *out_wallet = nullptr;
   return guard([&] {
@@ -281,7 +281,7 @@ monero_result monero_wallet_create_from_seed(const char* path, const char* passw
   });
 }
 
-monero_result monero_wallet_create_from_keys(const char* path, const char* password, monero_utils_network_type network_type, const char* address, const char* private_view_key, const char* private_spend_key, uint64_t restore_height, const char* language, ::monero_wallet** out_wallet) {
+monero_result monero_wallet_create_from_keys(const char* path, const char* password, int32_t network_type, const char* address, const char* private_view_key, const char* private_spend_key, uint64_t restore_height, const char* language, ::monero_wallet** out_wallet) {
   if (!require(path, "path") || !require(address, "address") || !require(private_view_key, "private_view_key") || !require(out_wallet, "out_wallet")) return MONERO_ERROR;
   *out_wallet = nullptr;
   return guard([&] {
@@ -294,7 +294,7 @@ monero_result monero_wallet_create_from_keys(const char* path, const char* passw
   });
 }
 
-monero_result monero_wallet_open(const char* path, const char* password, monero_utils_network_type network_type, ::monero_wallet** out_wallet) {
+monero_result monero_wallet_open(const char* path, const char* password, int32_t network_type, ::monero_wallet** out_wallet) {
   if (!require(path, "path") || !require(out_wallet, "out_wallet")) return MONERO_ERROR;
   *out_wallet = nullptr;
   return guard([&] {
@@ -313,7 +313,7 @@ monero_result monero_wallet_get_seed_languages(char** out_json) {
   return guard([&] { *out_json = dup_string(json_of_strings(monero::monero_wallet_full::get_seed_languages())); });
 }
 
-monero_result monero_wallet_keys_create_random(monero_utils_network_type network_type, const char* language, ::monero_wallet** out_wallet) {
+monero_result monero_wallet_keys_create_random(int32_t network_type, const char* language, ::monero_wallet** out_wallet) {
   if (!require(out_wallet, "out_wallet")) return MONERO_ERROR;
   *out_wallet = nullptr;
   return guard([&] {
@@ -322,7 +322,7 @@ monero_result monero_wallet_keys_create_random(monero_utils_network_type network
   });
 }
 
-monero_result monero_wallet_keys_create_from_seed(monero_utils_network_type network_type, const char* seed, const char* seed_offset, const char* language, ::monero_wallet** out_wallet) {
+monero_result monero_wallet_keys_create_from_seed(int32_t network_type, const char* seed, const char* seed_offset, const char* language, ::monero_wallet** out_wallet) {
   if (!require(seed, "seed") || !require(out_wallet, "out_wallet")) return MONERO_ERROR;
   *out_wallet = nullptr;
   return guard([&] {
@@ -333,7 +333,7 @@ monero_result monero_wallet_keys_create_from_seed(monero_utils_network_type netw
   });
 }
 
-monero_result monero_wallet_keys_create_from_keys(monero_utils_network_type network_type, const char* address, const char* private_view_key, const char* private_spend_key, const char* language, ::monero_wallet** out_wallet) {
+monero_result monero_wallet_keys_create_from_keys(int32_t network_type, const char* address, const char* private_view_key, const char* private_spend_key, const char* language, ::monero_wallet** out_wallet) {
   if (!require(address, "address") || !require(private_view_key, "private_view_key") || !require(out_wallet, "out_wallet")) return MONERO_ERROR;
   *out_wallet = nullptr;
   return guard([&] {
@@ -476,7 +476,7 @@ monero_result monero_wallet_get_subaddresses(::monero_wallet* wallet, uint32_t a
   });
 }
 
-monero_result monero_wallet_sign_message(::monero_wallet* wallet, const char* message, ::monero_message_signature_type signature_type, uint32_t account_idx, uint32_t subaddress_idx, char** out_signature) {
+monero_result monero_wallet_sign_message(::monero_wallet* wallet, const char* message, int32_t signature_type, uint32_t account_idx, uint32_t subaddress_idx, char** out_signature) {
   if (!require(wallet, "wallet") || !require(message, "message") || !require(out_signature, "out_signature")) return MONERO_ERROR;
   *out_signature = nullptr;
   return guard([&] { *out_signature = dup_string(wallet->wallet->sign_message(std::string(message), to_signature_type(signature_type), account_idx, subaddress_idx)); });

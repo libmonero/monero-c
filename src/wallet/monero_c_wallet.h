@@ -124,19 +124,19 @@ typedef struct monero_wallet_listener_callbacks {
  *
  * @param path is the path of the wallet file
  * @param password encrypts the wallet files. NULL or "" for no password
- * @param network_type is the network of the wallet
+ * @param network_type is the monero_utils_network_type of the wallet
  * @param language is the seed language. NULL for English
  * @param out_wallet receives the handle, released with monero_wallet_free()
  * @return MONERO_OK or MONERO_ERROR
  */
-MONERO_EXPORT monero_result monero_wallet_create_random(const char* path, const char* password, monero_utils_network_type network_type, const char* language, monero_wallet** out_wallet);
+MONERO_EXPORT monero_result monero_wallet_create_random(const char* path, const char* password, int32_t network_type, const char* language, monero_wallet** out_wallet);
 
 /**
  * Restore a wallet from its mnemonic seed and save it to disk.
  *
  * @param path is the path of the wallet file
  * @param password encrypts the wallet files. NULL or "" for no password
- * @param network_type is the network of the wallet
+ * @param network_type is the monero_utils_network_type of the wallet
  * @param seed is the mnemonic seed
  * @param seed_offset is the passphrase that extends the seed. NULL or "" for none
  * @param restore_height is the first block to scan. 0 scans from the genesis block
@@ -144,7 +144,7 @@ MONERO_EXPORT monero_result monero_wallet_create_random(const char* path, const 
  * @param out_wallet receives the handle, released with monero_wallet_free()
  * @return MONERO_OK or MONERO_ERROR
  */
-MONERO_EXPORT monero_result monero_wallet_create_from_seed(const char* path, const char* password, monero_utils_network_type network_type, const char* seed, const char* seed_offset, uint64_t restore_height, const char* language, monero_wallet** out_wallet);
+MONERO_EXPORT monero_result monero_wallet_create_from_seed(const char* path, const char* password, int32_t network_type, const char* seed, const char* seed_offset, uint64_t restore_height, const char* language, monero_wallet** out_wallet);
 
 /**
  * Restore a wallet from its keys and save it to disk. Without a private spend key the wallet
@@ -152,7 +152,7 @@ MONERO_EXPORT monero_result monero_wallet_create_from_seed(const char* path, con
  *
  * @param path is the path of the wallet file
  * @param password encrypts the wallet files. NULL or "" for no password
- * @param network_type is the network of the wallet
+ * @param network_type is the monero_utils_network_type of the wallet
  * @param address is the primary address
  * @param private_view_key is the private view key, in hex
  * @param private_spend_key is the private spend key, in hex. NULL or "" for a view-only wallet
@@ -161,18 +161,18 @@ MONERO_EXPORT monero_result monero_wallet_create_from_seed(const char* path, con
  * @param out_wallet receives the handle, released with monero_wallet_free()
  * @return MONERO_OK or MONERO_ERROR
  */
-MONERO_EXPORT monero_result monero_wallet_create_from_keys(const char* path, const char* password, monero_utils_network_type network_type, const char* address, const char* private_view_key, const char* private_spend_key, uint64_t restore_height, const char* language, monero_wallet** out_wallet);
+MONERO_EXPORT monero_result monero_wallet_create_from_keys(const char* path, const char* password, int32_t network_type, const char* address, const char* private_view_key, const char* private_spend_key, uint64_t restore_height, const char* language, monero_wallet** out_wallet);
 
 /**
  * Open a wallet from its files on disk.
  *
  * @param path is the path of the wallet file
  * @param password decrypts the wallet files. NULL or "" for no password
- * @param network_type is the network of the wallet
+ * @param network_type is the monero_utils_network_type of the wallet
  * @param out_wallet receives the handle, released with monero_wallet_free()
  * @return MONERO_OK or MONERO_ERROR
  */
-MONERO_EXPORT monero_result monero_wallet_open(const char* path, const char* password, monero_utils_network_type network_type, monero_wallet** out_wallet);
+MONERO_EXPORT monero_result monero_wallet_open(const char* path, const char* password, int32_t network_type, monero_wallet** out_wallet);
 
 /**
  * Check if a wallet exists at the given path. It looks for the keys file, path + ".keys".
@@ -195,29 +195,29 @@ MONERO_EXPORT monero_result monero_wallet_get_seed_languages(char** out_json);
  * Create a keys-only wallet with a new random seed. It has no files, so monero_wallet_save() and
  * monero_wallet_close(wallet, true) fail on it. It also has no height, sync or transactions.
  *
- * @param network_type is the network of the wallet
+ * @param network_type is the monero_utils_network_type of the wallet
  * @param language is the seed language. NULL for English
  * @param out_wallet receives the handle, released with monero_wallet_free()
  * @return MONERO_OK or MONERO_ERROR
  */
-MONERO_EXPORT monero_result monero_wallet_keys_create_random(monero_utils_network_type network_type, const char* language, monero_wallet** out_wallet);
+MONERO_EXPORT monero_result monero_wallet_keys_create_random(int32_t network_type, const char* language, monero_wallet** out_wallet);
 
 /**
  * Restore a keys-only wallet from its mnemonic seed.
  *
- * @param network_type is the network of the wallet
+ * @param network_type is the monero_utils_network_type of the wallet
  * @param seed is the mnemonic seed
  * @param seed_offset is the passphrase that extends the seed. NULL or "" for none
  * @param language is the seed language. NULL for English
  * @param out_wallet receives the handle, released with monero_wallet_free()
  * @return MONERO_OK or MONERO_ERROR
  */
-MONERO_EXPORT monero_result monero_wallet_keys_create_from_seed(monero_utils_network_type network_type, const char* seed, const char* seed_offset, const char* language, monero_wallet** out_wallet);
+MONERO_EXPORT monero_result monero_wallet_keys_create_from_seed(int32_t network_type, const char* seed, const char* seed_offset, const char* language, monero_wallet** out_wallet);
 
 /**
  * Restore a keys-only wallet from its keys. Without a private spend key the wallet is view-only.
  *
- * @param network_type is the network of the wallet
+ * @param network_type is the monero_utils_network_type of the wallet
  * @param address is the primary address
  * @param private_view_key is the private view key, in hex
  * @param private_spend_key is the private spend key, in hex. NULL or "" for a view-only wallet
@@ -225,7 +225,7 @@ MONERO_EXPORT monero_result monero_wallet_keys_create_from_seed(monero_utils_net
  * @param out_wallet receives the handle, released with monero_wallet_free()
  * @return MONERO_OK or MONERO_ERROR
  */
-MONERO_EXPORT monero_result monero_wallet_keys_create_from_keys(monero_utils_network_type network_type, const char* address, const char* private_view_key, const char* private_spend_key, const char* language, monero_wallet** out_wallet);
+MONERO_EXPORT monero_result monero_wallet_keys_create_from_keys(int32_t network_type, const char* address, const char* private_view_key, const char* private_spend_key, const char* language, monero_wallet** out_wallet);
 
 /**
  * Save the wallet to disk.
@@ -467,13 +467,13 @@ MONERO_EXPORT monero_result monero_wallet_get_subaddresses(monero_wallet* wallet
  *
  * @param wallet is the wallet handle
  * @param message is the message to sign
- * @param signature_type is the key that signs the message
+ * @param signature_type is the monero_message_signature_type, the key that signs the message
  * @param account_idx is the account index
  * @param subaddress_idx is the subaddress index within the account
  * @param out_signature receives the signature. Free with monero_utils_free()
  * @return MONERO_OK or MONERO_ERROR
  */
-MONERO_EXPORT monero_result monero_wallet_sign_message(monero_wallet* wallet, const char* message, monero_message_signature_type signature_type, uint32_t account_idx, uint32_t subaddress_idx, char** out_signature);
+MONERO_EXPORT monero_result monero_wallet_sign_message(monero_wallet* wallet, const char* message, int32_t signature_type, uint32_t account_idx, uint32_t subaddress_idx, char** out_signature);
 
 /**
  * Verify a signature made by monero_wallet_sign_message() for an address. A signature that doesn't

@@ -180,7 +180,9 @@ static void test_restore_and_open(void) {
 static void test_invalid_arguments(void) {
   monero_wallet* wallet = NULL;
   EXPECT_ERR_MSG(monero_wallet_create_random(NULL, PASSWORD, NETWORK, NULL, &wallet), "path must not be null");
-  EXPECT_ERR_MSG(monero_wallet_create_random("monero_c_wallet_unit_bad", PASSWORD, (monero_utils_network_type) 9, NULL, &wallet), "unknown network type");
+  EXPECT_ERR_MSG(monero_wallet_create_random("monero_c_wallet_unit_bad", PASSWORD, 9, NULL, &wallet), "unknown network type");
+  EXPECT_ERR_MSG(monero_wallet_create_random("monero_c_wallet_unit_bad", PASSWORD, -1, NULL, &wallet), "unknown network type");
+  EXPECT_ERR_MSG(monero_wallet_open("monero_c_wallet_unit_bad", PASSWORD, 4, &wallet), "unknown network type");
   CHECK(wallet == NULL);
   EXPECT_ERR(monero_wallet_open("monero_c_wallet_unit_missing", PASSWORD, NETWORK, &wallet));
   CHECK(wallet == NULL);
