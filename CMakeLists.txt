@@ -290,6 +290,8 @@ target_link_libraries(monero_c-static PRIVATE ${MONERO_C_LINK_LIBS})
 # monero-project's ge25519 asm lacks .note.GNU-stack. Keep the stack non-executable (GNU ld/lld only)
 if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
   target_link_options(monero_c PRIVATE -Wl,-z,noexecstack)
+  # export only the C ABI, not the symbols of the static archives (monero-project, boost, OpenSSL)
+  target_link_options(monero_c PRIVATE -Wl,--exclude-libs,ALL)
   # the static lib has no link step, so its consumers must get the flag
   target_link_options(monero_c-static INTERFACE -Wl,-z,noexecstack)
 endif()

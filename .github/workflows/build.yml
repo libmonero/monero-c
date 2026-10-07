@@ -161,6 +161,9 @@ jobs:
           cmake --build . -j3
           cd ..
 
+      - name: Check exported symbols
+        run: cmake -DLIBRARY=build/libmonero_c.so -DEXPECTED=tests/abi/monero_c.symbols -P tests/abi/check_symbols.cmake
+
       - name: Stage monero_c build
         run: |
           mkdir -p dist
