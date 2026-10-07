@@ -41,9 +41,19 @@ jobs:
           until [ "$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$RUN_ID" --jq .status || true)" = "completed" ]; do
             sleep 60
           done
-          COUNT=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$RUN_ID/artifacts" --jq '[.artifacts[] | select(.name | startswith("monero-c-")) | select(.expired | not)] | length' || echo 0)
-          echo "Build run $RUN_ID has $COUNT monero-c artifacts"
-          if [ "$COUNT" -eq 0 ]; then echo "Build produced no monero-c artifacts"; exit 1; fi
+          CONCLUSION=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$RUN_ID" --jq .conclusion)
+          if [ "$CONCLUSION" != "success" ]; then
+            echo "Build run $RUN_ID concluded with $CONCLUSION"; exit 1
+          fi
+          MISSING=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$RUN_ID/artifacts" --jq '
+            [.artifacts[] | select(.expired | not) | .name] as $available |
+            ["monero-c-linux-x86_64", "monero-c-linux-arm64", "monero-c-mac-x86_64", "monero-c-mac-arm64", "monero-c-windows"] |
+            map(select(. as $name | $available | index($name) == null)) | .[]')
+          if [ -n "$MISSING" ]; then
+            echo "Build run $RUN_ID is missing required artifacts:"
+            echo "$MISSING"
+            exit 1
+          fi
           echo "run-id=$RUN_ID" >> "$GITHUB_OUTPUT"
 
   linux:
