@@ -19,7 +19,7 @@ Unit tests need no daemon. The integration test loads the package and calls `mon
 
 ## Package contents
 
-CI packages `linux-x64`, `linux-arm64`, `win-x64`, `osx-x64` and `osx-arm64`, and runs the managed tests on Ubuntu, Debian 12, Windows x64 and both macOS architectures. Dependencies are linked statically except libusb, which is bundled as a shared library with its LGPL license and source archive. The Windows build disables Trezor support, so `monero_c.dll` does not import libusb. On Linux, libusb also requires the system `libudev.so.1` library.
+CI packages `linux-x64`, `linux-arm64`, `win-x64`, `osx-x64` and `osx-arm64`, and runs the managed tests on Ubuntu 24.04 and Debian 12 (x64 and arm64), Windows x64 and both macOS architectures. The [package README](../packaging/dotnet-core/README.md) lists the minimum version of each platform. Dependencies are linked statically except libusb, which is bundled as a shared library with its LGPL license and source archive. The Windows build disables Trezor support, so `monero_c.dll` does not import libusb. libusb is built with `--disable-udev`, so it does not need `libudev`.
 
 For native CMake support in Rider, open the repository's [`CMakeLists.txt`](../CMakeLists.txt).
 
