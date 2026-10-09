@@ -121,7 +121,7 @@ monero_key_image_spent_status to_c_status(monero::monero_key_image_spent_status 
 class listener_adapter : public monero::monero_daemon_listener {
 public:
   ::monero_daemon_listener* owner = nullptr;  // the C handle, not the base class of the same name
-  monero_daemon_listener_callbacks callbacks = {nullptr, nullptr};
+  monero_daemon_listener_callbacks callbacks = {};
 
   void on_block_header(const std::shared_ptr<monero::monero_block_header>& header) override {
     monero::monero_daemon_listener::on_block_header(header);

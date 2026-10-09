@@ -786,7 +786,7 @@ MONERO_EXPORT monero_result monero_wallet_export_outputs(monero_wallet* wallet, 
  * @param out_num_imported receives the number of imported outputs
  * @return MONERO_OK or MONERO_ERROR
  */
-MONERO_EXPORT monero_result monero_wallet_import_outputs(monero_wallet* wallet, const char* outputs_hex, int* out_num_imported);
+MONERO_EXPORT monero_result monero_wallet_import_outputs(monero_wallet* wallet, const char* outputs_hex, int32_t* out_num_imported);
 
 /**
  * Freeze an output, so the wallet doesn't spend it. Fails for an unknown key image.
@@ -1411,7 +1411,7 @@ MONERO_EXPORT monero_result monero_wallet_prepare_multisig(monero_wallet* wallet
  * @param out_multisig_hex receives the hex to share with the participants, if another round is needed. Free with monero_utils_free()
  * @return MONERO_OK or MONERO_ERROR
  */
-MONERO_EXPORT monero_result monero_wallet_make_multisig(monero_wallet* wallet, const char* const* multisig_hexes, size_t num_multisig_hexes, int threshold, const char* password, char** out_multisig_hex);
+MONERO_EXPORT monero_result monero_wallet_make_multisig(monero_wallet* wallet, const char* const* multisig_hexes, size_t num_multisig_hexes, int32_t threshold, const char* password, char** out_multisig_hex);
 
 /**
  * Exchange the multisig hex with the other participants. Repeat it with the new multisig hex of each
@@ -1445,7 +1445,7 @@ MONERO_EXPORT monero_result monero_wallet_export_multisig_hex(monero_wallet* wal
  * @param out_num_imported receives the number of imported outputs
  * @return MONERO_OK or MONERO_ERROR
  */
-MONERO_EXPORT monero_result monero_wallet_import_multisig_hex(monero_wallet* wallet, const char* const* multisig_hexes, size_t num_multisig_hexes, bool refresh_after_import, int* out_num_imported);
+MONERO_EXPORT monero_result monero_wallet_import_multisig_hex(monero_wallet* wallet, const char* const* multisig_hexes, size_t num_multisig_hexes, bool refresh_after_import, int32_t* out_num_imported);
 
 /**
  * Sign multisig transactions, given as the hex shared when they were created.

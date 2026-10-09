@@ -64,7 +64,7 @@ namespace {
 class wallet_listener_adapter : public monero::monero_wallet_listener {
 public:
   ::monero_wallet_listener* owner = nullptr;  // the C handle, not the base class of the same name
-  monero_wallet_listener_callbacks callbacks = {nullptr, nullptr, nullptr, nullptr};
+  monero_wallet_listener_callbacks callbacks = {};
 
   void on_sync_progress(uint64_t height, uint64_t start_height, uint64_t end_height, double percent_done, const std::string& message) override {
     if (callbacks.on_sync_progress == nullptr) return;
@@ -661,7 +661,7 @@ monero_result monero_wallet_export_outputs(::monero_wallet* wallet, bool all, ch
   return guard([&] { *out_hex = dup_string(wallet->wallet->export_outputs(all)); });
 }
 
-monero_result monero_wallet_import_outputs(::monero_wallet* wallet, const char* outputs_hex, int* out_num_imported) {
+monero_result monero_wallet_import_outputs(::monero_wallet* wallet, const char* outputs_hex, int32_t* out_num_imported) {
   if (!require(wallet, "wallet") || !require(outputs_hex, "outputs_hex") || !require(out_num_imported, "out_num_imported")) return MONERO_ERROR;
   return guard([&] { *out_num_imported = wallet->wallet->import_outputs(std::string(outputs_hex)); });
 }
@@ -1074,7 +1074,7 @@ monero_result monero_wallet_prepare_multisig(::monero_wallet* wallet, char** out
   return guard([&] { *out_multisig_hex = dup_string(wallet->wallet->prepare_multisig()); });
 }
 
-monero_result monero_wallet_make_multisig(::monero_wallet* wallet, const char* const* multisig_hexes, size_t num_multisig_hexes, int threshold, const char* password, char** out_multisig_hex) {
+monero_result monero_wallet_make_multisig(::monero_wallet* wallet, const char* const* multisig_hexes, size_t num_multisig_hexes, int32_t threshold, const char* password, char** out_multisig_hex) {
   reset_out(out_multisig_hex);
   if (!require(wallet, "wallet") || !require(out_multisig_hex, "out_multisig_hex")) return MONERO_ERROR;
   return guard([&] { *out_multisig_hex = dup_string(wallet->wallet->make_multisig(string_array(multisig_hexes, num_multisig_hexes, "multisig_hexes"), threshold, safe_str(password))); });
@@ -1092,7 +1092,7 @@ monero_result monero_wallet_export_multisig_hex(::monero_wallet* wallet, char** 
   return guard([&] { *out_multisig_hex = dup_string(wallet->wallet->export_multisig_hex()); });
 }
 
-monero_result monero_wallet_import_multisig_hex(::monero_wallet* wallet, const char* const* multisig_hexes, size_t num_multisig_hexes, bool refresh_after_import, int* out_num_imported) {
+monero_result monero_wallet_import_multisig_hex(::monero_wallet* wallet, const char* const* multisig_hexes, size_t num_multisig_hexes, bool refresh_after_import, int32_t* out_num_imported) {
   if (!require(wallet, "wallet") || !require(out_num_imported, "out_num_imported")) return MONERO_ERROR;
   return guard([&] { *out_num_imported = wallet->wallet->import_multisig_hex(string_array(multisig_hexes, num_multisig_hexes, "multisig_hexes"), refresh_after_import); });
 }
