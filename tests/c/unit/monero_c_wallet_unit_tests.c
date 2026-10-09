@@ -199,6 +199,42 @@ static void test_invalid_arguments(void) {
   monero_wallet_listener_free(NULL);
 }
 
+// a call that fails on a NULL argument resets its outputs too, whichever output it can reach
+static void test_null_arguments_reset_outputs(void) {
+  monero_wallet* wallet = POISON_PTR;
+  monero_wallet_listener* listener = POISON_PTR;
+  char* json = POISON_PTR;
+
+  EXPECT_ERR(monero_wallet_create_random(NULL, PASSWORD, NETWORK, NULL, &wallet));
+  CHECK(wallet == NULL);
+  wallet = POISON_PTR;
+  EXPECT_ERR(monero_wallet_create_from_seed("monero_c_wallet_unit_bad", PASSWORD, NETWORK, NULL, NULL, 0, NULL, &wallet));
+  CHECK(wallet == NULL);
+  wallet = POISON_PTR;
+  EXPECT_ERR(monero_wallet_open(NULL, PASSWORD, NETWORK, &wallet));
+  CHECK(wallet == NULL);
+  wallet = POISON_PTR;
+  EXPECT_ERR(monero_wallet_rpc_open(NULL, NULL, NULL, "name", NULL, &wallet));
+  CHECK(wallet == NULL);
+  wallet = POISON_PTR;
+  EXPECT_ERR(monero_wallet_rpc_create_random(NULL, NULL, NULL, "name", NULL, NULL, &wallet));
+  CHECK(wallet == NULL);
+  wallet = POISON_PTR;
+  EXPECT_ERR(monero_wallet_rpc_create_from_keys(NULL, NULL, NULL, "name", NULL, NULL, NULL, NULL, 0, NULL, &wallet));
+  CHECK(wallet == NULL);
+  EXPECT_ERR(monero_wallet_listener_create(NULL, &listener));
+  CHECK(listener == NULL);
+
+  EXPECT_ERR(monero_wallet_get_seed(NULL, &json));
+  CHECK(json == NULL);
+  json = POISON_PTR;
+  EXPECT_ERR(monero_wallet_get_subaddresses(NULL, 0, NULL, 0, &json));
+  CHECK(json == NULL);
+  json = POISON_PTR;
+  EXPECT_ERR(monero_wallet_get_address_book_entries(NULL, NULL, 0, &json));
+  CHECK(json == NULL);
+}
+
 static void test_listeners(void) {
   const char* first_path = "monero_c_wallet_unit_listener_first";
   const char* second_path = "monero_c_wallet_unit_listener_second";
@@ -444,6 +480,7 @@ int main(void) {
   test_create_random();
   test_restore_and_open();
   test_invalid_arguments();
+  test_null_arguments_reset_outputs();
   test_listeners();
   test_listener_outlives_wallet();
   test_exists_and_seed_languages();

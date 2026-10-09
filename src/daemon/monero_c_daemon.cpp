@@ -53,6 +53,7 @@ using monero_c::json_of_list;
 using monero_c::json_of_strings;
 using monero_c::optional_of;
 using monero_c::require;
+using monero_c::reset_out;
 using monero_c::safe_str;
 using monero_c::set_last_error;
 using monero_c::string_array;
@@ -137,8 +138,8 @@ extern "C" {
 // ------------------------------ CONNECTION ----------------------------------
 
 monero_result monero_daemon_connect(const char* uri, const char* username, const char* password, const char* proxy_uri, uint32_t timeout_ms, monero_daemon** out_daemon) {
+  reset_out(out_daemon);
   if (!require(out_daemon, "out_daemon")) return MONERO_ERROR;
-  *out_daemon = nullptr;
   std::string uri_str = safe_str(uri);
   if (uri_str.empty()) { set_last_error("uri must not be empty"); return MONERO_ERROR; }
   return guard([&] {
@@ -151,8 +152,8 @@ monero_result monero_daemon_connect(const char* uri, const char* username, const
 }
 
 monero_result monero_daemon_connect_with(::monero_rpc_connection* connection, monero_daemon** out_daemon) {
+  reset_out(out_daemon);
   if (!require(connection, "connection") || !require(out_daemon, "out_daemon")) return MONERO_ERROR;
-  *out_daemon = nullptr;
   return guard([&] {
     std::unique_ptr<monero_daemon> daemon(new monero_daemon());
     daemon->rpc = std::make_shared<monero::monero_daemon_rpc>(monero_c::connection_of(connection));
@@ -165,8 +166,8 @@ void monero_daemon_free(monero_daemon* daemon) {
 }
 
 monero_result monero_daemon_get_rpc_connection(monero_daemon* daemon, char** out_json) {
+  reset_out(out_json);
   if (!require(daemon, "daemon") || !require(out_json, "out_json")) return MONERO_ERROR;
-  *out_json = nullptr;
   return guard([&] { *out_json = dup_string(daemon->rpc->get_rpc_connection()->serialize()); });
 }
 
@@ -178,8 +179,8 @@ monero_result monero_daemon_set_poll_period(monero_daemon* daemon, uint64_t peri
 // -------------------------------- LISTENERS ---------------------------------
 
 monero_result monero_daemon_listener_create(const monero_daemon_listener_callbacks* callbacks, monero_daemon_listener** out_listener) {
+  reset_out(out_listener);
   if (!require(callbacks, "callbacks") || !require(out_listener, "out_listener")) return MONERO_ERROR;
-  *out_listener = nullptr;
   return guard([&] {
     std::unique_ptr<monero_daemon_listener> listener(new monero_daemon_listener());
     listener->adapter.owner = listener.get();
@@ -228,9 +229,9 @@ monero_result monero_daemon_remove_listener(monero_daemon* daemon, monero_daemon
 }
 
 monero_result monero_daemon_get_listeners(monero_daemon* daemon, monero_daemon_listener*** out_listeners, size_t* out_count) {
+  reset_out(out_listeners);
+  reset_out(out_count);
   if (!require(daemon, "daemon") || !require(out_listeners, "out_listeners") || !require(out_count, "out_count")) return MONERO_ERROR;
-  *out_listeners = nullptr;
-  *out_count = 0;
   return guard([&] {
     std::vector<monero_daemon_listener*> handles;
     for (monero::monero_daemon_listener* listener : daemon->rpc->get_listeners()) {
@@ -249,8 +250,8 @@ monero_result monero_daemon_remove_listeners(monero_daemon* daemon) {
 // ---------------------------------- GENERAL ---------------------------------
 
 monero_result monero_daemon_get_version(monero_daemon* daemon, char** out_json) {
+  reset_out(out_json);
   if (!require(daemon, "daemon") || !require(out_json, "out_json")) return MONERO_ERROR;
-  *out_json = nullptr;
   return guard([&] { *out_json = dup_json_value(daemon->rpc->get_version()); });
 }
 
@@ -265,78 +266,78 @@ monero_result monero_daemon_get_height(monero_daemon* daemon, uint64_t* out_heig
 }
 
 monero_result monero_daemon_get_block_hash(monero_daemon* daemon, uint64_t height, char** out_hash) {
+  reset_out(out_hash);
   if (!require(daemon, "daemon") || !require(out_hash, "out_hash")) return MONERO_ERROR;
-  *out_hash = nullptr;
   return guard([&] { *out_hash = dup_string(daemon->rpc->get_block_hash(height)); });
 }
 
 monero_result monero_daemon_get_info(monero_daemon* daemon, char** out_json) {
+  reset_out(out_json);
   if (!require(daemon, "daemon") || !require(out_json, "out_json")) return MONERO_ERROR;
-  *out_json = nullptr;
   return guard([&] { *out_json = dup_json(daemon->rpc->get_info()); });
 }
 
 monero_result monero_daemon_get_sync_info(monero_daemon* daemon, char** out_json) {
+  reset_out(out_json);
   if (!require(daemon, "daemon") || !require(out_json, "out_json")) return MONERO_ERROR;
-  *out_json = nullptr;
   return guard([&] { *out_json = dup_json(daemon->rpc->get_sync_info()); });
 }
 
 monero_result monero_daemon_get_network_stats(monero_daemon* daemon, char** out_json) {
+  reset_out(out_json);
   if (!require(daemon, "daemon") || !require(out_json, "out_json")) return MONERO_ERROR;
-  *out_json = nullptr;
   return guard([&] { *out_json = dup_json(daemon->rpc->get_network_stats()); });
 }
 
 monero_result monero_daemon_get_hard_fork_info(monero_daemon* daemon, char** out_json) {
+  reset_out(out_json);
   if (!require(daemon, "daemon") || !require(out_json, "out_json")) return MONERO_ERROR;
-  *out_json = nullptr;
   return guard([&] { *out_json = dup_json(daemon->rpc->get_hard_fork_info()); });
 }
 
 monero_result monero_daemon_get_alt_chains(monero_daemon* daemon, char** out_json) {
+  reset_out(out_json);
   if (!require(daemon, "daemon") || !require(out_json, "out_json")) return MONERO_ERROR;
-  *out_json = nullptr;
   return guard([&] { *out_json = dup_string(json_of_list(daemon->rpc->get_alt_chains())); });
 }
 
 monero_result monero_daemon_get_alt_block_hashes(monero_daemon* daemon, char** out_json) {
+  reset_out(out_json);
   if (!require(daemon, "daemon") || !require(out_json, "out_json")) return MONERO_ERROR;
-  *out_json = nullptr;
   return guard([&] { *out_json = dup_string(json_of_strings(daemon->rpc->get_alt_block_hashes())); });
 }
 
 // ---------------------------------- MINING ----------------------------------
 
 monero_result monero_daemon_get_block_template(monero_daemon* daemon, const char* wallet_address, const int32_t* reserve_size, char** out_json) {
+  reset_out(out_json);
   if (!require(daemon, "daemon") || !require(out_json, "out_json")) return MONERO_ERROR;
-  *out_json = nullptr;
   return guard([&] { *out_json = dup_json(daemon->rpc->get_block_template(safe_str(wallet_address), optional_of(reserve_size))); });
 }
 
 monero_result monero_daemon_get_miner_data(monero_daemon* daemon, char** out_json) {
+  reset_out(out_json);
   if (!require(daemon, "daemon") || !require(out_json, "out_json")) return MONERO_ERROR;
-  *out_json = nullptr;
   return guard([&] { *out_json = dup_json(daemon->rpc->get_miner_data()); });
 }
 
 monero_result monero_daemon_calculate_pow(monero_daemon* daemon, uint32_t major_version, uint64_t height, const char* block_blob, const char* seed_hash, char** out_pow_hash) {
+  reset_out(out_pow_hash);
   if (!require(daemon, "daemon") || !require(out_pow_hash, "out_pow_hash")) return MONERO_ERROR;
-  *out_pow_hash = nullptr;
   return guard([&] { *out_pow_hash = dup_string(daemon->rpc->calculate_pow(major_version, height, safe_str(block_blob), safe_str(seed_hash))); });
 }
 
 monero_result monero_daemon_add_auxiliary_pow(monero_daemon* daemon, const char* block_template_blob, const char* aux_pow_json, char** out_json) {
+  reset_out(out_json);
   if (!require(daemon, "daemon") || !require(out_json, "out_json")) return MONERO_ERROR;
-  *out_json = nullptr;
   return guard([&] {
     *out_json = dup_json(daemon->rpc->add_auxiliary_pow(safe_str(block_template_blob), parse_list<monero::monero_auxiliary_pow>(safe_str(aux_pow_json))));
   });
 }
 
 monero_result monero_daemon_get_mining_status(monero_daemon* daemon, char** out_json) {
+  reset_out(out_json);
   if (!require(daemon, "daemon") || !require(out_json, "out_json")) return MONERO_ERROR;
-  *out_json = nullptr;
   return guard([&] { *out_json = dup_json(daemon->rpc->get_mining_status()); });
 }
 
@@ -351,8 +352,8 @@ monero_result monero_daemon_stop_mining(monero_daemon* daemon) {
 }
 
 monero_result monero_daemon_generate_blocks(monero_daemon* daemon, const char* wallet_address, uint64_t num_blocks, const char* prev_block_hash, const uint32_t* starting_nonce, char** out_json) {
+  reset_out(out_json);
   if (!require(daemon, "daemon") || !require(out_json, "out_json")) return MONERO_ERROR;
-  *out_json = nullptr;
   return guard([&] {
     boost::optional<std::string> prev_hash;
     if (prev_block_hash != nullptr) prev_hash = std::string(prev_block_hash);
@@ -373,98 +374,98 @@ monero_result monero_daemon_submit_blocks(monero_daemon* daemon, const char* con
 // ----------------------------------- BLOCKS ---------------------------------
 
 monero_result monero_daemon_get_last_block_header(monero_daemon* daemon, char** out_json) {
+  reset_out(out_json);
   if (!require(daemon, "daemon") || !require(out_json, "out_json")) return MONERO_ERROR;
-  *out_json = nullptr;
   return guard([&] { *out_json = dup_json(daemon->rpc->get_last_block_header()); });
 }
 
 monero_result monero_daemon_get_block_header_by_hash(monero_daemon* daemon, const char* block_hash, char** out_json) {
+  reset_out(out_json);
   if (!require(daemon, "daemon") || !require(out_json, "out_json")) return MONERO_ERROR;
-  *out_json = nullptr;
   return guard([&] { *out_json = dup_json(daemon->rpc->get_block_header_by_hash(safe_str(block_hash))); });
 }
 
 monero_result monero_daemon_get_block_header_by_height(monero_daemon* daemon, uint64_t height, char** out_json) {
+  reset_out(out_json);
   if (!require(daemon, "daemon") || !require(out_json, "out_json")) return MONERO_ERROR;
-  *out_json = nullptr;
   return guard([&] { *out_json = dup_json(daemon->rpc->get_block_header_by_height(height)); });
 }
 
 monero_result monero_daemon_get_block_headers_by_range(monero_daemon* daemon, uint64_t start_height, uint64_t end_height, char** out_json) {
+  reset_out(out_json);
   if (!require(daemon, "daemon") || !require(out_json, "out_json")) return MONERO_ERROR;
-  *out_json = nullptr;
   return guard([&] { *out_json = dup_string(json_of_list(daemon->rpc->get_block_headers_by_range(start_height, end_height))); });
 }
 
 monero_result monero_daemon_get_block_by_hash(monero_daemon* daemon, const char* block_hash, char** out_json) {
+  reset_out(out_json);
   if (!require(daemon, "daemon") || !require(out_json, "out_json")) return MONERO_ERROR;
-  *out_json = nullptr;
   return guard([&] { *out_json = dup_json(daemon->rpc->get_block_by_hash(safe_str(block_hash))); });
 }
 
 monero_result monero_daemon_get_blocks_by_hash(monero_daemon* daemon, const char* const* block_hashes, size_t num_block_hashes, uint64_t start_height, bool prune, uint64_t max_block_count, char** out_json) {
+  reset_out(out_json);
   if (!require(daemon, "daemon") || !require(out_json, "out_json")) return MONERO_ERROR;
-  *out_json = nullptr;
   return guard([&] {
     *out_json = dup_json(daemon->rpc->get_blocks_by_hash(string_array(block_hashes, num_block_hashes), start_height, prune, max_block_count));
   });
 }
 
 monero_result monero_daemon_get_block_by_height(monero_daemon* daemon, uint64_t height, char** out_json) {
+  reset_out(out_json);
   if (!require(daemon, "daemon") || !require(out_json, "out_json")) return MONERO_ERROR;
-  *out_json = nullptr;
   return guard([&] { *out_json = dup_json(daemon->rpc->get_block_by_height(height)); });
 }
 
 monero_result monero_daemon_get_blocks_by_height(monero_daemon* daemon, const uint64_t* heights, size_t num_heights, char** out_json) {
+  reset_out(out_json);
   if (!require(daemon, "daemon") || !require(out_json, "out_json")) return MONERO_ERROR;
-  *out_json = nullptr;
   return guard([&] { *out_json = dup_string(json_of_list(daemon->rpc->get_blocks_by_height(array_of(heights, num_heights)))); });
 }
 
 monero_result monero_daemon_get_blocks_by_range(monero_daemon* daemon, const uint64_t* start_height, const uint64_t* end_height, char** out_json) {
+  reset_out(out_json);
   if (!require(daemon, "daemon") || !require(out_json, "out_json")) return MONERO_ERROR;
-  *out_json = nullptr;
   return guard([&] { *out_json = dup_string(json_of_list(daemon->rpc->get_blocks_by_range(optional_of(start_height), optional_of(end_height)))); });
 }
 
 monero_result monero_daemon_get_blocks_by_range_chunked(monero_daemon* daemon, const uint64_t* start_height, const uint64_t* end_height, const uint64_t* max_chunk_size, char** out_json) {
+  reset_out(out_json);
   if (!require(daemon, "daemon") || !require(out_json, "out_json")) return MONERO_ERROR;
-  *out_json = nullptr;
   return guard([&] {
     *out_json = dup_string(json_of_list(daemon->rpc->get_blocks_by_range_chunked(optional_of(start_height), optional_of(end_height), optional_of(max_chunk_size))));
   });
 }
 
 monero_result monero_daemon_get_block_hashes(monero_daemon* daemon, const char* const* block_hashes, size_t num_block_hashes, char** out_json) {
+  reset_out(out_json);
   if (!require(daemon, "daemon") || !require(out_json, "out_json")) return MONERO_ERROR;
-  *out_json = nullptr;
   return guard([&] { *out_json = dup_json(daemon->rpc->get_block_hashes(string_array(block_hashes, num_block_hashes))); });
 }
 
 monero_result monero_daemon_wait_for_next_block_header(monero_daemon* daemon, char** out_json) {
+  reset_out(out_json);
   if (!require(daemon, "daemon") || !require(out_json, "out_json")) return MONERO_ERROR;
-  *out_json = nullptr;
   return guard([&] { *out_json = dup_json(daemon->rpc->wait_for_next_block_header()); });
 }
 
 // ---------------------------- TRANSACTIONS ----------------------------------
 
 monero_result monero_daemon_get_tx(monero_daemon* daemon, const char* tx_hash, bool prune, char** out_json) {
+  reset_out(out_json);
   if (!require(daemon, "daemon") || !require(out_json, "out_json")) return MONERO_ERROR;
-  *out_json = nullptr;
   return guard([&] { *out_json = dup_json(daemon->rpc->get_tx(safe_str(tx_hash), prune)); });
 }
 
 monero_result monero_daemon_get_txs(monero_daemon* daemon, const char* const* tx_hashes, size_t num_tx_hashes, bool prune, char** out_json) {
+  reset_out(out_json);
   if (!require(daemon, "daemon") || !require(out_json, "out_json")) return MONERO_ERROR;
-  *out_json = nullptr;
   return guard([&] { *out_json = dup_string(json_of_list(daemon->rpc->get_txs(string_array(tx_hashes, num_tx_hashes), prune))); });
 }
 
 monero_result monero_daemon_get_tx_hex(monero_daemon* daemon, const char* tx_hash, bool prune, char** out_tx_hex) {
+  reset_out(out_tx_hex);
   if (!require(daemon, "daemon") || !require(out_tx_hex, "out_tx_hex")) return MONERO_ERROR;
-  *out_tx_hex = nullptr;
   return guard([&] {
     boost::optional<std::string> hex = daemon->rpc->get_tx_hex(safe_str(tx_hash), prune);
     *out_tx_hex = hex ? dup_string(*hex) : nullptr;
@@ -472,26 +473,26 @@ monero_result monero_daemon_get_tx_hex(monero_daemon* daemon, const char* tx_has
 }
 
 monero_result monero_daemon_get_tx_hexes(monero_daemon* daemon, const char* const* tx_hashes, size_t num_tx_hashes, bool prune, char** out_json) {
+  reset_out(out_json);
   if (!require(daemon, "daemon") || !require(out_json, "out_json")) return MONERO_ERROR;
-  *out_json = nullptr;
   return guard([&] { *out_json = dup_string(json_of_strings(daemon->rpc->get_tx_hexes(string_array(tx_hashes, num_tx_hashes), prune))); });
 }
 
 monero_result monero_daemon_get_miner_tx_sum(monero_daemon* daemon, uint64_t height, uint64_t num_blocks, char** out_json) {
+  reset_out(out_json);
   if (!require(daemon, "daemon") || !require(out_json, "out_json")) return MONERO_ERROR;
-  *out_json = nullptr;
   return guard([&] { *out_json = dup_json(daemon->rpc->get_miner_tx_sum(height, num_blocks)); });
 }
 
 monero_result monero_daemon_get_fee_estimate(monero_daemon* daemon, uint64_t grace_blocks, char** out_json) {
+  reset_out(out_json);
   if (!require(daemon, "daemon") || !require(out_json, "out_json")) return MONERO_ERROR;
-  *out_json = nullptr;
   return guard([&] { *out_json = dup_json(daemon->rpc->get_fee_estimate(grace_blocks)); });
 }
 
 monero_result monero_daemon_submit_tx_hex(monero_daemon* daemon, const char* tx_hex, bool do_not_relay, char** out_json) {
+  reset_out(out_json);
   if (!require(daemon, "daemon") || !require(out_json, "out_json")) return MONERO_ERROR;
-  *out_json = nullptr;
   return guard([&] { *out_json = dup_json(daemon->rpc->submit_tx_hex(safe_str(tx_hex), do_not_relay)); });
 }
 
@@ -508,26 +509,26 @@ monero_result monero_daemon_relay_txs_by_hash(monero_daemon* daemon, const char*
 // -------------------------------- TX POOL -----------------------------------
 
 monero_result monero_daemon_get_tx_pool(monero_daemon* daemon, char** out_json) {
+  reset_out(out_json);
   if (!require(daemon, "daemon") || !require(out_json, "out_json")) return MONERO_ERROR;
-  *out_json = nullptr;
   return guard([&] { *out_json = dup_string(json_of_list(daemon->rpc->get_tx_pool())); });
 }
 
 monero_result monero_daemon_get_tx_pool_hashes(monero_daemon* daemon, char** out_json) {
+  reset_out(out_json);
   if (!require(daemon, "daemon") || !require(out_json, "out_json")) return MONERO_ERROR;
-  *out_json = nullptr;
   return guard([&] { *out_json = dup_string(json_of_strings(daemon->rpc->get_tx_pool_hashes())); });
 }
 
 monero_result monero_daemon_get_tx_pool_backlog(monero_daemon* daemon, char** out_json) {
+  reset_out(out_json);
   if (!require(daemon, "daemon") || !require(out_json, "out_json")) return MONERO_ERROR;
-  *out_json = nullptr;
   return guard([&] { *out_json = dup_string(json_of_backlog(daemon->rpc->get_tx_pool_backlog())); });
 }
 
 monero_result monero_daemon_get_tx_pool_stats(monero_daemon* daemon, char** out_json) {
+  reset_out(out_json);
   if (!require(daemon, "daemon") || !require(out_json, "out_json")) return MONERO_ERROR;
-  *out_json = nullptr;
   return guard([&] { *out_json = dup_json(daemon->rpc->get_tx_pool_stats()); });
 }
 
@@ -554,9 +555,9 @@ monero_result monero_daemon_get_key_image_spent_status(monero_daemon* daemon, co
 }
 
 monero_result monero_daemon_get_key_image_spent_statuses(monero_daemon* daemon, const char* const* key_images, size_t num_key_images, monero_key_image_spent_status** out_statuses, size_t* out_count) {
+  reset_out(out_statuses);
+  reset_out(out_count);
   if (!require(daemon, "daemon") || !require(out_statuses, "out_statuses") || !require(out_count, "out_count")) return MONERO_ERROR;
-  *out_statuses = nullptr;
-  *out_count = 0;
   return guard([&] {
     std::vector<monero_key_image_spent_status> statuses;
     for (monero::monero_key_image_spent_status status : daemon->rpc->get_key_image_spent_statuses(string_array(key_images, num_key_images))) {
@@ -567,15 +568,15 @@ monero_result monero_daemon_get_key_image_spent_statuses(monero_daemon* daemon, 
 }
 
 monero_result monero_daemon_get_output_indices(monero_daemon* daemon, const char* tx_hash, uint64_t** out_indices, size_t* out_count) {
+  reset_out(out_indices);
+  reset_out(out_count);
   if (!require(daemon, "daemon") || !require(out_indices, "out_indices") || !require(out_count, "out_count")) return MONERO_ERROR;
-  *out_indices = nullptr;
-  *out_count = 0;
   return guard([&] { *out_indices = dup_array(daemon->rpc->get_output_indices(safe_str(tx_hash)), out_count); });
 }
 
 monero_result monero_daemon_get_outputs(monero_daemon* daemon, const char* outputs_json, char** out_json) {
+  reset_out(out_json);
   if (!require(daemon, "daemon") || !require(out_json, "out_json")) return MONERO_ERROR;
-  *out_json = nullptr;
   return guard([&] {
     std::vector<monero::monero_output> outputs;
     for (const auto& output : parse_list<monero::monero_output>(safe_str(outputs_json))) outputs.push_back(*output);
@@ -584,16 +585,16 @@ monero_result monero_daemon_get_outputs(monero_daemon* daemon, const char* outpu
 }
 
 monero_result monero_daemon_get_output_histogram(monero_daemon* daemon, const uint64_t* amounts, size_t num_amounts, const int32_t* min_count, const int32_t* max_count, const bool* is_unlocked, const int32_t* recent_cutoff, char** out_json) {
+  reset_out(out_json);
   if (!require(daemon, "daemon") || !require(out_json, "out_json")) return MONERO_ERROR;
-  *out_json = nullptr;
   return guard([&] {
     *out_json = dup_string(json_of_list(daemon->rpc->get_output_histogram(array_of(amounts, num_amounts), optional_of(min_count), optional_of(max_count), optional_of(is_unlocked), optional_of(recent_cutoff))));
   });
 }
 
 monero_result monero_daemon_get_output_distribution(monero_daemon* daemon, const uint64_t* amounts, size_t num_amounts, const bool* is_cumulative, const uint64_t* start_height, const uint64_t* end_height, char** out_json) {
+  reset_out(out_json);
   if (!require(daemon, "daemon") || !require(out_json, "out_json")) return MONERO_ERROR;
-  *out_json = nullptr;
   return guard([&] {
     *out_json = dup_string(json_of_list(daemon->rpc->get_output_distribution(array_of(amounts, num_amounts), optional_of(is_cumulative), optional_of(start_height), optional_of(end_height))));
   });
@@ -634,20 +635,20 @@ monero_result monero_daemon_reset_upload_limit(monero_daemon* daemon, int32_t* o
 // ----------------------------------- PEERS ----------------------------------
 
 monero_result monero_daemon_get_peers(monero_daemon* daemon, char** out_json) {
+  reset_out(out_json);
   if (!require(daemon, "daemon") || !require(out_json, "out_json")) return MONERO_ERROR;
-  *out_json = nullptr;
   return guard([&] { *out_json = dup_string(json_of_list(daemon->rpc->get_peers())); });
 }
 
 monero_result monero_daemon_get_known_peers(monero_daemon* daemon, char** out_json) {
+  reset_out(out_json);
   if (!require(daemon, "daemon") || !require(out_json, "out_json")) return MONERO_ERROR;
-  *out_json = nullptr;
   return guard([&] { *out_json = dup_string(json_of_list(daemon->rpc->get_known_peers())); });
 }
 
 monero_result monero_daemon_get_public_peers(monero_daemon* daemon, bool include_offline, char** out_json) {
+  reset_out(out_json);
   if (!require(daemon, "daemon") || !require(out_json, "out_json")) return MONERO_ERROR;
-  *out_json = nullptr;
   return guard([&] { *out_json = dup_string(json_of_list(daemon->rpc->get_public_peers(include_offline))); });
 }
 
@@ -662,8 +663,8 @@ monero_result monero_daemon_set_incoming_peer_limit(monero_daemon* daemon, int32
 }
 
 monero_result monero_daemon_get_peer_bans(monero_daemon* daemon, char** out_json) {
+  reset_out(out_json);
   if (!require(daemon, "daemon") || !require(out_json, "out_json")) return MONERO_ERROR;
-  *out_json = nullptr;
   return guard([&] { *out_json = dup_string(json_of_list(daemon->rpc->get_peer_bans())); });
 }
 
@@ -678,16 +679,16 @@ monero_result monero_daemon_set_peer_ban(monero_daemon* daemon, const char* ban_
 }
 
 monero_result monero_daemon_get_peer_ban(monero_daemon* daemon, const char* address, char** out_json) {
+  reset_out(out_json);
   if (!require(daemon, "daemon") || !require(out_json, "out_json")) return MONERO_ERROR;
-  *out_json = nullptr;
   return guard([&] { *out_json = dup_json(daemon->rpc->get_peer_ban(safe_str(address))); });
 }
 
 // ----------------------------------- ADMIN ----------------------------------
 
 monero_result monero_daemon_prune_blockchain(monero_daemon* daemon, bool check, char** out_json) {
+  reset_out(out_json);
   if (!require(daemon, "daemon") || !require(out_json, "out_json")) return MONERO_ERROR;
-  *out_json = nullptr;
   return guard([&] { *out_json = dup_json(daemon->rpc->prune_blockchain(check)); });
 }
 
@@ -727,20 +728,20 @@ monero_result monero_daemon_set_log_level(monero_daemon* daemon, int32_t level) 
 }
 
 monero_result monero_daemon_set_log_categories(monero_daemon* daemon, const char* categories, char** out_categories) {
+  reset_out(out_categories);
   if (!require(daemon, "daemon") || !require(out_categories, "out_categories")) return MONERO_ERROR;
-  *out_categories = nullptr;
   return guard([&] { *out_categories = dup_string(daemon->rpc->set_log_categories(safe_str(categories))); });
 }
 
 monero_result monero_daemon_check_for_update(monero_daemon* daemon, char** out_json) {
+  reset_out(out_json);
   if (!require(daemon, "daemon") || !require(out_json, "out_json")) return MONERO_ERROR;
-  *out_json = nullptr;
   return guard([&] { *out_json = dup_json(daemon->rpc->check_for_update()); });
 }
 
 monero_result monero_daemon_download_update(monero_daemon* daemon, const char* path, char** out_json) {
+  reset_out(out_json);
   if (!require(daemon, "daemon") || !require(out_json, "out_json")) return MONERO_ERROR;
-  *out_json = nullptr;
   return guard([&] { *out_json = dup_json(daemon->rpc->download_update(safe_str(path))); });
 }
 

@@ -44,6 +44,7 @@ using monero_c::json_of_list;
 using monero_c::json_of_strings;
 using monero_c::optional_of;
 using monero_c::require;
+using monero_c::reset_out;
 using monero_c::safe_str;
 using monero_c::string_array;
 
@@ -255,8 +256,8 @@ extern "C" {
 // -------------------------------- WALLET ------------------------------------
 
 monero_result monero_wallet_create_random(const char* path, const char* password, int32_t network_type, const char* language, ::monero_wallet** out_wallet) {
+  reset_out(out_wallet);
   if (!require(path, "path") || !require(out_wallet, "out_wallet")) return MONERO_ERROR;
-  *out_wallet = nullptr;
   return guard([&] {
     monero::monero_wallet_config config = make_config(path, password, network_type, language);
     std::unique_ptr<monero::monero_wallet_full> wallet(monero::monero_wallet_full::create_wallet(config));
@@ -270,8 +271,8 @@ monero_result monero_wallet_create_random(const char* path, const char* password
 }
 
 monero_result monero_wallet_create_from_seed(const char* path, const char* password, int32_t network_type, const char* seed, const char* seed_offset, uint64_t restore_height, const char* language, ::monero_wallet** out_wallet) {
+  reset_out(out_wallet);
   if (!require(path, "path") || !require(seed, "seed") || !require(out_wallet, "out_wallet")) return MONERO_ERROR;
-  *out_wallet = nullptr;
   return guard([&] {
     monero::monero_wallet_config config = make_config(path, password, network_type, language);
     config.m_seed = std::string(seed);
@@ -282,8 +283,8 @@ monero_result monero_wallet_create_from_seed(const char* path, const char* passw
 }
 
 monero_result monero_wallet_create_from_keys(const char* path, const char* password, int32_t network_type, const char* address, const char* private_view_key, const char* private_spend_key, uint64_t restore_height, const char* language, ::monero_wallet** out_wallet) {
+  reset_out(out_wallet);
   if (!require(path, "path") || !require(address, "address") || !require(private_view_key, "private_view_key") || !require(out_wallet, "out_wallet")) return MONERO_ERROR;
-  *out_wallet = nullptr;
   return guard([&] {
     monero::monero_wallet_config config = make_config(path, password, network_type, language);
     config.m_primary_address = std::string(address);
@@ -295,8 +296,8 @@ monero_result monero_wallet_create_from_keys(const char* path, const char* passw
 }
 
 monero_result monero_wallet_open(const char* path, const char* password, int32_t network_type, ::monero_wallet** out_wallet) {
+  reset_out(out_wallet);
   if (!require(path, "path") || !require(out_wallet, "out_wallet")) return MONERO_ERROR;
-  *out_wallet = nullptr;
   return guard([&] {
     *out_wallet = wrap(std::unique_ptr<monero::monero_wallet_full>(monero::monero_wallet_full::open_wallet(std::string(path), safe_str(password), to_network(network_type), network_type == MONERO_UTILS_NETWORK_REGTEST)), network_type);
   });
@@ -308,14 +309,14 @@ monero_result monero_wallet_exists(const char* path, bool* out_exists) {
 }
 
 monero_result monero_wallet_get_seed_languages(char** out_json) {
+  reset_out(out_json);
   if (!require(out_json, "out_json")) return MONERO_ERROR;
-  *out_json = nullptr;
   return guard([&] { *out_json = dup_string(json_of_strings(monero::monero_wallet_full::get_seed_languages())); });
 }
 
 monero_result monero_wallet_keys_create_random(int32_t network_type, const char* language, ::monero_wallet** out_wallet) {
+  reset_out(out_wallet);
   if (!require(out_wallet, "out_wallet")) return MONERO_ERROR;
-  *out_wallet = nullptr;
   return guard([&] {
     monero::monero_wallet_config config = make_config(nullptr, nullptr, network_type, language);
     *out_wallet = wrap(std::unique_ptr<monero::monero_wallet>(monero::monero_wallet_keys::create_wallet_random(config)), network_type);
@@ -323,8 +324,8 @@ monero_result monero_wallet_keys_create_random(int32_t network_type, const char*
 }
 
 monero_result monero_wallet_keys_create_from_seed(int32_t network_type, const char* seed, const char* seed_offset, const char* language, ::monero_wallet** out_wallet) {
+  reset_out(out_wallet);
   if (!require(seed, "seed") || !require(out_wallet, "out_wallet")) return MONERO_ERROR;
-  *out_wallet = nullptr;
   return guard([&] {
     monero::monero_wallet_config config = make_config(nullptr, nullptr, network_type, language);
     config.m_seed = std::string(seed);
@@ -334,8 +335,8 @@ monero_result monero_wallet_keys_create_from_seed(int32_t network_type, const ch
 }
 
 monero_result monero_wallet_keys_create_from_keys(int32_t network_type, const char* address, const char* private_view_key, const char* private_spend_key, const char* language, ::monero_wallet** out_wallet) {
+  reset_out(out_wallet);
   if (!require(address, "address") || !require(private_view_key, "private_view_key") || !require(out_wallet, "out_wallet")) return MONERO_ERROR;
-  *out_wallet = nullptr;
   return guard([&] {
     monero::monero_wallet_config config = make_config(nullptr, nullptr, network_type, language);
     config.m_primary_address = std::string(address);
@@ -378,32 +379,32 @@ monero_result monero_wallet_is_multisig(::monero_wallet* wallet, bool* out_multi
 }
 
 monero_result monero_wallet_get_seed(::monero_wallet* wallet, char** out_seed) {
+  reset_out(out_seed);
   if (!require(wallet, "wallet") || !require(out_seed, "out_seed")) return MONERO_ERROR;
-  *out_seed = nullptr;
   return guard([&] { *out_seed = dup_string(wallet->wallet->get_seed()); });
 }
 
 monero_result monero_wallet_get_seed_language(::monero_wallet* wallet, char** out_language) {
+  reset_out(out_language);
   if (!require(wallet, "wallet") || !require(out_language, "out_language")) return MONERO_ERROR;
-  *out_language = nullptr;
   return guard([&] { *out_language = dup_string(wallet->wallet->get_seed_language()); });
 }
 
 monero_result monero_wallet_get_primary_address(::monero_wallet* wallet, char** out_address) {
+  reset_out(out_address);
   if (!require(wallet, "wallet") || !require(out_address, "out_address")) return MONERO_ERROR;
-  *out_address = nullptr;
   return guard([&] { *out_address = dup_string(wallet->wallet->get_primary_address()); });
 }
 
 monero_result monero_wallet_get_private_view_key(::monero_wallet* wallet, char** out_key) {
+  reset_out(out_key);
   if (!require(wallet, "wallet") || !require(out_key, "out_key")) return MONERO_ERROR;
-  *out_key = nullptr;
   return guard([&] { *out_key = dup_string(wallet->wallet->get_private_view_key()); });
 }
 
 monero_result monero_wallet_get_private_spend_key(::monero_wallet* wallet, char** out_key) {
+  reset_out(out_key);
   if (!require(wallet, "wallet") || !require(out_key, "out_key")) return MONERO_ERROR;
-  *out_key = nullptr;
   return guard([&] { *out_key = dup_string(wallet->wallet->get_private_spend_key()); });
 }
 
@@ -443,33 +444,33 @@ monero_result monero_wallet_get_subaddress_unlocked_balance(::monero_wallet* wal
 }
 
 monero_result monero_wallet_get_address(::monero_wallet* wallet, uint32_t account_idx, uint32_t subaddress_idx, char** out_address) {
+  reset_out(out_address);
   if (!require(wallet, "wallet") || !require(out_address, "out_address")) return MONERO_ERROR;
-  *out_address = nullptr;
   return guard([&] { *out_address = dup_string(wallet->wallet->get_address(account_idx, subaddress_idx)); });
 }
 
 monero_result monero_wallet_get_integrated_address(::monero_wallet* wallet, const char* standard_address, const char* payment_id, char** out_json) {
+  reset_out(out_json);
   if (!require(wallet, "wallet") || !require(out_json, "out_json")) return MONERO_ERROR;
-  *out_json = nullptr;
   return guard([&] { *out_json = dup_string(wallet->wallet->get_integrated_address(safe_str(standard_address), safe_str(payment_id)).serialize()); });
 }
 
 monero_result monero_wallet_decode_integrated_address(::monero_wallet* wallet, const char* integrated_address, char** out_json) {
+  reset_out(out_json);
   if (!require(wallet, "wallet") || !require(integrated_address, "integrated_address") || !require(out_json, "out_json")) return MONERO_ERROR;
-  *out_json = nullptr;
   return guard([&] { *out_json = dup_string(wallet->wallet->decode_integrated_address(std::string(integrated_address)).serialize()); });
 }
 
 monero_result monero_wallet_get_account(::monero_wallet* wallet, uint32_t account_idx, bool include_subaddresses, char** out_json) {
+  reset_out(out_json);
   if (!require(wallet, "wallet") || !require(out_json, "out_json")) return MONERO_ERROR;
-  *out_json = nullptr;
   return guard([&] { *out_json = dup_string(wallet->wallet->get_account(account_idx, include_subaddresses).serialize()); });
 }
 
 monero_result monero_wallet_get_subaddresses(::monero_wallet* wallet, uint32_t account_idx, const uint32_t* subaddress_indices, size_t num_subaddress_indices, char** out_json) {
+  reset_out(out_json);
   if (!require(wallet, "wallet") || !require(out_json, "out_json")) return MONERO_ERROR;
   if (num_subaddress_indices > 0 && !require(subaddress_indices, "subaddress_indices")) return MONERO_ERROR;
-  *out_json = nullptr;
   return guard([&] {
     auto indices = array_of(subaddress_indices, num_subaddress_indices);
     *out_json = dup_string(json_of_list(wallet->wallet->get_subaddresses(account_idx, indices)));
@@ -477,14 +478,14 @@ monero_result monero_wallet_get_subaddresses(::monero_wallet* wallet, uint32_t a
 }
 
 monero_result monero_wallet_sign_message(::monero_wallet* wallet, const char* message, int32_t signature_type, uint32_t account_idx, uint32_t subaddress_idx, char** out_signature) {
+  reset_out(out_signature);
   if (!require(wallet, "wallet") || !require(message, "message") || !require(out_signature, "out_signature")) return MONERO_ERROR;
-  *out_signature = nullptr;
   return guard([&] { *out_signature = dup_string(wallet->wallet->sign_message(std::string(message), to_signature_type(signature_type), account_idx, subaddress_idx)); });
 }
 
 monero_result monero_wallet_verify_message(::monero_wallet* wallet, const char* message, const char* address, const char* signature, char** out_json) {
+  reset_out(out_json);
   if (!require(wallet, "wallet") || !require(message, "message") || !require(address, "address") || !require(signature, "signature") || !require(out_json, "out_json")) return MONERO_ERROR;
-  *out_json = nullptr;
   return guard([&] { *out_json = dup_string(wallet->wallet->verify_message(std::string(message), std::string(address), std::string(signature)).serialize()); });
 }
 
@@ -504,9 +505,9 @@ monero_result monero_wallet_delete_address_book_entry(::monero_wallet* wallet, u
 }
 
 monero_result monero_wallet_get_address_book_entries(::monero_wallet* wallet, const uint64_t* indices, size_t num_indices, char** out_json) {
+  reset_out(out_json);
   if (!require(wallet, "wallet") || !require(out_json, "out_json")) return MONERO_ERROR;
   if (num_indices > 0 && !require(indices, "indices")) return MONERO_ERROR;
-  *out_json = nullptr;
   return guard([&] {
     std::vector<uint64_t> list;
     if (num_indices > 0) list.assign(indices, indices + num_indices);
@@ -520,32 +521,32 @@ monero_result monero_wallet_change_password(::monero_wallet* wallet, const char*
 }
 
 monero_result monero_wallet_create_account(::monero_wallet* wallet, const char* label, char** out_json) {
+  reset_out(out_json);
   if (!require(wallet, "wallet") || !require(out_json, "out_json")) return MONERO_ERROR;
-  *out_json = nullptr;
   return guard([&] { *out_json = dup_string(wallet->wallet->create_account(safe_str(label)).serialize()); });
 }
 
 monero_result monero_wallet_create_subaddress(::monero_wallet* wallet, uint32_t account_idx, const char* label, char** out_json) {
+  reset_out(out_json);
   if (!require(wallet, "wallet") || !require(out_json, "out_json")) return MONERO_ERROR;
-  *out_json = nullptr;
   return guard([&] { *out_json = dup_string(wallet->wallet->create_subaddress(account_idx, safe_str(label)).serialize()); });
 }
 
 monero_result monero_wallet_get_accounts(::monero_wallet* wallet, bool include_subaddresses, char** out_json) {
+  reset_out(out_json);
   if (!require(wallet, "wallet") || !require(out_json, "out_json")) return MONERO_ERROR;
-  *out_json = nullptr;
   return guard([&] { *out_json = dup_string(json_of_list(wallet->wallet->get_accounts(include_subaddresses))); });
 }
 
 monero_result monero_wallet_get_address_index(::monero_wallet* wallet, const char* address, char** out_json) {
+  reset_out(out_json);
   if (!require(wallet, "wallet") || !require(address, "address") || !require(out_json, "out_json")) return MONERO_ERROR;
-  *out_json = nullptr;
   return guard([&] { *out_json = dup_string(wallet->wallet->get_address_index(std::string(address)).serialize()); });
 }
 
 monero_result monero_wallet_get_subaddress(::monero_wallet* wallet, uint32_t account_idx, uint32_t subaddress_idx, char** out_json) {
+  reset_out(out_json);
   if (!require(wallet, "wallet") || !require(out_json, "out_json")) return MONERO_ERROR;
-  *out_json = nullptr;
   return guard([&] { *out_json = dup_string(wallet->wallet->get_subaddress(account_idx, subaddress_idx).serialize()); });
 }
 
@@ -560,8 +561,8 @@ monero_result monero_wallet_set_account_tag_label(::monero_wallet* wallet, const
 }
 
 monero_result monero_wallet_get_account_tags(::monero_wallet* wallet, char** out_json) {
+  reset_out(out_json);
   if (!require(wallet, "wallet") || !require(out_json, "out_json")) return MONERO_ERROR;
-  *out_json = nullptr;
   return guard([&] { *out_json = dup_string(json_of_list(wallet->wallet->get_account_tags())); });
 }
 
@@ -584,8 +585,8 @@ monero_result monero_wallet_untag_accounts(::monero_wallet* wallet, const uint32
 }
 
 monero_result monero_wallet_get_attribute(::monero_wallet* wallet, const char* key, bool* out_found, char** out_value) {
+  reset_out(out_value);
   if (!require(wallet, "wallet") || !require(key, "key") || !require(out_found, "out_found") || !require(out_value, "out_value")) return MONERO_ERROR;
-  *out_value = nullptr;
   return guard([&] {
     std::string value;
     *out_found = wallet->wallet->get_attribute(std::string(key), value);
@@ -604,26 +605,26 @@ monero_result monero_wallet_get_default_fee_priority(::monero_wallet* wallet, ::
 }
 
 monero_result monero_wallet_get_path(::monero_wallet* wallet, char** out_path) {
+  reset_out(out_path);
   if (!require(wallet, "wallet") || !require(out_path, "out_path")) return MONERO_ERROR;
-  *out_path = nullptr;
   return guard([&] { *out_path = dup_string(wallet->wallet->get_path()); });
 }
 
 monero_result monero_wallet_get_public_view_key(::monero_wallet* wallet, char** out_key) {
+  reset_out(out_key);
   if (!require(wallet, "wallet") || !require(out_key, "out_key")) return MONERO_ERROR;
-  *out_key = nullptr;
   return guard([&] { *out_key = dup_string(wallet->wallet->get_public_view_key()); });
 }
 
 monero_result monero_wallet_get_public_spend_key(::monero_wallet* wallet, char** out_key) {
+  reset_out(out_key);
   if (!require(wallet, "wallet") || !require(out_key, "out_key")) return MONERO_ERROR;
-  *out_key = nullptr;
   return guard([&] { *out_key = dup_string(wallet->wallet->get_public_spend_key()); });
 }
 
 monero_result monero_wallet_get_version(::monero_wallet* wallet, char** out_json) {
+  reset_out(out_json);
   if (!require(wallet, "wallet") || !require(out_json, "out_json")) return MONERO_ERROR;
-  *out_json = nullptr;
   return guard([&] { *out_json = dup_string(wallet->wallet->get_version().serialize()); });
 }
 
@@ -643,20 +644,20 @@ monero_result monero_wallet_is_closed(::monero_wallet* wallet, bool* out_closed)
 }
 
 monero_result monero_wallet_export_key_images(::monero_wallet* wallet, bool all, char** out_json) {
+  reset_out(out_json);
   if (!require(wallet, "wallet") || !require(out_json, "out_json")) return MONERO_ERROR;
-  *out_json = nullptr;
   return guard([&] { *out_json = dup_string(wallet->wallet->export_key_images(all)->serialize()); });
 }
 
 monero_result monero_wallet_import_key_images(::monero_wallet* wallet, const char* key_images_json, uint64_t offset, char** out_json) {
+  reset_out(out_json);
   if (!require(wallet, "wallet") || !require(key_images_json, "key_images_json") || !require(out_json, "out_json")) return MONERO_ERROR;
-  *out_json = nullptr;
   return guard([&] { *out_json = dup_string(wallet->wallet->import_key_images(parse_key_images(key_images_json), offset)->serialize()); });
 }
 
 monero_result monero_wallet_export_outputs(::monero_wallet* wallet, bool all, char** out_hex) {
+  reset_out(out_hex);
   if (!require(wallet, "wallet") || !require(out_hex, "out_hex")) return MONERO_ERROR;
-  *out_hex = nullptr;
   return guard([&] { *out_hex = dup_string(wallet->wallet->export_outputs(all)); });
 }
 
@@ -681,8 +682,8 @@ monero_result monero_wallet_is_output_frozen(::monero_wallet* wallet, const char
 }
 
 monero_result monero_wallet_get_tx_note(::monero_wallet* wallet, const char* tx_hash, char** out_note) {
+  reset_out(out_note);
   if (!require(wallet, "wallet") || !require(tx_hash, "tx_hash") || !require(out_note, "out_note")) return MONERO_ERROR;
-  *out_note = nullptr;
   return guard([&] { *out_note = dup_string(wallet->wallet->get_tx_note(std::string(tx_hash))); });
 }
 
@@ -692,9 +693,9 @@ monero_result monero_wallet_set_tx_note(::monero_wallet* wallet, const char* tx_
 }
 
 monero_result monero_wallet_get_tx_notes(::monero_wallet* wallet, const char* const* tx_hashes, size_t num_tx_hashes, char** out_json) {
+  reset_out(out_json);
   if (!require(wallet, "wallet") || !require(out_json, "out_json")) return MONERO_ERROR;
   if (num_tx_hashes > 0 && !require(tx_hashes, "tx_hashes")) return MONERO_ERROR;
-  *out_json = nullptr;
   return guard([&] { *out_json = dup_string(json_of_strings(wallet->wallet->get_tx_notes(string_array(tx_hashes, num_tx_hashes)))); });
 }
 
@@ -715,8 +716,8 @@ monero_result monero_wallet_set_daemon_connection(::monero_wallet* wallet, const
 }
 
 monero_result monero_wallet_get_daemon_connection(::monero_wallet* wallet, char** out_json) {
+  reset_out(out_json);
   if (!require(wallet, "wallet") || !require(out_json, "out_json")) return MONERO_ERROR;
-  *out_json = nullptr;
   return guard([&] {
     std::shared_ptr<monero::monero_rpc_connection> connection = wallet->wallet->get_daemon_connection();
     if (connection) *out_json = dup_string(connection->serialize());
@@ -731,8 +732,8 @@ monero_result monero_wallet_is_daemon_trusted(::monero_wallet* wallet, bool* out
 // -------------------------------- LISTENERS ---------------------------------
 
 monero_result monero_wallet_listener_create(const monero_wallet_listener_callbacks* callbacks, ::monero_wallet_listener** out_listener) {
+  reset_out(out_listener);
   if (!require(callbacks, "callbacks") || !require(out_listener, "out_listener")) return MONERO_ERROR;
-  *out_listener = nullptr;
   return guard([&] {
     std::unique_ptr<::monero_wallet_listener> listener(new ::monero_wallet_listener());
     listener->adapter.owner = listener.get();
@@ -808,8 +809,8 @@ monero_result monero_wallet_remove_listeners(::monero_wallet* wallet) {
 // -------------------------------- DAEMON ------------------------------------
 
 monero_result monero_wallet_sync(::monero_wallet* wallet, const uint64_t* start_height, ::monero_wallet_listener* listener, char** out_json) {
+  reset_out(out_json);
   if (!require(wallet, "wallet") || !require(out_json, "out_json")) return MONERO_ERROR;
-  *out_json = nullptr;
   return guard([&] {
     monero::monero_sync_result result = listener ? sync_with_listener(wallet, listener, start_height) : (start_height ? wallet->wallet->sync(*start_height) : wallet->wallet->sync());
     *out_json = dup_string(result.serialize());
@@ -890,8 +891,8 @@ monero_result monero_wallet_stop_mining(::monero_wallet* wallet) {
 // ------------------------------ TRANSACTIONS ---------------------------------
 
 monero_result monero_wallet_get_txs(::monero_wallet* wallet, const char* query_json, char** out_json) {
+  reset_out(out_json);
   if (!require(wallet, "wallet") || !require(out_json, "out_json")) return MONERO_ERROR;
-  *out_json = nullptr;
   return guard([&] {
     auto txs = query_json ? wallet->wallet->get_txs(*model_json<monero::monero_tx_query>(query_json, "query")) : wallet->wallet->get_txs();
     *out_json = dup_string(json_of_list(txs));
@@ -899,26 +900,26 @@ monero_result monero_wallet_get_txs(::monero_wallet* wallet, const char* query_j
 }
 
 monero_result monero_wallet_get_transfers(::monero_wallet* wallet, const char* query_json, char** out_json) {
+  reset_out(out_json);
   if (!require(wallet, "wallet") || !require(out_json, "out_json")) return MONERO_ERROR;
-  *out_json = nullptr;
   return guard([&] { *out_json = dup_string(json_of_list(wallet->wallet->get_transfers(*query_of<monero::monero_transfer_query>(query_json)))); });
 }
 
 monero_result monero_wallet_get_outputs(::monero_wallet* wallet, const char* query_json, char** out_json) {
+  reset_out(out_json);
   if (!require(wallet, "wallet") || !require(out_json, "out_json")) return MONERO_ERROR;
-  *out_json = nullptr;
   return guard([&] { *out_json = dup_string(json_of_list(wallet->wallet->get_outputs(*query_of<monero::monero_output_query>(query_json)))); });
 }
 
 monero_result monero_wallet_create_tx(::monero_wallet* wallet, const char* config_json, char** out_json) {
+  reset_out(out_json);
   if (!require(wallet, "wallet") || !require(config_json, "config_json") || !require(out_json, "out_json")) return MONERO_ERROR;
-  *out_json = nullptr;
   return guard([&] { *out_json = dup_string(wallet->wallet->create_tx(*model_json<monero::monero_tx_config>(config_json, "config"))->serialize()); });
 }
 
 monero_result monero_wallet_create_txs(::monero_wallet* wallet, const char* config_json, char** out_json) {
+  reset_out(out_json);
   if (!require(wallet, "wallet") || !require(config_json, "config_json") || !require(out_json, "out_json")) return MONERO_ERROR;
-  *out_json = nullptr;
   return guard([&] {
     // the transactions share one tx set, which holds the unsigned hex that sign_txs() takes
     auto txs = wallet->wallet->create_txs(*model_json<monero::monero_tx_config>(config_json, "config"));
@@ -928,63 +929,63 @@ monero_result monero_wallet_create_txs(::monero_wallet* wallet, const char* conf
 }
 
 monero_result monero_wallet_relay_tx(::monero_wallet* wallet, const char* tx_metadata, char** out_hash) {
+  reset_out(out_hash);
   if (!require(wallet, "wallet") || !require(tx_metadata, "tx_metadata") || !require(out_hash, "out_hash")) return MONERO_ERROR;
-  *out_hash = nullptr;
   return guard([&] { *out_hash = dup_string(wallet->wallet->relay_tx(std::string(tx_metadata))); });
 }
 
 monero_result monero_wallet_relay_tx_json(::monero_wallet* wallet, const char* tx_json, char** out_hash) {
+  reset_out(out_hash);
   if (!require(wallet, "wallet") || !require(tx_json, "tx_json") || !require(out_hash, "out_hash")) return MONERO_ERROR;
-  *out_hash = nullptr;
   return guard([&] { *out_hash = dup_string(wallet->wallet->relay_tx(tx_metadata_of_json(tx_json))); });
 }
 
 monero_result monero_wallet_relay_txs(::monero_wallet* wallet, const char* const* tx_metadatas, size_t num_tx_metadatas, char** out_json) {
+  reset_out(out_json);
   if (!require(wallet, "wallet") || !require(out_json, "out_json")) return MONERO_ERROR;
   if (num_tx_metadatas > 0 && !require(tx_metadatas, "tx_metadatas")) return MONERO_ERROR;
-  *out_json = nullptr;
   return guard([&] { *out_json = dup_string(json_of_strings(wallet->wallet->relay_txs(string_array(tx_metadatas, num_tx_metadatas)))); });
 }
 
 monero_result monero_wallet_relay_txs_json(::monero_wallet* wallet, const char* txs_json, char** out_json) {
+  reset_out(out_json);
   if (!require(wallet, "wallet") || !require(txs_json, "txs_json") || !require(out_json, "out_json")) return MONERO_ERROR;
-  *out_json = nullptr;
   return guard([&] { *out_json = dup_string(json_of_strings(wallet->wallet->relay_txs(tx_metadatas_of_json(txs_json)))); });
 }
 
 monero_result monero_wallet_submit_txs(::monero_wallet* wallet, const char* signed_tx_hex, char** out_json) {
+  reset_out(out_json);
   if (!require(wallet, "wallet") || !require(signed_tx_hex, "signed_tx_hex") || !require(out_json, "out_json")) return MONERO_ERROR;
-  *out_json = nullptr;
   return guard([&] { *out_json = dup_string(json_of_strings(wallet->wallet->submit_txs(std::string(signed_tx_hex)))); });
 }
 
 monero_result monero_wallet_sign_txs(::monero_wallet* wallet, const char* unsigned_tx_hex, char** out_json) {
+  reset_out(out_json);
   if (!require(wallet, "wallet") || !require(unsigned_tx_hex, "unsigned_tx_hex") || !require(out_json, "out_json")) return MONERO_ERROR;
-  *out_json = nullptr;
   return guard([&] { *out_json = dup_string(wallet->wallet->sign_txs(std::string(unsigned_tx_hex)).serialize()); });
 }
 
 monero_result monero_wallet_describe_tx_set(::monero_wallet* wallet, const char* tx_set_json, char** out_json) {
+  reset_out(out_json);
   if (!require(wallet, "wallet") || !require(tx_set_json, "tx_set_json") || !require(out_json, "out_json")) return MONERO_ERROR;
-  *out_json = nullptr;
   return guard([&] { *out_json = dup_string(wallet->wallet->describe_tx_set(*model_json<monero::monero_tx_set>(tx_set_json, "tx_set")).serialize()); });
 }
 
 monero_result monero_wallet_sweep_output(::monero_wallet* wallet, const char* config_json, char** out_json) {
+  reset_out(out_json);
   if (!require(wallet, "wallet") || !require(config_json, "config_json") || !require(out_json, "out_json")) return MONERO_ERROR;
-  *out_json = nullptr;
   return guard([&] { *out_json = dup_string(wallet->wallet->sweep_output(*model_json<monero::monero_tx_config>(config_json, "config"))->serialize()); });
 }
 
 monero_result monero_wallet_sweep_dust(::monero_wallet* wallet, bool relay, char** out_json) {
+  reset_out(out_json);
   if (!require(wallet, "wallet") || !require(out_json, "out_json")) return MONERO_ERROR;
-  *out_json = nullptr;
   return guard([&] { *out_json = dup_string(json_of_list(wallet->wallet->sweep_dust(relay))); });
 }
 
 monero_result monero_wallet_sweep_unlocked(::monero_wallet* wallet, const char* config_json, char** out_json) {
+  reset_out(out_json);
   if (!require(wallet, "wallet") || !require(config_json, "config_json") || !require(out_json, "out_json")) return MONERO_ERROR;
-  *out_json = nullptr;
   return guard([&] { *out_json = dup_string(json_of_list(wallet->wallet->sweep_unlocked(*model_json<monero::monero_tx_config>(config_json, "config")))); });
 }
 
@@ -994,44 +995,44 @@ monero_result monero_wallet_move_to(::monero_wallet* wallet, const char* path, c
 }
 
 monero_result monero_wallet_get_payment_uri(::monero_wallet* wallet, const char* config_json, char** out_uri) {
+  reset_out(out_uri);
   if (!require(wallet, "wallet") || !require(config_json, "config_json") || !require(out_uri, "out_uri")) return MONERO_ERROR;
-  *out_uri = nullptr;
   return guard([&] { *out_uri = dup_string(wallet->wallet->get_payment_uri(*model_json<monero::monero_tx_config>(config_json, "config"))); });
 }
 
 monero_result monero_wallet_parse_payment_uri(::monero_wallet* wallet, const char* uri, char** out_json) {
+  reset_out(out_json);
   if (!require(wallet, "wallet") || !require(uri, "uri") || !require(out_json, "out_json")) return MONERO_ERROR;
-  *out_json = nullptr;
   return guard([&] { *out_json = dup_string(wallet->wallet->parse_payment_uri(std::string(uri))->serialize()); });
 }
 
 monero_result monero_wallet_get_tx_key(::monero_wallet* wallet, const char* tx_hash, char** out_key) {
+  reset_out(out_key);
   if (!require(wallet, "wallet") || !require(tx_hash, "tx_hash") || !require(out_key, "out_key")) return MONERO_ERROR;
-  *out_key = nullptr;
   return guard([&] { *out_key = dup_string(wallet->wallet->get_tx_key(std::string(tx_hash))); });
 }
 
 monero_result monero_wallet_check_tx_key(::monero_wallet* wallet, const char* tx_hash, const char* tx_key, const char* address, char** out_json) {
+  reset_out(out_json);
   if (!require(wallet, "wallet") || !require(tx_hash, "tx_hash") || !require(tx_key, "tx_key") || !require(address, "address") || !require(out_json, "out_json")) return MONERO_ERROR;
-  *out_json = nullptr;
   return guard([&] { *out_json = dup_string(wallet->wallet->check_tx_key(std::string(tx_hash), std::string(tx_key), std::string(address))->serialize()); });
 }
 
 monero_result monero_wallet_get_tx_proof(::monero_wallet* wallet, const char* tx_hash, const char* address, const char* message, char** out_signature) {
+  reset_out(out_signature);
   if (!require(wallet, "wallet") || !require(tx_hash, "tx_hash") || !require(address, "address") || !require(out_signature, "out_signature")) return MONERO_ERROR;
-  *out_signature = nullptr;
   return guard([&] { *out_signature = dup_string(wallet->wallet->get_tx_proof(std::string(tx_hash), std::string(address), safe_str(message))); });
 }
 
 monero_result monero_wallet_check_tx_proof(::monero_wallet* wallet, const char* tx_hash, const char* address, const char* message, const char* signature, char** out_json) {
+  reset_out(out_json);
   if (!require(wallet, "wallet") || !require(tx_hash, "tx_hash") || !require(address, "address") || !require(signature, "signature") || !require(out_json, "out_json")) return MONERO_ERROR;
-  *out_json = nullptr;
   return guard([&] { *out_json = dup_string(wallet->wallet->check_tx_proof(std::string(tx_hash), std::string(address), safe_str(message), std::string(signature))->serialize()); });
 }
 
 monero_result monero_wallet_get_spend_proof(::monero_wallet* wallet, const char* tx_hash, const char* message, char** out_signature) {
+  reset_out(out_signature);
   if (!require(wallet, "wallet") || !require(tx_hash, "tx_hash") || !require(out_signature, "out_signature")) return MONERO_ERROR;
-  *out_signature = nullptr;
   return guard([&] { *out_signature = dup_string(wallet->wallet->get_spend_proof(std::string(tx_hash), safe_str(message))); });
 }
 
@@ -1041,20 +1042,20 @@ monero_result monero_wallet_check_spend_proof(::monero_wallet* wallet, const cha
 }
 
 monero_result monero_wallet_get_reserve_proof_wallet(::monero_wallet* wallet, const char* message, char** out_signature) {
+  reset_out(out_signature);
   if (!require(wallet, "wallet") || !require(out_signature, "out_signature")) return MONERO_ERROR;
-  *out_signature = nullptr;
   return guard([&] { *out_signature = dup_string(wallet->wallet->get_reserve_proof_wallet(safe_str(message))); });
 }
 
 monero_result monero_wallet_get_reserve_proof_account(::monero_wallet* wallet, uint32_t account_idx, uint64_t amount, const char* message, char** out_signature) {
+  reset_out(out_signature);
   if (!require(wallet, "wallet") || !require(out_signature, "out_signature")) return MONERO_ERROR;
-  *out_signature = nullptr;
   return guard([&] { *out_signature = dup_string(wallet->wallet->get_reserve_proof_account(account_idx, amount, safe_str(message))); });
 }
 
 monero_result monero_wallet_check_reserve_proof(::monero_wallet* wallet, const char* address, const char* message, const char* signature, char** out_json) {
+  reset_out(out_json);
   if (!require(wallet, "wallet") || !require(address, "address") || !require(signature, "signature") || !require(out_json, "out_json")) return MONERO_ERROR;
-  *out_json = nullptr;
   return guard([&] { *out_json = dup_string(wallet->wallet->check_reserve_proof(std::string(address), safe_str(message), std::string(signature))->serialize()); });
 }
 
@@ -1066,34 +1067,34 @@ monero_result monero_wallet_is_multisig_import_needed(::monero_wallet* wallet, b
 }
 
 monero_result monero_wallet_get_multisig_info(::monero_wallet* wallet, char** out_json) {
+  reset_out(out_json);
   if (!require(wallet, "wallet") || !require(out_json, "out_json")) return MONERO_ERROR;
-  *out_json = nullptr;
   return guard([&] { *out_json = dup_string(wallet->wallet->get_multisig_info().serialize()); });
 }
 
 monero_result monero_wallet_prepare_multisig(::monero_wallet* wallet, char** out_multisig_hex) {
+  reset_out(out_multisig_hex);
   if (!require(wallet, "wallet") || !require(out_multisig_hex, "out_multisig_hex")) return MONERO_ERROR;
-  *out_multisig_hex = nullptr;
   return guard([&] { *out_multisig_hex = dup_string(wallet->wallet->prepare_multisig()); });
 }
 
 monero_result monero_wallet_make_multisig(::monero_wallet* wallet, const char* const* multisig_hexes, size_t num_multisig_hexes, int threshold, const char* password, char** out_multisig_hex) {
+  reset_out(out_multisig_hex);
   if (!require(wallet, "wallet") || !require(out_multisig_hex, "out_multisig_hex")) return MONERO_ERROR;
   if (num_multisig_hexes > 0 && !require(multisig_hexes, "multisig_hexes")) return MONERO_ERROR;
-  *out_multisig_hex = nullptr;
   return guard([&] { *out_multisig_hex = dup_string(wallet->wallet->make_multisig(string_array(multisig_hexes, num_multisig_hexes), threshold, safe_str(password))); });
 }
 
 monero_result monero_wallet_exchange_multisig_keys(::monero_wallet* wallet, const char* const* multisig_hexes, size_t num_multisig_hexes, const char* password, char** out_json) {
+  reset_out(out_json);
   if (!require(wallet, "wallet") || !require(out_json, "out_json")) return MONERO_ERROR;
   if (num_multisig_hexes > 0 && !require(multisig_hexes, "multisig_hexes")) return MONERO_ERROR;
-  *out_json = nullptr;
   return guard([&] { *out_json = dup_string(wallet->wallet->exchange_multisig_keys(string_array(multisig_hexes, num_multisig_hexes), safe_str(password)).serialize()); });
 }
 
 monero_result monero_wallet_export_multisig_hex(::monero_wallet* wallet, char** out_multisig_hex) {
+  reset_out(out_multisig_hex);
   if (!require(wallet, "wallet") || !require(out_multisig_hex, "out_multisig_hex")) return MONERO_ERROR;
-  *out_multisig_hex = nullptr;
   return guard([&] { *out_multisig_hex = dup_string(wallet->wallet->export_multisig_hex()); });
 }
 
@@ -1104,22 +1105,22 @@ monero_result monero_wallet_import_multisig_hex(::monero_wallet* wallet, const c
 }
 
 monero_result monero_wallet_sign_multisig_tx_hex(::monero_wallet* wallet, const char* multisig_tx_hex, char** out_json) {
+  reset_out(out_json);
   if (!require(wallet, "wallet") || !require(multisig_tx_hex, "multisig_tx_hex") || !require(out_json, "out_json")) return MONERO_ERROR;
-  *out_json = nullptr;
   return guard([&] { *out_json = dup_string(wallet->wallet->sign_multisig_tx_hex(std::string(multisig_tx_hex)).serialize()); });
 }
 
 monero_result monero_wallet_submit_multisig_tx_hex(::monero_wallet* wallet, const char* signed_multisig_tx_hex, char** out_json) {
+  reset_out(out_json);
   if (!require(wallet, "wallet") || !require(signed_multisig_tx_hex, "signed_multisig_tx_hex") || !require(out_json, "out_json")) return MONERO_ERROR;
-  *out_json = nullptr;
   return guard([&] { *out_json = dup_string(json_of_strings(wallet->wallet->submit_multisig_tx_hex(std::string(signed_multisig_tx_hex)))); });
 }
 
 // -------------------------------- RPC WALLETS -------------------------------
 
 monero_result monero_wallet_rpc_connect(::monero_rpc_connection* connection, ::monero_wallet** out_wallet) {
+  reset_out(out_wallet);
   if (!require(connection, "connection") || !require(out_wallet, "out_wallet")) return MONERO_ERROR;
-  *out_wallet = nullptr;
   return guard([&] { *out_wallet = wrap_shared(std::make_shared<monero::monero_wallet_rpc>(monero_c::connection_of(connection))); });
 }
 
@@ -1134,8 +1135,8 @@ monero_result monero_wallet_rpc_create_wallet(::monero_wallet* wallet, const cha
 }
 
 monero_result monero_wallet_rpc_open(const char* uri, const char* username, const char* password, const char* name, const char* wallet_password, ::monero_wallet** out_wallet) {
+  reset_out(out_wallet);
   if (!require(uri, "uri") || !require(name, "name") || !require(out_wallet, "out_wallet")) return MONERO_ERROR;
-  *out_wallet = nullptr;
   return guard([&] {
     std::shared_ptr<monero::monero_wallet_rpc> rpc = rpc_client(uri, username, password);
     rpc->open_wallet(std::string(name), safe_str(wallet_password));
@@ -1144,14 +1145,14 @@ monero_result monero_wallet_rpc_open(const char* uri, const char* username, cons
 }
 
 monero_result monero_wallet_rpc_create_random(const char* uri, const char* username, const char* password, const char* name, const char* wallet_password, const char* language, ::monero_wallet** out_wallet) {
+  reset_out(out_wallet);
   if (!require(uri, "uri") || !require(name, "name") || !require(out_wallet, "out_wallet")) return MONERO_ERROR;
-  *out_wallet = nullptr;
   return guard([&] { *out_wallet = create_rpc_wallet(uri, username, password, rpc_config(name, wallet_password, language)); });
 }
 
 monero_result monero_wallet_rpc_create_from_seed(const char* uri, const char* username, const char* password, const char* name, const char* wallet_password, const char* seed, const char* seed_offset, uint64_t restore_height, const char* language, ::monero_wallet** out_wallet) {
+  reset_out(out_wallet);
   if (!require(uri, "uri") || !require(name, "name") || !require(seed, "seed") || !require(out_wallet, "out_wallet")) return MONERO_ERROR;
-  *out_wallet = nullptr;
   return guard([&] {
     auto config = rpc_config(name, wallet_password, language);
     config->m_seed = std::string(seed);
@@ -1162,8 +1163,8 @@ monero_result monero_wallet_rpc_create_from_seed(const char* uri, const char* us
 }
 
 monero_result monero_wallet_rpc_create_from_keys(const char* uri, const char* username, const char* password, const char* name, const char* wallet_password, const char* address, const char* private_view_key, const char* private_spend_key, uint64_t restore_height, const char* language, ::monero_wallet** out_wallet) {
+  reset_out(out_wallet);
   if (!require(uri, "uri") || !require(name, "name") || !require(address, "address") || !require(private_view_key, "private_view_key") || !require(out_wallet, "out_wallet")) return MONERO_ERROR;
-  *out_wallet = nullptr;
   return guard([&] {
     auto config = rpc_config(name, wallet_password, language);
     config->m_primary_address = std::string(address);
@@ -1180,14 +1181,14 @@ monero_result monero_wallet_rpc_stop(::monero_wallet* wallet) {
 }
 
 monero_result monero_wallet_rpc_get_seed_languages(::monero_wallet* wallet, char** out_json) {
+  reset_out(out_json);
   if (!require(wallet, "wallet") || !require(out_json, "out_json")) return MONERO_ERROR;
-  *out_json = nullptr;
   return guard([&] { *out_json = dup_string(json_of_strings(as_rpc(wallet).get_seed_languages())); });
 }
 
 monero_result monero_wallet_rpc_get_connection(::monero_wallet* wallet, char** out_json) {
+  reset_out(out_json);
   if (!require(wallet, "wallet") || !require(out_json, "out_json")) return MONERO_ERROR;
-  *out_json = nullptr;
   return guard([&] { *out_json = dup_string(as_rpc(wallet).get_rpc_connection()->serialize()); });
 }
 
@@ -1197,8 +1198,8 @@ monero_result monero_wallet_rpc_set_poll_period(::monero_wallet* wallet, uint64_
 }
 
 monero_result monero_wallet_rpc_get_balances(::monero_wallet* wallet, const uint32_t* account_idx, const uint32_t* subaddress_idx, char** out_json) {
+  reset_out(out_json);
   if (!require(wallet, "wallet") || !require(out_json, "out_json")) return MONERO_ERROR;
-  *out_json = nullptr;
   return guard([&] {
     std::shared_ptr<monero::monero_subaddress> balances = as_rpc(wallet).get_balances(optional_of(account_idx), optional_of(subaddress_idx));
     *out_json = dup_string(balances ? balances->serialize() : std::string("null"));
@@ -1206,21 +1207,21 @@ monero_result monero_wallet_rpc_get_balances(::monero_wallet* wallet, const uint
 }
 
 monero_result monero_wallet_rpc_get_account(::monero_wallet* wallet, uint32_t account_idx, bool include_subaddresses, bool skip_balances, char** out_json) {
+  reset_out(out_json);
   if (!require(wallet, "wallet") || !require(out_json, "out_json")) return MONERO_ERROR;
-  *out_json = nullptr;
   return guard([&] { *out_json = dup_string(as_rpc(wallet).get_account(account_idx, include_subaddresses, skip_balances).serialize()); });
 }
 
 monero_result monero_wallet_rpc_get_accounts(::monero_wallet* wallet, bool include_subaddresses, const char* tag, bool skip_balances, char** out_json) {
+  reset_out(out_json);
   if (!require(wallet, "wallet") || !require(out_json, "out_json")) return MONERO_ERROR;
-  *out_json = nullptr;
   return guard([&] { *out_json = dup_string(json_of_list(as_rpc(wallet).get_accounts(include_subaddresses, safe_str(tag), skip_balances))); });
 }
 
 monero_result monero_wallet_rpc_get_subaddresses(::monero_wallet* wallet, uint32_t account_idx, const uint32_t* subaddress_indices, size_t num_subaddress_indices, bool skip_balances, char** out_json) {
+  reset_out(out_json);
   if (!require(wallet, "wallet") || !require(out_json, "out_json")) return MONERO_ERROR;
   if (num_subaddress_indices > 0 && !require(subaddress_indices, "subaddress_indices")) return MONERO_ERROR;
-  *out_json = nullptr;
   return guard([&] {
     auto indices = array_of(subaddress_indices, num_subaddress_indices);
     *out_json = dup_string(json_of_list(as_rpc(wallet).get_subaddresses(account_idx, indices, skip_balances)));

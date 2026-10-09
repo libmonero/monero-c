@@ -45,6 +45,7 @@ using monero_c::dup_string;
 using monero_c::guard;
 using monero_c::optional_of;
 using monero_c::require;
+using monero_c::reset_out;
 using monero_c::safe_str;
 
 // request parameters given as a JSON object, parsed once
@@ -165,8 +166,8 @@ std::shared_ptr<monero::monero_rpc_connection> connection_of(::monero_rpc_connec
 extern "C" {
 
 monero_result monero_rpc_connection_create(const char* connection_json, ::monero_rpc_connection** out_connection) {
+  reset_out(out_connection);
   if (!require(connection_json, "connection_json") || !require(out_connection, "out_connection")) return MONERO_ERROR;
-  *out_connection = nullptr;
   return guard([&] {
     std::unique_ptr<::monero_rpc_connection> handle(new ::monero_rpc_connection());
     handle->connection = monero::monero_rpc_connection::deserialize(std::string(connection_json));
@@ -179,8 +180,8 @@ void monero_rpc_connection_free(::monero_rpc_connection* connection) {
 }
 
 monero_result monero_rpc_connection_serialize(::monero_rpc_connection* connection, char** out_json) {
+  reset_out(out_json);
   if (!require(connection, "connection") || !require(out_json, "out_json")) return MONERO_ERROR;
-  *out_json = nullptr;
   return guard([&] { *out_json = dup_string(connection->connection->serialize()); });
 }
 
@@ -195,8 +196,8 @@ monero_result monero_rpc_connection_set_attribute(::monero_rpc_connection* conne
 }
 
 monero_result monero_rpc_connection_get_attribute(::monero_rpc_connection* connection, const char* key, char** out_value) {
+  reset_out(out_value);
   if (!require(connection, "connection") || !require(key, "key") || !require(out_value, "out_value")) return MONERO_ERROR;
-  *out_value = nullptr;
   return guard([&] { *out_value = dup_string(connection->connection->get_attribute(std::string(key))); });
 }
 
@@ -231,8 +232,8 @@ monero_result monero_rpc_connection_check_connection(::monero_rpc_connection* co
 }
 
 monero_result monero_rpc_connection_send_json_request(::monero_rpc_connection* connection, const char* method, const char* params_json, const uint32_t* timeout_ms, char** out_json) {
+  reset_out(out_json);
   if (!require(connection, "connection") || !require(method, "method") || !require(out_json, "out_json")) return MONERO_ERROR;
-  *out_json = nullptr;
   return guard([&] {
     monero::monero_rpc_request request(std::string(method), params_of(params_json));
     *out_json = dup_string(json_of_tree(connection->connection->send_json_request(request, optional_of(timeout_ms)).m_result));
@@ -240,8 +241,8 @@ monero_result monero_rpc_connection_send_json_request(::monero_rpc_connection* c
 }
 
 monero_result monero_rpc_connection_send_path_request(::monero_rpc_connection* connection, const char* path, const char* params_json, const uint32_t* timeout_ms, char** out_json) {
+  reset_out(out_json);
   if (!require(connection, "connection") || !require(path, "path") || !require(out_json, "out_json")) return MONERO_ERROR;
-  *out_json = nullptr;
   return guard([&] {
     monero::monero_rpc_request request(std::string(path), params_of(params_json), false);
     *out_json = dup_string(json_of_tree(connection->connection->send_path_request(request, optional_of(timeout_ms)).m_response));
@@ -249,8 +250,9 @@ monero_result monero_rpc_connection_send_path_request(::monero_rpc_connection* c
 }
 
 monero_result monero_rpc_connection_send_binary_request(::monero_rpc_connection* connection, const char* path, const char* params_json, const uint32_t* timeout_ms, uint8_t** out_data, size_t* out_len) {
+  reset_out(out_data);
+  reset_out(out_len);
   if (!require(connection, "connection") || !require(path, "path") || !require(out_data, "out_data") || !require(out_len, "out_len")) return MONERO_ERROR;
-  *out_data = nullptr;
   return guard([&] {
     monero::monero_rpc_request request(std::string(path), params_of(params_json), false);
     monero::monero_rpc_response response = connection->connection->send_binary_request(request, optional_of(timeout_ms));

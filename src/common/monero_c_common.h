@@ -93,6 +93,13 @@ inline bool require(const void* ptr, const char* name) {
   return false;
 }
 
+// sets an output to NULL (a count to 0), unless the pointer to it is NULL. Done before the
+// arguments are checked, so a failed call never leaves a stale pointer for the caller to free
+template <class T>
+void reset_out(T* out) {
+  if (out != nullptr) *out = T();
+}
+
 // copies a C array. Throws if it is NULL and the count is not zero
 template <class T>
 std::vector<T> array_of(const T* items, size_t count) {

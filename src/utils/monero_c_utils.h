@@ -75,8 +75,9 @@ extern "C" {
 
 // ------------------------------- RESULT CODES -------------------------------
 
-// returned by every function that can fail. On MONERO_ERROR, call
-// monero_last_error() for a human-readable message
+// returned by every function that can fail. On MONERO_ERROR, call monero_last_error()
+// for a human-readable message. The pointer outputs of a failed call are set to NULL and the
+// counts to 0, even when the failure is a NULL argument. Scalar outputs are left unchanged
 typedef enum monero_result {
   MONERO_OK = 0,
   MONERO_ERROR = -1

@@ -112,6 +112,9 @@ static inline int json_string(const char* json, const char* key, char* out, size
   return 1;
 }
 
+// a value no call returns: an output set to it before a call that fails has to be reset
+#define POISON_PTR ((void*) 1)
+
 // counts the words of a seed, which are separated by spaces. Returns 0 for an empty seed
 static inline size_t count_words(const char* seed) {
   size_t words = 0;

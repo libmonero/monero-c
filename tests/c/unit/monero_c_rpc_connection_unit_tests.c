@@ -227,6 +227,42 @@ static void test_every_function_rejects_null_connection(void) {
   CHECK(json == NULL && data == NULL);
 }
 
+// a call that fails on a NULL argument resets its outputs too
+static void test_null_arguments_reset_outputs(void) {
+  monero_rpc_connection* connection = POISON_PTR;
+  char* json = POISON_PTR;
+  uint8_t* data = POISON_PTR;
+  size_t count = 7;
+
+  EXPECT_ERR(monero_rpc_connection_create(NULL, &connection));
+  CHECK(connection == NULL);
+  EXPECT_ERR(monero_rpc_connection_serialize(NULL, &json));
+  CHECK(json == NULL);
+
+  EXPECT_ERR(monero_rpc_connection_send_binary_request(NULL, "x", "x", NULL, &data, &count));
+  CHECK(data == NULL && count == 0);
+
+  // with the data pointer NULL, the length is still reset
+  count = 7;
+  EXPECT_ERR(monero_rpc_connection_send_binary_request(NULL, "x", "x", NULL, NULL, &count));
+  CHECK(count == 0);
+
+  // a connection that exists, with a NULL path
+  monero_rpc_connection* valid = create_connection(UNREACHABLE);
+  if (valid == NULL) return;
+  json = POISON_PTR;
+  EXPECT_ERR(monero_rpc_connection_get_attribute(valid, NULL, &json));
+  CHECK(json == NULL);
+  json = POISON_PTR;
+  EXPECT_ERR(monero_rpc_connection_send_path_request(valid, NULL, "{}", NULL, &json));
+  CHECK(json == NULL);
+  data = POISON_PTR;
+  count = 7;
+  EXPECT_ERR(monero_rpc_connection_send_binary_request(valid, NULL, "{}", NULL, &data, &count));
+  CHECK(data == NULL && count == 0);
+  monero_rpc_connection_free(valid);
+}
+
 #if !defined(_WIN32)
 
 #include <netinet/in.h>
@@ -421,6 +457,7 @@ int main(void) {
   test_daemon_from_connection();
   test_rpc_wallet_from_connection();
   test_every_function_rejects_null_connection();
+  test_null_arguments_reset_outputs();
 #if !defined(_WIN32)
   // a client that closes its socket while the server writes must not stop the program
   signal(SIGPIPE, SIG_IGN);

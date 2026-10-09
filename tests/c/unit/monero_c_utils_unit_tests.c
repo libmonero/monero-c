@@ -386,6 +386,43 @@ static void test_binary_blocks_to_json(void) {
 }
 
 // the log setters return nothing, so check the log file
+// a failed call resets its pointer and count outputs, and keeps its scalar outputs
+static void test_failed_calls_reset_outputs(void) {
+  char* text = POISON_PTR;
+  uint8_t* data = POISON_PTR;
+  size_t len = 7;
+  uint64_t amount = 42;
+  uint32_t minor = 7;
+  uint32_t patch = 7;
+  const uint8_t junk[] = {1, 2, 3};
+
+  EXPECT_ERR(monero_utils_get_integrated_address(99, MAINNET_PRIMARY_1, "", &text));
+  CHECK(text == NULL);
+  text = POISON_PTR;
+  EXPECT_ERR(monero_utils_get_payment_uri("{}", 99, &text));
+  CHECK(text == NULL);
+  text = POISON_PTR;
+  EXPECT_ERR(monero_utils_parse_payment_uri("bitcoin:x", 99, &text));
+  CHECK(text == NULL);
+  text = POISON_PTR;
+  EXPECT_ERR(monero_utils_binary_blocks_to_json(junk, sizeof(junk), &text));
+  CHECK(text == NULL);
+  text = POISON_PTR;
+  EXPECT_ERR(monero_utils_binary_blocks_fast_to_json(junk, sizeof(junk), &text));
+  CHECK(text == NULL);
+
+  // with one of the two outputs NULL, the other is still reset
+  EXPECT_ERR(monero_utils_json_to_binary("{}", &data, NULL));
+  CHECK(data == NULL);
+  EXPECT_ERR(monero_utils_json_to_binary("{}", NULL, &len));
+  CHECK(len == 0);
+
+  EXPECT_ERR(monero_utils_xmr_to_atomic_units(-1.0, &amount));
+  CHECK(amount == 42);
+  EXPECT_ERR(monero_utils_get_abi_version(NULL, &minor, &patch));
+  CHECK(minor == 7 && patch == 7);
+}
+
 static void test_logging(void) {
   const char* path = "monero_c_utils_unit_tests.log";
   FILE* file = NULL;
@@ -423,6 +460,7 @@ int main(void) {
   test_parse_payment_uri_wrong_scheme();
   test_json_binary_roundtrip();
   test_binary_blocks_to_json();
+  test_failed_calls_reset_outputs();
   test_logging();
 
   printf("%d/%d checks passed\n", g_checks - g_failures, g_checks);

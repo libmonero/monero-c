@@ -282,6 +282,40 @@ static void test_outputs_are_reset_on_error(monero_daemon* daemon) {
   CHECK(height == 42);
 }
 
+// a call that fails on a NULL argument resets its outputs too, whichever output it can reach
+static void test_null_arguments_reset_outputs(void) {
+  char* json = POISON_PTR;
+  monero_daemon* daemon = POISON_PTR;
+  monero_daemon_listener* listener = POISON_PTR;
+  monero_daemon_listener** listeners = POISON_PTR;
+  monero_key_image_spent_status* statuses = POISON_PTR;
+  uint64_t* indices = POISON_PTR;
+  size_t count = 7;
+
+  EXPECT_ERR(monero_daemon_get_info(NULL, &json));
+  CHECK(json == NULL);
+  EXPECT_ERR(monero_daemon_connect_with(NULL, &daemon));
+  CHECK(daemon == NULL);
+  EXPECT_ERR(monero_daemon_listener_create(NULL, &listener));
+  CHECK(listener == NULL);
+
+  EXPECT_ERR(monero_daemon_get_listeners(NULL, &listeners, &count));
+  CHECK(listeners == NULL && count == 0);
+
+  statuses = POISON_PTR;
+  count = 7;
+  EXPECT_ERR(monero_daemon_get_key_image_spent_statuses(NULL, STRINGS, 1, &statuses, &count));
+  CHECK(statuses == NULL && count == 0);
+
+  // a NULL output next to a valid one: the valid one is still reset
+  indices = POISON_PTR;
+  EXPECT_ERR(monero_daemon_get_output_indices(NULL, "00", &indices, NULL));
+  CHECK(indices == NULL);
+  count = 7;
+  EXPECT_ERR(monero_daemon_get_output_indices(NULL, "00", NULL, &count));
+  CHECK(count == 0);
+}
+
 // the binding's own checks and the messages monero-cpp throws both reach the caller
 static void test_errors_from_the_binding_and_monero_cpp(monero_daemon* daemon) {
   char* json = NULL;
@@ -428,6 +462,7 @@ int main(void) {
   test_every_function_rejects_null_daemon();
   test_null_outputs_are_rejected(daemon);
   test_outputs_are_reset_on_error(daemon);
+  test_null_arguments_reset_outputs();
   test_errors_from_the_binding_and_monero_cpp(daemon);
   test_listener_handles(daemon);
   test_listener_registered_with_one_daemon();
