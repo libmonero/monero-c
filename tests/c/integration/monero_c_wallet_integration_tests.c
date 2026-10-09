@@ -27,9 +27,9 @@
 // integration tests for the wallet. The daemon part needs a regtest monerod, and the RPC part a
 // monero-wallet-rpc server connected to it. Set the URIs of both, for example:
 //
-//   docker compose -f tests/integration/docker-compose.yml up -d
+//   docker compose -f tests/c/integration/docker-compose.yml up -d
 //   MONERO_C_TEST_DAEMON_URI=http://127.0.0.1:18081 MONERO_C_TEST_WALLET_RPC_URI=http://127.0.0.1:18082 \
-//     ./build/tests/integration/monero_c_wallet_integration_tests
+//     ./build/tests/c/integration/monero_c_wallet_integration_tests
 //
 // the daemon part mines blocks, so never point it at a real node. Run the node with --fixed-difficulty=1,
 // as the compose file does. The RPC part stops the server at the end. Each part is skipped, and the program

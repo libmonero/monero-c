@@ -146,6 +146,21 @@ set_target_properties(randomx PROPERTIES IMPORTED_LOCATION
 # monero-project's external dependencies
 ##############################################################################
 
+option(MONERO_C_STATIC_DEPENDENCIES "Prefer static third-party dependencies other than libusb" OFF)
+
+if (MONERO_C_STATIC_DEPENDENCIES)
+  set(Boost_USE_STATIC_LIBS ON)
+  set(OPENSSL_USE_STATIC_LIBS ON)
+  set(Protobuf_USE_STATIC_LIBS ON)
+  if (APPLE)
+    set(CMAKE_FIND_LIBRARY_SUFFIXES .a .dylib .tbd)
+  elseif (WIN32)
+    set(CMAKE_FIND_LIBRARY_SUFFIXES .a .lib)
+  else()
+    set(CMAKE_FIND_LIBRARY_SUFFIXES .a)
+  endif()
+endif()
+
 find_package(Threads REQUIRED)
 
 # MSYS2's boost package ships regex only as a CMake config package, not a legacy-findable lib file.
@@ -168,13 +183,45 @@ find_package(Boost ${BOOST_MIN_VER} QUIET REQUIRED COMPONENTS ${BOOST_COMPONENTS
 find_package(OpenSSL REQUIRED)
 if (WIN32)
   list(APPEND OPENSSL_LIBRARIES ws2_32 crypt32 bcrypt)
+elseif (MONERO_C_STATIC_DEPENDENCIES AND UNIX)
+  list(APPEND OPENSSL_LIBRARIES ${CMAKE_DL_LIBS})
 endif()
 
 find_package(Unbound REQUIRED)
 
-find_library(usb_LIBRARY NAMES usb-1.0 libusb usb)
-if (usb_LIBRARY)
-  set(LibUSB_LIBRARIES ${usb_LIBRARY})
+if (MONERO_C_STATIC_DEPENDENCIES)
+  # static libunbound dependencies
+  foreach(dependency expat event event_core nghttp2)
+    string(TOUPPER "${dependency}" dependency_upper)
+    find_library(${dependency_upper}_LIBRARY NAMES ${dependency}
+      HINTS /opt/homebrew/opt/${dependency}/lib /usr/local/opt/${dependency}/lib)
+    if (${dependency_upper}_LIBRARY)
+      list(APPEND UNBOUND_LIBRARIES "${${dependency_upper}_LIBRARY}")
+    endif()
+  endforeach()
+endif()
+
+if (MONERO_C_STATIC_DEPENDENCIES)
+  set(MONERO_C_FIND_LIBRARY_SUFFIXES ${CMAKE_FIND_LIBRARY_SUFFIXES})
+  if (WIN32)
+    set(CMAKE_FIND_LIBRARY_SUFFIXES .dll.a .lib)
+  elseif (APPLE)
+    set(CMAKE_FIND_LIBRARY_SUFFIXES .dylib)
+  else()
+    set(CMAKE_FIND_LIBRARY_SUFFIXES .so)
+  endif()
+  find_library(MONERO_C_LIBUSB_SHARED_LIBRARY NAMES usb-1.0 libusb usb)
+  set(CMAKE_FIND_LIBRARY_SUFFIXES ${MONERO_C_FIND_LIBRARY_SUFFIXES})
+  if (NOT MONERO_C_LIBUSB_SHARED_LIBRARY OR
+      NOT EXISTS "${MONERO_C_LIBUSB_SHARED_LIBRARY}")
+    message(FATAL_ERROR "MONERO_C_STATIC_DEPENDENCIES requires a shared libusb library")
+  endif()
+  set(LibUSB_LIBRARIES ${MONERO_C_LIBUSB_SHARED_LIBRARY})
+else()
+  find_library(usb_LIBRARY NAMES usb-1.0 libusb usb)
+  if (usb_LIBRARY)
+    set(LibUSB_LIBRARIES ${usb_LIBRARY})
+  endif()
 endif()
 
 find_package(HIDAPI REQUIRED)
@@ -241,6 +288,11 @@ target_include_directories(monero_c-obj
 add_library(monero_c SHARED $<TARGET_OBJECTS:monero_c-obj>)
 add_library(monero_c-static STATIC $<TARGET_OBJECTS:monero_c-obj>)
 set_target_properties(monero_c-static PROPERTIES OUTPUT_NAME monero_c)
+if (APPLE)
+  set_target_properties(monero_c PROPERTIES BUILD_WITH_INSTALL_RPATH ON INSTALL_RPATH "@loader_path")
+elseif (UNIX)
+  set_target_properties(monero_c PROPERTIES BUILD_WITH_INSTALL_RPATH ON INSTALL_RPATH "$ORIGIN")
+endif()
 
 # $<TARGET_OBJECTS:...> doesn't propagate monero_c-obj's PUBLIC include dirs, so repeat them here.
 target_include_directories(monero_c PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
@@ -286,6 +338,13 @@ set(MONERO_C_LINK_LIBS
 
 target_link_libraries(monero_c PRIVATE ${MONERO_C_LINK_LIBS})
 target_link_libraries(monero_c-static PRIVATE ${MONERO_C_LINK_LIBS})
+
+if (WIN32)
+  target_link_libraries(monero_c PRIVATE ws2_32 iphlpapi)
+  target_link_libraries(monero_c-static PRIVATE ws2_32 iphlpapi)
+  target_link_options(monero_c PRIVATE "-Wl,-Bstatic,--whole-archive" -lwinpthread "-Wl,--no-whole-archive,-Bdynamic")
+  target_link_options(monero_c PRIVATE -static-libstdc++ -static-libgcc)
+endif()
 
 # monero-project's ge25519 asm lacks .note.GNU-stack. Keep the stack non-executable (GNU ld/lld only)
 if (CMAKE_SYSTEM_NAME STREQUAL "Linux")

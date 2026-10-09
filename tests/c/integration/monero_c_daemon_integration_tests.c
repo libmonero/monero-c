@@ -26,8 +26,8 @@
 
 // needs a regtest monerod, for example the one in docker-compose.yml in this folder:
 //
-//   docker compose -f tests/integration/docker-compose.yml up -d
-//   MONERO_C_TEST_DAEMON_URI=http://127.0.0.1:18081 ./build/tests/integration/monero_c_daemon_integration_tests
+//   docker compose -f tests/c/integration/docker-compose.yml up -d
+//   MONERO_C_TEST_DAEMON_URI=http://127.0.0.1:18081 ./build/tests/c/integration/monero_c_daemon_integration_tests
 //
 // the tests mine blocks, so never point them at a real node.
 // run the node with --fixed-difficulty=1, as the compose file does. Otherwise the difficulty grows with every block.

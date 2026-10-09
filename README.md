@@ -115,6 +115,7 @@ Every call returns `MONERO_OK` or `MONERO_ERROR`, and `monero_last_error()` give
 
 * [API documentation](https://libmonero.github.io/monero-c/)
 * [Coverage report](https://libmonero.github.io/monero-c/coverage/)
+* [.NET bindings and NuGet package](docs/dotnet.md)
 
 ## Building monero-c from source
 
@@ -158,12 +159,12 @@ Flags are cached in `./build/CMakeCache.txt`, so pass them on every build to cha
 ctest --test-dir build --output-on-failure
 ```
 
-The unit tests in [tests/unit](tests/unit/) need nothing else. The integration tests in [tests/integration](tests/integration/) call a regtest `monerod` and a `monero-wallet-rpc` server, so they are skipped unless `MONERO_C_TEST_DAEMON_URI` and `MONERO_C_TEST_WALLET_RPC_URI` point at them. The compose file starts both, with the same image that monero-python uses:
+The native unit tests in [tests/c/unit](tests/c/unit/) need nothing else. The native integration tests in [tests/c/integration](tests/c/integration/) call a regtest `monerod` and a `monero-wallet-rpc` server, so they are skipped unless `MONERO_C_TEST_DAEMON_URI` and `MONERO_C_TEST_WALLET_RPC_URI` point at them. The compose file starts both, with the same image that monero-python uses:
 
 ```
-docker compose -f tests/integration/docker-compose.yml up -d
+docker compose -f tests/c/integration/docker-compose.yml up -d
 MONERO_C_TEST_DAEMON_URI=http://127.0.0.1:18081 MONERO_C_TEST_WALLET_RPC_URI=http://127.0.0.1:18082 ctest --test-dir build --output-on-failure
-docker compose -f tests/integration/docker-compose.yml down -v
+docker compose -f tests/c/integration/docker-compose.yml down -v
 ```
 
 The wallet tests stop the wallet RPC server when they end, and the wallets they create stay in its volume, so run `down -v` and `up -d` before the next run.

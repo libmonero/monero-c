@@ -112,7 +112,7 @@ jobs:
     timeout-minutes: 20
 
     env:
-      # regtest monerod and monero-wallet-rpc from tests/integration/docker-compose.yml, published on these host ports
+      # regtest monerod and monero-wallet-rpc from tests/c/integration/docker-compose.yml, published on these host ports
       MONERO_C_TEST_DAEMON_URI: http://127.0.0.1:18081
       MONERO_C_TEST_WALLET_RPC_URI: http://127.0.0.1:18082
 
@@ -139,7 +139,7 @@ jobs:
           fi
 
       - name: Start regtest monerod and monero-wallet-rpc
-        run: docker compose -f tests/integration/docker-compose.yml up -d
+        run: docker compose -f tests/c/integration/docker-compose.yml up -d
 
       - name: Wait for monerod
         run: |
@@ -171,11 +171,11 @@ jobs:
 
       - name: Show monerod and monero-wallet-rpc logs on failure
         if: failure()
-        run: docker compose -f tests/integration/docker-compose.yml logs
+        run: docker compose -f tests/c/integration/docker-compose.yml logs
 
       - name: Stop regtest monerod and monero-wallet-rpc
         if: always()
-        run: docker compose -f tests/integration/docker-compose.yml down -v
+        run: docker compose -f tests/c/integration/docker-compose.yml down -v
 
   windows:
     name: windows
@@ -259,6 +259,10 @@ jobs:
           for dep in $(otool -L artifact/libmonero_c.dylib | tail -n +2 | awk '{print $1}'); do
             case "$dep" in
               @rpath/*|/usr/lib/*|/System/Library/*) ;;
+              @loader_path/*)
+                resolved_dep="artifact/${dep#@loader_path/}"
+                test -e "$resolved_dep" || { echo "missing dependency: $dep ($resolved_dep)"; exit 1; }
+                ;;
               *) test -e "$dep" || { echo "missing dependency: $dep"; exit 1; } ;;
             esac
           done

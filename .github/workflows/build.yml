@@ -94,9 +94,10 @@ jobs:
           echo "ffaa41d741a8a3bee244ac8e54a72ea05bf2879663c098c82fc5757853441575  libusb-1.0.27.tar.bz2" | sha256sum -c
           tar -xf libusb-1.0.27.tar.bz2
           cd libusb-1.0.27
-          ./configure --disable-shared --disable-udev --with-pic
+          ./configure --disable-static --enable-shared --disable-udev --with-pic
           make
           make install
+          test -s /usr/local/lib/libusb-1.0.so.0
 
       - name: Install hidapi
         run: |
@@ -132,44 +133,64 @@ jobs:
           cd external/monero-cpp
           mkdir -p build
           cd build
-          cmake -DSTATIC=ON -DBOOST_ROOT=/usr/local -DBoost_NO_SYSTEM_PATHS=ON -DBUILD_SAMPLE=ON -DBUILD_SCRATCHPAD=ON -DBUILD_TESTS=ON ..
-          cmake --build . -j3
+          cmake -DBUILD_LIBRARY=ON -DBUILD_SAMPLE=OFF -DBUILD_SCRATCHPAD=OFF -DBUILD_TESTS=OFF -DBOOST_ROOT=/usr/local -DBoost_NO_SYSTEM_PATHS=ON ..
+          cmake --build . --target monero-cpp-static -j3
           cd ../../..
-
-      - name: Verify monero-cpp library
-        run: |
-          file external/monero-cpp/build/libmonero-cpp.so | grep -q '${{ matrix.filearch }}' || { echo "wrong architecture: $(file external/monero-cpp/build/libmonero-cpp.so)"; exit 1; }
-          ldd external/monero-cpp/build/libmonero-cpp.so
-          floor=$(objdump -T external/monero-cpp/build/libmonero-cpp.so | grep -o 'GLIBC_[0-9.]*' | sort -uV | tail -1)
-          echo "glibc floor: $floor"
-          test "$(printf '%s\n${{ matrix.glibc_floor }}\n' "$floor" | sort -V | tail -1)" = "${{ matrix.glibc_floor }}" || { echo "glibc floor $floor exceeds ${{ matrix.glibc_floor }}"; exit 1; }
-          if ldd external/monero-cpp/build/libmonero-cpp.so | grep -vE 'linux-vdso|ld-linux|libc\.so|libm\.so|libpthread\.so|librt\.so|libdl\.so'; then
-            echo "library is not standalone: unexpected dynamic dependencies above"; exit 1
-          fi
-          nm -D --defined-only external/monero-cpp/build/libmonero-cpp.so | grep -q monero_wallet_full || { echo "missing monero-cpp api exports"; exit 1; }
-          # --exclude-libs hides the static closure, so check for leaked dependency symbols
-          if nm -D --defined-only external/monero-cpp/build/libmonero-cpp.so | grep -E ' (SSL_|EVP_|BN_)'; then
-            echo "static closure symbols are exported"; exit 1
-          fi
-          nm external/monero-cpp/build/libmonero-cpp.a | grep -q monero_wallet_full || { echo "missing api in static library"; exit 1; }
 
       - name: Build monero_c library
         run: |
           mkdir -p build
           cd build
-          cmake -DBUILD_TESTS=ON -DBOOST_ROOT=/usr/local -DBoost_NO_SYSTEM_PATHS=ON ..
+          cmake -DBUILD_TESTS=ON -DMONERO_C_STATIC_DEPENDENCIES=ON -DMONERO_C_LIBUSB_SHARED_LIBRARY:FILEPATH=/usr/local/lib/libusb-1.0.so -DBOOST_ROOT=/usr/local -DBoost_NO_SYSTEM_PATHS=ON ..
+          grep -Fxq 'MONERO_C_LIBUSB_SHARED_LIBRARY:FILEPATH=/usr/local/lib/libusb-1.0.so' CMakeCache.txt
           cmake --build . -j3
           cd ..
 
+      - name: Verify native runtime dependencies
+        run: |
+          file build/libmonero_c.so | grep -q '${{ matrix.filearch }}' || { echo "wrong architecture: $(file build/libmonero_c.so)"; exit 1; }
+          floor=$(objdump -T build/libmonero_c.so | grep -o 'GLIBC_[0-9.]*' | sort -uV | tail -1)
+          echo "glibc floor: $floor"
+          test -n "$floor" || { echo "could not determine glibc floor"; exit 1; }
+          test "$(printf '%s\n${{ matrix.glibc_floor }}\n' "$floor" | sort -V | tail -1)" = "${{ matrix.glibc_floor }}" || { echo "glibc floor $floor exceeds ${{ matrix.glibc_floor }}"; exit 1; }
+          ldd_out=$(ldd build/libmonero_c.so)
+          echo "$ldd_out"
+          unexpected=$(echo "$ldd_out" | awk '/=>/ {print $1} /^\// {name=$1; sub(".*/", "", name); print name}' | grep -Ev '^(linux-vdso\.so\.[0-9]+|libc\.so(\.[0-9]+)*|libm\.so(\.[0-9]+)*|libstdc\+\+\.so(\.[0-9]+)*|libgcc_s\.so(\.[0-9]+)*|libpthread\.so(\.[0-9]+)*|librt\.so(\.[0-9]+)*|libdl\.so(\.[0-9]+)*|ld-linux[^ ]*|libusb-1\.0\.so\.0|libudev\.so\.1)$' || true)
+          if [ -n "$unexpected" ]; then
+            echo "unexpected non-system runtime dependencies:"
+            echo "$unexpected"
+            exit 1
+          fi
+          printf '%s\n' "$ldd_out" | grep -q 'libusb-1.0.so.0 =>' || { echo "libusb is not dynamically linked"; exit 1; }
+
       - name: Check exported symbols
-        run: cmake -DLIBRARY=build/libmonero_c.so -DEXPECTED=tests/abi/monero_c.symbols -P tests/abi/check_symbols.cmake
+        run: cmake -DLIBRARY=build/libmonero_c.so -DEXPECTED=tests/c/abi/monero_c.symbols -P tests/c/abi/check_symbols.cmake
 
       - name: Stage monero_c build
         run: |
           mkdir -p dist
+          mkdir -p dist/licenses
+          cp external/monero-cpp/LICENSE.txt dist/licenses/monero-cpp-MIT.txt
+          cp external/monero-cpp/external/monero-project/LICENSE dist/licenses/monero-project-BSD-3-Clause.txt
+          cp external/monero-cpp/external/monero-project/contrib/epee/LICENSE.txt dist/licenses/epee-BSD-3-Clause.txt
+          cp external/monero-cpp/external/monero-project/external/randomx/LICENSE dist/licenses/randomx-BSD-3-Clause.txt
+          cp external/monero-cpp/external/monero-project/external/db_drivers/liblmdb/LICENSE dist/licenses/lmdb-OLDAP-2.8.txt
+          cp external/monero-cpp/external/monero-project/external/rapidjson/license.txt dist/licenses/rapidjson-MIT.txt
+          cp boost_1_85_0/LICENSE_1_0.txt dist/licenses/boost-BSL-1.0.txt
+          cp openssl-3.5.7/LICENSE.txt dist/licenses/openssl-Apache-2.0.txt
+          cp expat-2.7.1/COPYING dist/licenses/expat-MIT.txt
+          cp unbound-1.22.0/LICENSE dist/licenses/unbound-BSD-3-Clause.txt
+          cp libusb-1.0.27/COPYING dist/licenses/libusb-LGPL-2.1.txt
+          mkdir -p dist/licenses/source
+          cp libusb-1.0.27.tar.bz2 dist/licenses/source/
+          cp hidapi-hidapi-0.14.0/LICENSE-bsd.txt dist/licenses/hidapi-BSD-3-Clause.txt
+          cp /usr/share/doc/libsodium-dev/copyright dist/licenses/libsodium-ISC.txt
+          cp /usr/share/doc/libprotobuf-dev/copyright dist/licenses/protobuf-BSD-3-Clause.txt
+          cp /usr/share/doc/libevent-dev/copyright dist/licenses/libevent-BSD-3-Clause.txt
           cp build/libmonero_c.so dist/
-          cp build/tests/unit/monero_c_utils_unit_tests build/tests/unit/monero_c_daemon_unit_tests build/tests/integration/monero_c_daemon_integration_tests dist/
-          cp build/tests/unit/monero_c_wallet_unit_tests build/tests/unit/monero_c_wallet_keys_unit_tests build/tests/unit/monero_c_wallet_offline_unit_tests build/tests/unit/monero_c_wallet_multisig_unit_tests build/tests/unit/monero_c_rpc_connection_unit_tests build/tests/unit/monero_c_abi_unit_tests build/tests/unit/monero_c_cpp_unit_tests build/tests/integration/monero_c_wallet_integration_tests dist/
+          cp -L /usr/local/lib/libusb-1.0.so.0 dist/
+          cp build/tests/c/unit/monero_c_utils_unit_tests build/tests/c/unit/monero_c_daemon_unit_tests build/tests/c/integration/monero_c_daemon_integration_tests dist/
+          cp build/tests/c/unit/monero_c_wallet_unit_tests build/tests/c/unit/monero_c_wallet_keys_unit_tests build/tests/c/unit/monero_c_wallet_offline_unit_tests build/tests/c/unit/monero_c_wallet_multisig_unit_tests build/tests/c/unit/monero_c_rpc_connection_unit_tests build/tests/c/unit/monero_c_abi_unit_tests build/tests/c/unit/monero_c_cpp_unit_tests build/tests/c/integration/monero_c_wallet_integration_tests dist/
 
       - name: Upload monero_c build
         uses: actions/upload-artifact@v7
@@ -194,7 +215,7 @@ jobs:
       - name: Run tests with coverage
         if: env.COVERAGE == 'true'
         run: |
-          # regtest monerod with the same settings as tests/integration/docker-compose.yml
+          # regtest monerod with the same settings as tests/c/integration/docker-compose.yml
           mkdir -p "$RUNNER_TEMP/regtest"
           external/monero-cpp/external/monero-project/build/release/bin/monerod --regtest --offline --fixed-difficulty=1 --non-interactive --log-level=0 --hide-my-port --no-zmq --rpc-bind-ip=127.0.0.1 --rpc-bind-port=18081 --rpc-access-control-origins=* --rpc-ssl=disabled --disable-rpc-ban --p2p-bind-port=18080 --no-igd --data-dir "$RUNNER_TEMP/regtest" &
           node_pid=$!
@@ -202,17 +223,17 @@ jobs:
             if curl -fsS -m 5 -X POST http://127.0.0.1:18081/json_rpc -d '{"jsonrpc":"2.0","id":"0","method":"get_block_count"}' | grep -q '"count"'; then break; fi
             sleep 2
           done
-          build-coverage/tests/unit/monero_c_utils_unit_tests
-          build-coverage/tests/unit/monero_c_daemon_unit_tests
-          build-coverage/tests/unit/monero_c_wallet_unit_tests
-          build-coverage/tests/unit/monero_c_wallet_keys_unit_tests
-          build-coverage/tests/unit/monero_c_wallet_offline_unit_tests
-          build-coverage/tests/unit/monero_c_wallet_multisig_unit_tests
-          build-coverage/tests/unit/monero_c_rpc_connection_unit_tests
-          build-coverage/tests/unit/monero_c_abi_unit_tests
-          build-coverage/tests/unit/monero_c_cpp_unit_tests
-          MONERO_C_TEST_DAEMON_URI=http://127.0.0.1:18081 build-coverage/tests/integration/monero_c_daemon_integration_tests
-          MONERO_C_TEST_DAEMON_URI=http://127.0.0.1:18081 build-coverage/tests/integration/monero_c_wallet_integration_tests
+          build-coverage/tests/c/unit/monero_c_utils_unit_tests
+          build-coverage/tests/c/unit/monero_c_daemon_unit_tests
+          build-coverage/tests/c/unit/monero_c_wallet_unit_tests
+          build-coverage/tests/c/unit/monero_c_wallet_keys_unit_tests
+          build-coverage/tests/c/unit/monero_c_wallet_offline_unit_tests
+          build-coverage/tests/c/unit/monero_c_wallet_multisig_unit_tests
+          build-coverage/tests/c/unit/monero_c_rpc_connection_unit_tests
+          build-coverage/tests/c/unit/monero_c_abi_unit_tests
+          build-coverage/tests/c/unit/monero_c_cpp_unit_tests
+          MONERO_C_TEST_DAEMON_URI=http://127.0.0.1:18081 build-coverage/tests/c/integration/monero_c_daemon_integration_tests
+          MONERO_C_TEST_DAEMON_URI=http://127.0.0.1:18081 build-coverage/tests/c/integration/monero_c_wallet_integration_tests
           kill "$node_pid"
 
       - name: Generate coverage report
@@ -256,11 +277,11 @@ jobs:
         if: env.COVERAGE == 'true'
         env:
           ASAN_OPTIONS: detect_leaks=1:halt_on_error=1
-          LSAN_OPTIONS: suppressions=tests/sanitizers/lsan.supp
+          LSAN_OPTIONS: suppressions=tests/c/sanitizers/lsan.supp
           UBSAN_OPTIONS: print_stacktrace=1:halt_on_error=1
         run: |
           for test in utils daemon wallet wallet_keys wallet_offline wallet_multisig rpc_connection abi cpp; do
-            build-sanitizers/tests/unit/monero_c_${test}_unit_tests
+            build-sanitizers/tests/c/unit/monero_c_${test}_unit_tests
           done
 
   windows:
@@ -291,13 +312,15 @@ jobs:
             mingw-w64-x86_64-hidapi
             mingw-w64-x86_64-unbound
             mingw-w64-x86_64-protobuf
-            mingw-w64-x86_64-libusb
             mingw-w64-x86_64-expat
             mingw-w64-x86_64-ntldd
             git
             make
             gettext
             base-devel
+            autoconf
+            automake
+            libtool
             wget
 
       - name: Install ICU v75.1
@@ -316,6 +339,19 @@ jobs:
           # record versions of the msys2 libraries that get statically linked into the shipped binary
           pacman -Q | grep mingw-w64 | sort
 
+      - name: Install libusb 1.0.27
+        shell: msys2 {0}
+        run: |
+          wget --tries=5 --waitretry=5 --timeout=30 --retry-on-http-error=500,502,503,504 https://github.com/libusb/libusb/releases/download/v1.0.27/libusb-1.0.27.tar.bz2
+          echo "ffaa41d741a8a3bee244ac8e54a72ea05bf2879663c098c82fc5757853441575  libusb-1.0.27.tar.bz2" | sha256sum -c
+          tar -xf libusb-1.0.27.tar.bz2
+          cd libusb-1.0.27
+          ./configure --prefix="$MINGW_PREFIX" --disable-static --enable-shared
+          make
+          make install
+          test -s "$MINGW_PREFIX/lib/libusb-1.0.dll.a"
+          test -s "$MINGW_PREFIX/bin/libusb-1.0.dll"
+
       - name: Build monero-project
         shell: msys2 {0}
         run: |
@@ -332,7 +368,7 @@ jobs:
             -D MSYS2_FOLDER=$(cd $MINGW_PREFIX/.. && pwd -W) \
             -D USE_DEVICE_TREZOR=OFF \
             ../../
-            make wallet cryptonote_protocol
+          make wallet cryptonote_protocol
 
       - name: Build monero-cpp libraries
         shell: msys2 {0}
@@ -340,43 +376,42 @@ jobs:
           cd external/monero-cpp
           mkdir -p build
           cd build
-          cmake -DSTATIC=ON -DBUILD_SAMPLE=ON -DBUILD_SCRATCHPAD=ON -DBUILD_TESTS=ON ..
-          cmake --build .
+          cmake -DBUILD_LIBRARY=ON -DBUILD_SAMPLE=OFF -DBUILD_SCRATCHPAD=OFF -DBUILD_TESTS=OFF ..
+          cmake --build . --target monero-cpp-static
           cd ../../..
-
-      - name: Verify monero-cpp library
-        shell: msys2 {0}
-        run: |
-          objdump -f external/monero-cpp/build/libmonero-cpp.dll | grep -q "x86-64" || { echo "wrong architecture"; exit 1; }
-          ntldd external/monero-cpp/build/libmonero-cpp.dll
-          if ntldd external/monero-cpp/build/libmonero-cpp.dll | grep -iE "mingw|msys|not found"; then
-            echo "library is not standalone: unexpected dynamic dependencies above"; exit 1
-          fi
-          # allow-list imports by name so a dependency resolving outside msys2 paths still fails
-          if ntldd external/monero-cpp/build/libmonero-cpp.dll | grep -ivE "ntdll|kernel32|kernelbase|msvcrt|ws2_32|advapi32|user32|shell32|ole32|oleaut32|rpcrt4|crypt32|bcrypt|secur32|dnsapi|iphlpapi|setupapi|cfgmgr32|gdi32|winmm|userenv|version\.dll|api-ms-win" | grep -iE "\.dll"; then
-            echo "library is not standalone: unexpected dynamic dependencies above"; exit 1
-          fi
-          objdump -p external/monero-cpp/build/libmonero-cpp.dll | grep -q monero_wallet_full || { echo "missing monero-cpp api exports"; exit 1; }
-          # --exclude-libs hides the static closure, so check for leaked dependency symbols
-          if objdump -p external/monero-cpp/build/libmonero-cpp.dll | grep -E '\s(SSL_|EVP_|BN_)'; then
-            echo "static closure symbols are exported"; exit 1
-          fi
-          nm external/monero-cpp/build/libmonero-cpp.a | grep -q monero_wallet_full || { echo "missing api in static library"; exit 1; }
 
       - name: Build monero_c library
         shell: msys2 {0}
         run: |
           mkdir -p build
           cd build
-          cmake -DBUILD_TESTS=ON ..
+          libusb_import=$(cygpath -m "$MINGW_PREFIX/lib/libusb-1.0.dll.a")
+          cmake -DBUILD_TESTS=ON -DMONERO_C_STATIC_DEPENDENCIES=ON -DMONERO_C_LIBUSB_SHARED_LIBRARY:FILEPATH="$libusb_import" ..
+          grep -Fxq "MONERO_C_LIBUSB_SHARED_LIBRARY:FILEPATH=$libusb_import" CMakeCache.txt
           cmake --build .
           cd ..
+
+      - name: Verify native runtime dependencies
+        shell: msys2 {0}
+        run: |
+          objdump -f build/libmonero_c.dll | grep -q "x86-64" || { echo "wrong native library architecture"; exit 1; }
+          ntldd_out=$(ntldd build/libmonero_c.dll)
+          echo "$ntldd_out"
+          if echo "$ntldd_out" | grep -qiE 'libusb-1\.0\.dll.*(not found|not_found)'; then
+            echo "libusb runtime DLL was not resolved"
+            exit 1
+          fi
+          if echo "$ntldd_out" | grep -ivE 'ntdll|kernel32|kernelbase|msvcrt|ws2_32|advapi32|user32|shell32|ole32|oleaut32|rpcrt4|crypt32|bcrypt|secur32|dnsapi|iphlpapi|setupapi|cfgmgr32|gdi32|winmm|userenv|version\.dll|api-ms-win|libusb-1\.0\.dll' | grep -iE '\.dll'; then
+            echo "native library depends on non-system runtime DLLs above"
+            exit 1
+          fi
 
       - name: Stage monero_c build
         shell: msys2 {0}
         run: |
           mkdir -p dist
           cp build/libmonero_c.dll dist/
+          cp "$MINGW_PREFIX/bin/libusb-1.0.dll" dist/
           # on Windows CMake puts the executables in the build root, see CMakeLists.txt
           cp build/monero_c_utils_unit_tests.exe build/monero_c_daemon_unit_tests.exe dist/
           cp build/monero_c_wallet_unit_tests.exe build/monero_c_wallet_keys_unit_tests.exe build/monero_c_wallet_offline_unit_tests.exe build/monero_c_wallet_multisig_unit_tests.exe build/monero_c_rpc_connection_unit_tests.exe build/monero_c_abi_unit_tests.exe build/monero_c_cpp_unit_tests.exe dist/
@@ -421,6 +456,17 @@ jobs:
           # record versions of the brew libraries that get statically linked into the shipped binary
           brew list --versions | sort
 
+      - name: Install libusb 1.0.27
+        run: |
+          curl --retry 5 --retry-delay 5 --retry-max-time 150 -fsSLO https://github.com/libusb/libusb/releases/download/v1.0.27/libusb-1.0.27.tar.bz2
+          echo "ffaa41d741a8a3bee244ac8e54a72ea05bf2879663c098c82fc5757853441575  libusb-1.0.27.tar.bz2" | shasum -a 256 -c
+          tar -xf libusb-1.0.27.tar.bz2
+          cd libusb-1.0.27
+          ./configure --prefix=/usr/local --disable-static --enable-shared --disable-udev --with-pic
+          make
+          sudo make install
+          test -s /usr/local/lib/libusb-1.0.0.dylib
+
       - name: Install hidapi (static)
         run: |
           # brew has no static hidapi, so build it from source to get a standalone library
@@ -457,36 +503,46 @@ jobs:
           cd external/monero-cpp
           mkdir -p build
           cd build
-          cmake -DSTATIC=ON -DBOOST_ROOT=/usr/local -DBoost_NO_SYSTEM_PATHS=ON -DBUILD_SAMPLE=ON -DBUILD_SCRATCHPAD=ON -DBUILD_TESTS=ON ..
-          cmake --build . -j3
+          cmake -DBUILD_LIBRARY=ON -DBUILD_SAMPLE=OFF -DBUILD_SCRATCHPAD=OFF -DBUILD_TESTS=OFF -DBOOST_ROOT=/usr/local -DBoost_NO_SYSTEM_PATHS=ON ..
+          cmake --build . --target monero-cpp-static -j3
           cd ../../..
-
-      - name: Verify monero-cpp library
-        run: |
-          lipo -archs external/monero-cpp/build/libmonero-cpp.dylib | grep -qx '${{ matrix.filearch }}' || { echo "wrong architecture: $(lipo -archs external/monero-cpp/build/libmonero-cpp.dylib)"; exit 1; }
-          otool -L external/monero-cpp/build/libmonero-cpp.dylib
-          otool -l external/monero-cpp/build/libmonero-cpp.dylib | grep minos
-          otool -l external/monero-cpp/build/libmonero-cpp.dylib | grep -q 'minos 11.0' || { echo "unexpected macOS deployment target"; exit 1; }
-          if otool -L external/monero-cpp/build/libmonero-cpp.dylib | tail -n +2 | grep -vE '@rpath/libmonero-cpp\.dylib|/usr/lib/|/System/Library/'; then
-            echo "library is not standalone: unexpected dynamic dependencies above"; exit 1
-          fi
-          nm -gU external/monero-cpp/build/libmonero-cpp.dylib | grep -q monero_wallet_full || { echo "missing monero-cpp api exports"; exit 1; }
-          nm external/monero-cpp/build/libmonero-cpp.a | grep -q monero_wallet_full || { echo "missing api in static library"; exit 1; }
 
       - name: Build monero_c library
         run: |
           mkdir -p build
           cd build
-          cmake -DBUILD_TESTS=ON -DBOOST_ROOT=/usr/local -DBoost_NO_SYSTEM_PATHS=ON ..
+          cmake -DBUILD_TESTS=ON -DMONERO_C_STATIC_DEPENDENCIES=ON -DMONERO_C_LIBUSB_SHARED_LIBRARY:FILEPATH=/usr/local/lib/libusb-1.0.0.dylib -DBOOST_ROOT=/usr/local -DBoost_NO_SYSTEM_PATHS=ON ..
+          grep -Fxq 'MONERO_C_LIBUSB_SHARED_LIBRARY:FILEPATH=/usr/local/lib/libusb-1.0.0.dylib' CMakeCache.txt
           cmake --build . -j3
           cd ..
+
+      - name: Relocate bundled libusb
+        run: |
+          dependency=$(otool -L build/libmonero_c.dylib | awk '/libusb-1.0/ {print $1; exit}')
+          test -n "$dependency" || { echo "libusb is not dynamically linked"; exit 1; }
+          install_name_tool -change "$dependency" "@loader_path/libusb-1.0.0.dylib" build/libmonero_c.dylib
+
+      - name: Verify native runtime dependencies
+        run: |
+          lipo -archs build/libmonero_c.dylib | grep -qx '${{ matrix.filearch }}' || { echo "wrong native library architecture: $(lipo -archs build/libmonero_c.dylib)"; exit 1; }
+          otool -l build/libmonero_c.dylib | grep -q 'minos 11.0' || { echo "unexpected macOS deployment target"; exit 1; }
+          dependencies=$(otool -L build/libmonero_c.dylib | tail -n +2 | awk '{print $1}')
+          echo "$dependencies"
+          unexpected=$(echo "$dependencies" | grep -vE '^(/usr/lib/|/System/Library/|@rpath/libmonero_c\.dylib$|@loader_path/libusb-1\.0\.0\.dylib$)' || true)
+          if [ -n "$unexpected" ]; then
+            echo "unexpected non-system runtime dependencies:"
+            echo "$unexpected"
+            exit 1
+          fi
+          printf '%s\n' "$dependencies" | grep -Fxq '@loader_path/libusb-1.0.0.dylib' || { echo "libusb is not bundled dynamically"; exit 1; }
 
       - name: Stage monero_c build
         run: |
           mkdir -p dist
           cp build/libmonero_c.dylib dist/
-          cp build/tests/unit/monero_c_utils_unit_tests build/tests/unit/monero_c_daemon_unit_tests dist/
-          cp build/tests/unit/monero_c_wallet_unit_tests build/tests/unit/monero_c_wallet_keys_unit_tests build/tests/unit/monero_c_wallet_offline_unit_tests build/tests/unit/monero_c_wallet_multisig_unit_tests build/tests/unit/monero_c_rpc_connection_unit_tests build/tests/unit/monero_c_abi_unit_tests build/tests/unit/monero_c_cpp_unit_tests dist/
+          cp /usr/local/lib/libusb-1.0.0.dylib dist/
+          cp build/tests/c/unit/monero_c_utils_unit_tests build/tests/c/unit/monero_c_daemon_unit_tests dist/
+          cp build/tests/c/unit/monero_c_wallet_unit_tests build/tests/c/unit/monero_c_wallet_keys_unit_tests build/tests/c/unit/monero_c_wallet_offline_unit_tests build/tests/c/unit/monero_c_wallet_multisig_unit_tests build/tests/c/unit/monero_c_rpc_connection_unit_tests build/tests/c/unit/monero_c_abi_unit_tests build/tests/c/unit/monero_c_cpp_unit_tests dist/
 
       - name: Upload monero_c build
         uses: actions/upload-artifact@v7
@@ -506,3 +562,10 @@ jobs:
       pages: write
       id-token: write
     uses: ./.github/workflows/docs.yml
+
+  dotnet:
+    name: .NET package and tests
+    needs: [ubuntu, windows, mac-os]
+    permissions:
+      contents: read
+    uses: ./.github/workflows/dotnet.yml

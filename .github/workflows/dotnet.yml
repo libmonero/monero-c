@@ -1,0 +1,219 @@
+name: .NET
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  package-and-test:
+    name: Package all RIDs and test Linux x64
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Download Linux x64 native build
+        uses: actions/download-artifact@v8
+        with:
+          name: monero-c-linux-x86_64
+          path: artifacts/linux-x64
+
+      - name: Download Linux ARM64 native build
+        uses: actions/download-artifact@v8
+        with:
+          name: monero-c-linux-arm64
+          path: artifacts/linux-arm64
+
+      - name: Download Windows x64 native build
+        uses: actions/download-artifact@v8
+        with:
+          name: monero-c-windows
+          path: artifacts/win-x64
+
+      - name: Download macOS x64 native build
+        uses: actions/download-artifact@v8
+        with:
+          name: monero-c-mac-x86_64
+          path: artifacts/osx-x64
+
+      - name: Download macOS ARM64 native build
+        uses: actions/download-artifact@v8
+        with:
+          name: monero-c-mac-arm64
+          path: artifacts/osx-arm64
+
+      - name: Verify Linux runtime dependencies
+        run: |
+          ldd_out=$(ldd artifacts/linux-x64/libmonero_c.so)
+          echo "$ldd_out"
+          if grep -q 'not found' <<< "$ldd_out"; then
+            echo "$ldd_out"
+            echo "missing runtime libraries above"; exit 1
+          fi
+          unexpected=$(echo "$ldd_out" | awk '/=>/ {print $1} /^\// {name=$1; sub(".*/", "", name); print name}' | grep -Ev '^(linux-vdso\.so\.[0-9]+|libc\.so(\.[0-9]+)*|libm\.so(\.[0-9]+)*|libstdc\+\+\.so(\.[0-9]+)*|libgcc_s\.so(\.[0-9]+)*|libpthread\.so(\.[0-9]+)*|librt\.so(\.[0-9]+)*|libdl\.so(\.[0-9]+)*|ld-linux[^ ]*|libusb-1\.0\.so\.0)$' || true)
+          if [ -n "$unexpected" ]; then
+            echo "unexpected non-system runtime dependencies:"
+            echo "$unexpected"
+            exit 1
+          fi
+          grep -q 'libusb-1.0.so.0 =>' <<< "$ldd_out" || { echo "libusb is not resolved from the downloaded native artifact"; exit 1; }
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Stage native libraries for all package RIDs
+        run: |
+          package_runtimes=packaging/dotnet-core/runtimes
+          mkdir -p "$package_runtimes"/{linux-x64,linux-arm64,win-x64,osx-x64,osx-arm64}/native
+          cp -R artifacts/linux-x64/licenses packaging/dotnet-core/
+          cp artifacts/linux-x64/libmonero_c.so "$package_runtimes/linux-x64/native/"
+          cp artifacts/linux-x64/libusb-1.0.so.0 "$package_runtimes/linux-x64/native/"
+          cp artifacts/linux-arm64/libmonero_c.so "$package_runtimes/linux-arm64/native/"
+          cp artifacts/linux-arm64/libusb-1.0.so.0 "$package_runtimes/linux-arm64/native/"
+          # match DllImport("monero_c") on Windows
+          cp artifacts/win-x64/libmonero_c.dll "$package_runtimes/win-x64/native/monero_c.dll"
+          cp artifacts/win-x64/libusb-1.0.dll "$package_runtimes/win-x64/native/"
+          cp artifacts/osx-x64/libmonero_c.dylib "$package_runtimes/osx-x64/native/"
+          cp artifacts/osx-x64/libusb-1.0.0.dylib "$package_runtimes/osx-x64/native/"
+          cp artifacts/osx-arm64/libmonero_c.dylib "$package_runtimes/osx-arm64/native/"
+          cp artifacts/osx-arm64/libusb-1.0.0.dylib "$package_runtimes/osx-arm64/native/"
+
+      - name: Verify all native runtime assets are staged
+        run: |
+          runtimes=packaging/dotnet-core/runtimes
+          for asset in \
+            linux-x64/native/libmonero_c.so \
+            linux-x64/native/libusb-1.0.so.0 \
+            linux-arm64/native/libmonero_c.so \
+            linux-arm64/native/libusb-1.0.so.0 \
+            win-x64/native/monero_c.dll \
+            win-x64/native/libusb-1.0.dll \
+            osx-x64/native/libmonero_c.dylib \
+            osx-x64/native/libusb-1.0.0.dylib \
+            osx-arm64/native/libmonero_c.dylib \
+            osx-arm64/native/libusb-1.0.0.dylib; do
+            test -s "$runtimes/$asset" || { echo "missing native runtime asset: $runtimes/$asset"; exit 1; }
+          done
+          for notice in \
+            monero-cpp-MIT.txt \
+            monero-project-BSD-3-Clause.txt \
+            epee-BSD-3-Clause.txt \
+            randomx-BSD-3-Clause.txt \
+            lmdb-OLDAP-2.8.txt \
+            rapidjson-MIT.txt \
+            boost-BSL-1.0.txt \
+            openssl-Apache-2.0.txt \
+            expat-MIT.txt \
+            unbound-BSD-3-Clause.txt \
+            libusb-LGPL-2.1.txt \
+            hidapi-BSD-3-Clause.txt \
+            libsodium-ISC.txt \
+            protobuf-BSD-3-Clause.txt \
+            libevent-BSD-3-Clause.txt \
+            easyloggingpp-MIT.txt \
+            qrcodegen-MIT.txt \
+            openaes-BSD-3-Clause.txt; do
+            test -s "packaging/dotnet-core/licenses/$notice" || { echo "missing third-party license text: $notice"; exit 1; }
+          done
+          test -s packaging/dotnet-core/licenses/source/libusb-1.0.27.tar.bz2 || { echo "missing corresponding libusb source archive"; exit 1; }
+
+      - name: Pack native NuGet package
+        run: |
+          mkdir -p packaging/dotnet-core/packages
+          dotnet pack packaging/dotnet-core/monero.pkgproj --configuration Release
+
+      - name: Verify all native runtime assets are in the package
+        run: |
+          package=packaging/dotnet-core/packages/Monero.Native.0.1.0-alpha.1.nupkg
+          unzip -Z1 "$package" > package-files.txt
+          for asset in \
+            runtimes/linux-x64/native/libmonero_c.so \
+            runtimes/linux-x64/native/libusb-1.0.so.0 \
+            runtimes/linux-arm64/native/libmonero_c.so \
+            runtimes/linux-arm64/native/libusb-1.0.so.0 \
+            runtimes/win-x64/native/monero_c.dll \
+            runtimes/win-x64/native/libusb-1.0.dll \
+            runtimes/osx-x64/native/libmonero_c.dylib \
+            runtimes/osx-x64/native/libusb-1.0.0.dylib \
+            runtimes/osx-arm64/native/libmonero_c.dylib \
+            runtimes/osx-arm64/native/libusb-1.0.0.dylib; do
+            grep -Fxq "$asset" package-files.txt || { echo "package is missing native runtime asset: $asset"; exit 1; }
+          done
+          grep -Fxq 'LICENSE' package-files.txt || { echo "package is missing LICENSE"; exit 1; }
+          grep -Fxq 'THIRD-PARTY-NOTICES.md' package-files.txt || { echo "package is missing THIRD-PARTY-NOTICES.md"; exit 1; }
+          grep -Fxq 'licenses/source/libusb-1.0.27.tar.bz2' package-files.txt || { echo "package is missing corresponding libusb source"; exit 1; }
+          for notice in $(find packaging/dotnet-core/licenses -maxdepth 1 -type f -printf '%f\n' | sort); do
+            notice_path="licenses/$notice"
+            grep -Fxq "$notice_path" package-files.txt || { echo "package is missing third-party notice: $notice_path"; exit 1; }
+          done
+
+      - name: Run managed tests
+        run: dotnet test monero-c.sln --configuration Release
+
+      - name: Upload native NuGet package
+        uses: actions/upload-artifact@v7
+        with:
+          name: monero-native-nuget
+          path: packaging/dotnet-core/packages/Monero.Native.0.1.0-alpha.1.nupkg
+          if-no-files-found: error
+
+  test-debian12:
+    name: Test package on Debian 12
+    needs: package-and-test
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Download native NuGet package
+        uses: actions/download-artifact@v8
+        with:
+          name: monero-native-nuget
+          path: packaging/dotnet-core/packages
+
+      - name: Run managed tests on Debian 12
+        run: |
+          docker run --rm \
+            --volume "$GITHUB_WORKSPACE:/workspace" \
+            --workdir /workspace \
+            mcr.microsoft.com/dotnet/sdk:8.0-bookworm-slim \
+            dotnet test monero-c.sln --configuration Release
+
+  test-windows-macos:
+    name: Test package (${{ matrix.platform }})
+    needs: package-and-test
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: Windows x64
+            os: windows-latest
+          - platform: macOS ARM64
+            os: macos-15
+          - platform: macOS x64
+            os: macos-15-intel
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Download native NuGet package
+        uses: actions/download-artifact@v8
+        with:
+          name: monero-native-nuget
+          path: packaging/dotnet-core/packages
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Run managed tests
+        run: dotnet test monero-c.sln --configuration Release
