@@ -319,8 +319,9 @@ static void test_json_depth_limit(void) {
 typedef struct fake_server {
   int fd;
   int port;
-  volatile int stop;
-  const char* volatile body;
+  pthread_mutex_t lock;  // guards the fields below, which the test and the server thread share
+  int stop;
+  const char* body;
   char request[4096];  // body of the last request, which may be binary
   size_t request_len;
 } fake_server;
@@ -348,26 +349,67 @@ static int read_request(fake_server* server, int client) {
     if (n <= 0) return 0;
     used += (size_t) n;
   }
+  pthread_mutex_lock(&server->lock);
   for (size_t i = 0; i < body_len; i++) server->request[i] = buffer[header_len + i];
   server->request_len = body_len;
+  pthread_mutex_unlock(&server->lock);
   return 1;
 }
 
+// sets the body that the server answers with
+static void set_body(fake_server* server, const char* body) {
+  pthread_mutex_lock(&server->lock);
+  server->body = body;
+  pthread_mutex_unlock(&server->lock);
+}
+
+static const char* get_body(fake_server* server) {
+  pthread_mutex_lock(&server->lock);
+  const char* body = server->body;
+  pthread_mutex_unlock(&server->lock);
+  return body;
+}
+
+static int is_stopped(fake_server* server) {
+  pthread_mutex_lock(&server->lock);
+  int stop = server->stop;
+  pthread_mutex_unlock(&server->lock);
+  return stop;
+}
+
 // true if the body of the last request contains text
-static int request_has(const fake_server* server, const char* text) {
+static int request_has(fake_server* server, const char* text) {
   char request[sizeof(server->request) + 1];
+  pthread_mutex_lock(&server->lock);
   snprintf(request, sizeof(request), "%.*s", (int) server->request_len, server->request);
+  pthread_mutex_unlock(&server->lock);
   return strstr(request, text) != NULL;
+}
+
+// the length of the body of the last request
+static size_t request_size(fake_server* server) {
+  pthread_mutex_lock(&server->lock);
+  size_t size = server->request_len;
+  pthread_mutex_unlock(&server->lock);
+  return size;
+}
+
+// true if the body of the last request starts with the prefix
+static int request_starts_with(fake_server* server, const unsigned char* prefix, size_t size) {
+  pthread_mutex_lock(&server->lock);
+  int match = server->request_len >= size && memcmp(server->request, prefix, size) == 0;
+  pthread_mutex_unlock(&server->lock);
+  return match;
 }
 
 static void* serve(void* arg) {
   fake_server* server = (fake_server*) arg;
-  while (!server->stop) {
+  while (!is_stopped(server)) {
     int client = accept(server->fd, NULL, NULL);
     if (client < 0) break;
-    while (!server->stop && read_request(server, client)) {
+    while (!is_stopped(server) && read_request(server, client)) {
       char header[256];
-      const char* body = server->body;
+      const char* body = get_body(server);
       int body_len = snprintf(NULL, 0, "%s", body);
       int header_len = snprintf(header, sizeof(header), "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: %d\r\n\r\n", body_len);
       if (send(client, header, (size_t) header_len, 0) < 0 || send(client, body, (size_t) body_len, 0) < 0) break;
@@ -392,14 +434,22 @@ static int start_server(fake_server* server, pthread_t* thread) {
     return 0;
   }
   server->port = ntohs(addr.sin_port);
-  return pthread_create(thread, NULL, serve, server) == 0;
+  pthread_mutex_init(&server->lock, NULL);
+  if (pthread_create(thread, NULL, serve, server) != 0) {
+    pthread_mutex_destroy(&server->lock);
+    close(server->fd);
+    return 0;
+  }
+  return 1;
 }
 
 // wakes the accept() of the server with a last connection, then joins it
 static void stop_server(fake_server* server, pthread_t thread) {
   struct sockaddr_in addr;
   int fd = socket(AF_INET, SOCK_STREAM, 0);
+  pthread_mutex_lock(&server->lock);
   server->stop = 1;
+  pthread_mutex_unlock(&server->lock);
   memset(&addr, 0, sizeof(addr));
   addr.sin_family = AF_INET;
   addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
@@ -409,16 +459,18 @@ static void stop_server(fake_server* server, pthread_t thread) {
     close(fd);
   }
   pthread_join(thread, NULL);
+  pthread_mutex_destroy(&server->lock);
   close(server->fd);
 }
 
 // monero-cpp parses responses into a property tree, which keeps only text, so the types are guessed
 static void test_response_types(void) {
-  fake_server server = {-1, 0, 0, NULL, {0}, 0};
+  fake_server server;
   pthread_t thread;
   char config[128];
   char* json = NULL;
   monero_rpc_connection* connection = NULL;
+  memset(&server, 0, sizeof(server));
   if (!start_server(&server, &thread)) {
     CHECK(!"cannot start the fake server");
     return;
@@ -427,12 +479,12 @@ static void test_response_types(void) {
   connection = create_connection(config);
 
   if (connection != NULL) {
-    server.body = "{\"jsonrpc\":\"2.0\",\"id\":\"0\",\"result\":{"
+    set_body(&server, "{\"jsonrpc\":\"2.0\",\"id\":\"0\",\"result\":{"
       "\"negative\":-5,\"min\":-9223372036854775808,\"max\":18446744073709551615,\"huge\":184467440737095516160,\"low\":-9223372036854775809,\"inf\":1e999,"
       "\"price\":1.5,\"half\":-0.5,\"one\":1.0,\"small\":1.23e-4,\"large\":2E+3,"
       "\"lead\":\"007\",\"dot\":\"1.\",\"exp\":\"1e\",\"frac\":\"1.e5\",\"minus\":\"-\",\"word\":\"abc\","
       "\"yes\":true,\"no\":false,\"none\":null,\"empty\":[],"
-      "\"nested\":[[1,2],[3]],\"objects\":[{\"a\":1},{\"b\":\"x\"}]}}";
+      "\"nested\":[[1,2],[3]],\"objects\":[{\"a\":1},{\"b\":\"x\"}]}}");
     EXPECT_OK(monero_rpc_connection_send_json_request(connection, "any", "{\"value\":1}", NULL, &json));
     CHECK(request_has(&server, "\"method\":\"any\""));
     CHECK(request_has(&server, "\"params\":{\"value\":1}"));
@@ -461,27 +513,27 @@ static void test_response_types(void) {
     json = NULL;
 
     // a JSON-RPC error fails the call with the server's message
-    server.body = "{\"jsonrpc\":\"2.0\",\"id\":\"0\",\"error\":{\"code\":-32601,\"message\":\"Method not found\"}}";
+    set_body(&server, "{\"jsonrpc\":\"2.0\",\"id\":\"0\",\"error\":{\"code\":-32601,\"message\":\"Method not found\"}}");
     EXPECT_ERR_MSG(monero_rpc_connection_send_json_request(connection, "any", NULL, NULL, &json), "Method not found");
     CHECK(json == NULL);
 
     // a path request returns the whole response, and a JSON-RPC response has none
-    server.body = "{\"height\":42,\"status\":\"OK\"}";
+    set_body(&server, "{\"height\":42,\"status\":\"OK\"}");
     EXPECT_OK(monero_rpc_connection_send_path_request(connection, "get_height", "{\"value\":2}", NULL, &json));
-    CHECK(server.request_len == 11 && request_has(&server, "{\"value\":2}"));
+    CHECK(request_size(&server) == 11 && request_has(&server, "{\"value\":2}"));
     CHECK(has(json, "{\"height\":42,\"status\":\"OK\"}"));
     monero_utils_free(json);
     json = NULL;
-    server.body = "{\"jsonrpc\":\"2.0\",\"id\":\"0\",\"result\":{}}";
+    set_body(&server, "{\"jsonrpc\":\"2.0\",\"id\":\"0\",\"result\":{}}");
     EXPECT_ERR_MSG(monero_rpc_connection_send_path_request(connection, "get_height", NULL, NULL, &json), "Invalid Monero RPC response");
     CHECK(json == NULL);
 
     // a binary request sends the parameters in the portable storage format, which starts with its signature
     uint8_t* data = NULL;
     size_t len = 0;
-    server.body = "{\"height\":42,\"status\":\"OK\"}";
+    set_body(&server, "{\"height\":42,\"status\":\"OK\"}");
     EXPECT_OK(monero_rpc_connection_send_binary_request(connection, "get_blocks_by_height.bin", "{\"heights\":[0]}", NULL, &data, &len));
-    CHECK(server.request_len > 9 && server.request[0] == 0x01 && server.request[1] == 0x11 && server.request[2] == 0x01 && server.request[3] == 0x01);
+    CHECK(request_size(&server) > 9 && request_starts_with(&server, (const unsigned char*) "\x01\x11\x01\x01", 4));
     CHECK(data != NULL && len == 27);
     monero_utils_free(data);
   }
