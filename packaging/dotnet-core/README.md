@@ -19,6 +19,7 @@ Not supported: Linux distributions with an older glibc (Ubuntu 22.04 and RHEL 9 
 ## Notes for callers
 
 * Strings are UTF-8. On Windows, `CharSet.Ansi` uses the system code page, so declare string parameters as `UnmanagedType.LPUTF8Str`.
+* A C `bool` is one byte. Declare `bool` parameters and return values with `UnmanagedType.U1`, because the default `bool` of the marshaller is four bytes.
 * A string or buffer that a function returns in an `out_*` parameter must be released with `monero_utils_free()`, not with `Marshal.FreeHGlobal()` or `Marshal.FreeCoTaskMem()`.
 * Call `monero_utils_get_abi_version()` after loading the library and compare the major and minor versions with the ones your code was written for. While the major version is 0, a different minor version can break callers. The patch version never changes the ABI.
 * `monero_last_error()` returns the error of the calling thread.
