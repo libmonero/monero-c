@@ -116,21 +116,23 @@ void reset_out(T* out) {
   if (out != nullptr) *out = T();
 }
 
-// copies a C array. Throws if it is NULL and the count is not zero
+// copies a C array. Throws if it is NULL and the count is not zero. The name is the argument,
+// for the error message
 template <class T>
-std::vector<T> array_of(const T* items, size_t count) {
+std::vector<T> array_of(const T* items, size_t count, const char* name) {
   if (count == 0) return std::vector<T>();
-  if (items == nullptr) throw std::invalid_argument("array must not be null");
+  if (items == nullptr) throw std::invalid_argument(std::string(name) + " must not be null");
   return std::vector<T>(items, items + count);
 }
 
-// copies a C array of strings. Throws if an element is NULL
-inline std::vector<std::string> string_array(const char* const* items, size_t count) {
+// copies a C array of strings. Throws if the array is NULL and the count is not zero, or if
+// an element is NULL
+inline std::vector<std::string> string_array(const char* const* items, size_t count, const char* name) {
   std::vector<std::string> out;
   if (count == 0) return out;
-  if (items == nullptr) throw std::invalid_argument("array must not be null");
+  if (items == nullptr) throw std::invalid_argument(std::string(name) + " must not be null");
   for (size_t i = 0; i < count; i++) {
-    if (items[i] == nullptr) throw std::invalid_argument("array element must not be null");
+    if (items[i] == nullptr) throw std::invalid_argument(std::string(name) + " must not contain NULL");
     out.push_back(items[i]);
   }
   return out;

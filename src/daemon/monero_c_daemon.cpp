@@ -374,7 +374,7 @@ monero_result monero_daemon_submit_block(monero_daemon* daemon, const char* bloc
 
 monero_result monero_daemon_submit_blocks(monero_daemon* daemon, const char* const* block_blobs, size_t num_block_blobs) {
   if (!require(daemon, "daemon")) return MONERO_ERROR;
-  return guard([&] { daemon->rpc->submit_blocks(string_array(block_blobs, num_block_blobs)); });
+  return guard([&] { daemon->rpc->submit_blocks(string_array(block_blobs, num_block_blobs, "block_blobs")); });
 }
 
 // ----------------------------------- BLOCKS ---------------------------------
@@ -413,7 +413,7 @@ monero_result monero_daemon_get_blocks_by_hash(monero_daemon* daemon, const char
   reset_out(out_json);
   if (!require(daemon, "daemon") || !require(out_json, "out_json")) return MONERO_ERROR;
   return guard([&] {
-    *out_json = dup_json(daemon->rpc->get_blocks_by_hash(string_array(block_hashes, num_block_hashes), start_height, prune, max_block_count));
+    *out_json = dup_json(daemon->rpc->get_blocks_by_hash(string_array(block_hashes, num_block_hashes, "block_hashes"), start_height, prune, max_block_count));
   });
 }
 
@@ -426,7 +426,7 @@ monero_result monero_daemon_get_block_by_height(monero_daemon* daemon, uint64_t 
 monero_result monero_daemon_get_blocks_by_height(monero_daemon* daemon, const uint64_t* heights, size_t num_heights, char** out_json) {
   reset_out(out_json);
   if (!require(daemon, "daemon") || !require(out_json, "out_json")) return MONERO_ERROR;
-  return guard([&] { *out_json = dup_string(json_of_list(daemon->rpc->get_blocks_by_height(array_of(heights, num_heights)))); });
+  return guard([&] { *out_json = dup_string(json_of_list(daemon->rpc->get_blocks_by_height(array_of(heights, num_heights, "heights")))); });
 }
 
 monero_result monero_daemon_get_blocks_by_range(monero_daemon* daemon, const uint64_t* start_height, const uint64_t* end_height, char** out_json) {
@@ -452,7 +452,7 @@ monero_result monero_daemon_get_blocks_by_range_chunked(monero_daemon* daemon, c
 monero_result monero_daemon_get_block_hashes(monero_daemon* daemon, const char* const* block_hashes, size_t num_block_hashes, char** out_json) {
   reset_out(out_json);
   if (!require(daemon, "daemon") || !require(out_json, "out_json")) return MONERO_ERROR;
-  return guard([&] { *out_json = dup_json(daemon->rpc->get_block_hashes(string_array(block_hashes, num_block_hashes))); });
+  return guard([&] { *out_json = dup_json(daemon->rpc->get_block_hashes(string_array(block_hashes, num_block_hashes, "block_hashes"))); });
 }
 
 monero_result monero_daemon_wait_for_next_block_header(monero_daemon* daemon, char** out_json) {
@@ -472,7 +472,7 @@ monero_result monero_daemon_get_tx(monero_daemon* daemon, const char* tx_hash, b
 monero_result monero_daemon_get_txs(monero_daemon* daemon, const char* const* tx_hashes, size_t num_tx_hashes, bool prune, char** out_json) {
   reset_out(out_json);
   if (!require(daemon, "daemon") || !require(out_json, "out_json")) return MONERO_ERROR;
-  return guard([&] { *out_json = dup_string(json_of_list(daemon->rpc->get_txs(string_array(tx_hashes, num_tx_hashes), prune))); });
+  return guard([&] { *out_json = dup_string(json_of_list(daemon->rpc->get_txs(string_array(tx_hashes, num_tx_hashes, "tx_hashes"), prune))); });
 }
 
 monero_result monero_daemon_get_tx_hex(monero_daemon* daemon, const char* tx_hash, bool prune, char** out_tx_hex) {
@@ -487,7 +487,7 @@ monero_result monero_daemon_get_tx_hex(monero_daemon* daemon, const char* tx_has
 monero_result monero_daemon_get_tx_hexes(monero_daemon* daemon, const char* const* tx_hashes, size_t num_tx_hashes, bool prune, char** out_json) {
   reset_out(out_json);
   if (!require(daemon, "daemon") || !require(out_json, "out_json")) return MONERO_ERROR;
-  return guard([&] { *out_json = dup_string(json_of_strings(daemon->rpc->get_tx_hexes(string_array(tx_hashes, num_tx_hashes), prune))); });
+  return guard([&] { *out_json = dup_string(json_of_strings(daemon->rpc->get_tx_hexes(string_array(tx_hashes, num_tx_hashes, "tx_hashes"), prune))); });
 }
 
 monero_result monero_daemon_get_miner_tx_sum(monero_daemon* daemon, uint64_t height, uint64_t num_blocks, char** out_json) {
@@ -515,7 +515,7 @@ monero_result monero_daemon_relay_tx_by_hash(monero_daemon* daemon, const char* 
 
 monero_result monero_daemon_relay_txs_by_hash(monero_daemon* daemon, const char* const* tx_hashes, size_t num_tx_hashes) {
   if (!require(daemon, "daemon")) return MONERO_ERROR;
-  return guard([&] { daemon->rpc->relay_txs_by_hash(string_array(tx_hashes, num_tx_hashes)); });
+  return guard([&] { daemon->rpc->relay_txs_by_hash(string_array(tx_hashes, num_tx_hashes, "tx_hashes")); });
 }
 
 // -------------------------------- TX POOL -----------------------------------
@@ -551,7 +551,7 @@ monero_result monero_daemon_flush_tx_pool(monero_daemon* daemon) {
 
 monero_result monero_daemon_flush_tx_pool_hashes(monero_daemon* daemon, const char* const* tx_hashes, size_t num_tx_hashes) {
   if (!require(daemon, "daemon")) return MONERO_ERROR;
-  return guard([&] { daemon->rpc->flush_tx_pool(string_array(tx_hashes, num_tx_hashes)); });
+  return guard([&] { daemon->rpc->flush_tx_pool(string_array(tx_hashes, num_tx_hashes, "tx_hashes")); });
 }
 
 monero_result monero_daemon_flush_tx_pool_hash(monero_daemon* daemon, const char* tx_hash) {
@@ -572,7 +572,7 @@ monero_result monero_daemon_get_key_image_spent_statuses(monero_daemon* daemon, 
   if (!require(daemon, "daemon") || !require(out_statuses, "out_statuses") || !require(out_count, "out_count")) return MONERO_ERROR;
   return guard([&] {
     std::vector<monero_key_image_spent_status> statuses;
-    for (monero::monero_key_image_spent_status status : daemon->rpc->get_key_image_spent_statuses(string_array(key_images, num_key_images))) {
+    for (monero::monero_key_image_spent_status status : daemon->rpc->get_key_image_spent_statuses(string_array(key_images, num_key_images, "key_images"))) {
       statuses.push_back(to_c_status(status));
     }
     *out_statuses = dup_array(statuses, out_count);
@@ -600,7 +600,7 @@ monero_result monero_daemon_get_output_histogram(monero_daemon* daemon, const ui
   reset_out(out_json);
   if (!require(daemon, "daemon") || !require(out_json, "out_json")) return MONERO_ERROR;
   return guard([&] {
-    *out_json = dup_string(json_of_list(daemon->rpc->get_output_histogram(array_of(amounts, num_amounts), optional_of(min_count), optional_of(max_count), optional_of(is_unlocked), optional_of(recent_cutoff))));
+    *out_json = dup_string(json_of_list(daemon->rpc->get_output_histogram(array_of(amounts, num_amounts, "amounts"), optional_of(min_count), optional_of(max_count), optional_of(is_unlocked), optional_of(recent_cutoff))));
   });
 }
 
@@ -608,7 +608,7 @@ monero_result monero_daemon_get_output_distribution(monero_daemon* daemon, const
   reset_out(out_json);
   if (!require(daemon, "daemon") || !require(out_json, "out_json")) return MONERO_ERROR;
   return guard([&] {
-    *out_json = dup_string(json_of_list(daemon->rpc->get_output_distribution(array_of(amounts, num_amounts), optional_of(is_cumulative), optional_of(start_height), optional_of(end_height))));
+    *out_json = dup_string(json_of_list(daemon->rpc->get_output_distribution(array_of(amounts, num_amounts, "amounts"), optional_of(is_cumulative), optional_of(start_height), optional_of(end_height))));
   });
 }
 

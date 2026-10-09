@@ -377,6 +377,40 @@ static void test_blocks_by_range_limit(monero_daemon* daemon) {
   CHECK(strcmp(monero_last_error(), message) != 0);
 }
 
+// arrays and JSON that pass the checks are sent to the daemon, so the calls fail on the closed port
+static void test_valid_arguments_reach_the_daemon(monero_daemon* daemon) {
+  char* json = POISON_PTR;
+  monero_key_image_spent_status* statuses = POISON_PTR;
+  size_t count = 7;
+  const char* null_message = "must not be null";
+
+  EXPECT_ERR(monero_daemon_submit_blocks(daemon, STRINGS, 1));
+  CHECK(strstr(monero_last_error(), null_message) == NULL);
+  EXPECT_ERR(monero_daemon_get_blocks_by_hash(daemon, STRINGS, 1, 0, false, 0, &json));
+  CHECK(strstr(monero_last_error(), null_message) == NULL);
+  CHECK(json == NULL);
+  json = POISON_PTR;
+  EXPECT_ERR(monero_daemon_get_txs(daemon, STRINGS, 1, false, &json));
+  CHECK(strstr(monero_last_error(), null_message) == NULL);
+  json = POISON_PTR;
+  EXPECT_ERR(monero_daemon_get_tx_hexes(daemon, STRINGS, 1, false, &json));
+  CHECK(strstr(monero_last_error(), null_message) == NULL);
+  json = POISON_PTR;
+  EXPECT_ERR(monero_daemon_get_output_distribution(daemon, NUMBERS, 1, NULL, NULL, NULL, &json));
+  CHECK(strstr(monero_last_error(), null_message) == NULL);
+  CHECK(json == NULL);
+  EXPECT_ERR(monero_daemon_relay_txs_by_hash(daemon, STRINGS, 1));
+  CHECK(strstr(monero_last_error(), null_message) == NULL);
+  EXPECT_ERR(monero_daemon_flush_tx_pool_hashes(daemon, STRINGS, 1));
+  CHECK(strstr(monero_last_error(), null_message) == NULL);
+  EXPECT_ERR(monero_daemon_get_key_image_spent_statuses(daemon, STRINGS, 1, &statuses, &count));
+  CHECK(strstr(monero_last_error(), null_message) == NULL);
+  CHECK(statuses == NULL && count == 0);
+
+  EXPECT_ERR(monero_daemon_set_peer_ban(daemon, "{}"));
+  CHECK(strstr(monero_last_error(), "JSON") == NULL);
+}
+
 // the binding's own checks and the messages monero-cpp throws both reach the caller
 static void test_errors_from_the_binding_and_monero_cpp(monero_daemon* daemon) {
   char* json = NULL;
@@ -395,13 +429,13 @@ static void test_errors_from_the_binding_and_monero_cpp(monero_daemon* daemon) {
 
   // a NULL element or a NULL array with a nonzero count is rejected before the daemon is involved
   const char* const with_null[] = {NULL};
-  EXPECT_ERR_MSG(monero_daemon_get_key_image_spent_statuses(daemon, with_null, 1, &statuses, &count), "array element must not be null");
-  EXPECT_ERR_MSG(monero_daemon_get_block_hashes(daemon, NULL, 1, &json), "array must not be null");
-  EXPECT_ERR_MSG(monero_daemon_get_output_histogram(daemon, NULL, 1, NULL, NULL, NULL, NULL, &json), "array must not be null");
+  EXPECT_ERR_MSG(monero_daemon_get_key_image_spent_statuses(daemon, with_null, 1, &statuses, &count), "key_images must not contain NULL");
+  EXPECT_ERR_MSG(monero_daemon_get_block_hashes(daemon, NULL, 1, &json), "block_hashes must not be null");
+  EXPECT_ERR_MSG(monero_daemon_get_output_histogram(daemon, NULL, 1, NULL, NULL, NULL, NULL, &json), "amounts must not be null");
 
   // zero length is valid, so the call must not fail with the null array error
   monero_result result = monero_daemon_get_blocks_by_height(daemon, NULL, 0, &json);
-  CHECK(result == MONERO_OK || strcmp(monero_last_error(), "array must not be null") != 0);
+  CHECK(result == MONERO_OK || strcmp(monero_last_error(), "heights must not be null") != 0);
   monero_utils_free(json);
   json = NULL;
 
@@ -526,6 +560,7 @@ int main(void) {
   test_null_arguments_reset_outputs();
   test_json_depth_limit(daemon);
   test_blocks_by_range_limit(daemon);
+  test_valid_arguments_reach_the_daemon(daemon);
   test_errors_from_the_binding_and_monero_cpp(daemon);
   test_listener_handles(daemon);
   test_listener_registered_with_one_daemon();

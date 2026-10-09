@@ -326,6 +326,52 @@ static void test_json_depth_limit(void) {
   remove_files(path);
 }
 
+// an array that is NULL with a nonzero count, or has a NULL element, fails with the name of the argument
+static void test_null_arrays(void) {
+  const char* path = "monero_c_wallet_offline_arrays";
+  monero_wallet* wallet = create_test_wallet(path);
+  if (wallet == NULL) {
+    remove_files(path);
+    return;
+  }
+
+  const char* with_null[1] = {NULL};
+  const char* hashes[1] = {TX_HASH};
+  char* json = POISON_PTR;
+
+  EXPECT_ERR_MSG(monero_wallet_get_tx_notes(wallet, NULL, 1, &json), "tx_hashes must not be null");
+  CHECK(json == NULL);
+  json = POISON_PTR;
+  EXPECT_ERR_MSG(monero_wallet_get_tx_notes(wallet, with_null, 1, &json), "tx_hashes must not contain NULL");
+  CHECK(json == NULL);
+  json = POISON_PTR;
+  EXPECT_ERR_MSG(monero_wallet_get_address_book_entries(wallet, NULL, 1, &json), "indices must not be null");
+  CHECK(json == NULL);
+  json = POISON_PTR;
+  EXPECT_ERR_MSG(monero_wallet_get_subaddresses(wallet, 0, NULL, 1, &json), "subaddress_indices must not be null");
+  CHECK(json == NULL);
+  EXPECT_ERR_MSG(monero_wallet_untag_accounts(wallet, NULL, 1), "account_indices must not be null");
+  EXPECT_ERR_MSG(monero_wallet_set_tx_notes(wallet, NULL, hashes, 1), "tx_hashes must not be null");
+  EXPECT_ERR_MSG(monero_wallet_set_tx_notes(wallet, hashes, NULL, 1), "notes must not be null");
+
+  // arrays that pass the check are used, so the calls fail on the missing daemon
+  json = POISON_PTR;
+  EXPECT_ERR(monero_wallet_scan_txs(wallet, hashes, 1));
+  CHECK(strstr(monero_last_error(), "must not be null") == NULL);
+  EXPECT_ERR(monero_wallet_relay_txs(wallet, hashes, 1, &json));
+  CHECK(strstr(monero_last_error(), "must not be null") == NULL);
+  CHECK(json == NULL);
+
+  // a zero count is valid with a NULL array
+  json = NULL;
+  EXPECT_OK(monero_wallet_get_tx_notes(wallet, NULL, 0, &json));
+  CHECK(contains(json, "[]"));
+  monero_utils_free(json);
+
+  monero_wallet_free(wallet);
+  remove_files(path);
+}
+
 static void test_tx_notes(void) {
   const char* path = "monero_c_wallet_offline_notes";
   monero_wallet* wallet = create_test_wallet(path);
@@ -530,6 +576,7 @@ int main(void) {
   test_keys_and_version();
   test_key_images_and_outputs();
   test_json_depth_limit();
+  test_null_arrays();
   test_tx_notes();
   test_daemon_connection();
   test_close();
