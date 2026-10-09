@@ -1,10 +1,14 @@
 # checks that the shared library exports the functions in monero_c.symbols and nothing else
-# usage: cmake -DLIBRARY=libmonero_c.so -DEXPECTED=monero_c.symbols -P check_symbols.cmake
-# Linux only, it reads the dynamic symbols with nm -D
+# usage: cmake -DLIBRARY=libmonero_c.so -DEXPECTED=monero_c.symbols [-DNM=nm] -P check_symbols.cmake
+# Linux only, it reads the dynamic symbols with nm -D. Set NM for a library of another architecture
 
-execute_process(COMMAND nm -D --defined-only "${LIBRARY}" OUTPUT_VARIABLE nm_out RESULT_VARIABLE nm_rc)
+if (NOT NM)
+  set(NM nm)
+endif()
+
+execute_process(COMMAND "${NM}" -D --defined-only "${LIBRARY}" OUTPUT_VARIABLE nm_out RESULT_VARIABLE nm_rc)
 if (NOT nm_rc EQUAL 0)
-  message(FATAL_ERROR "nm failed on ${LIBRARY}")
+  message(FATAL_ERROR "${NM} failed on ${LIBRARY}")
 endif()
 
 string(REPLACE "\n" ";" lines "${nm_out}")

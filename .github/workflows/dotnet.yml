@@ -94,6 +94,20 @@ jobs:
           cp artifacts/osx-arm64/libmonero_c.dylib "$package_runtimes/osx-arm64/native/"
           cp artifacts/osx-arm64/libusb-1.0.0.dylib "$package_runtimes/osx-arm64/native/"
 
+      - name: Strip the Linux libraries
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y binutils-aarch64-linux-gnu
+          package_runtimes=packaging/dotnet-core/runtimes
+          strip --strip-unneeded "$package_runtimes"/linux-x64/native/*.so*
+          aarch64-linux-gnu-strip --strip-unneeded "$package_runtimes"/linux-arm64/native/*.so*
+
+      - name: Check the stripped libraries export the C ABI
+        run: |
+          package_runtimes=packaging/dotnet-core/runtimes
+          cmake -DLIBRARY="$package_runtimes/linux-x64/native/libmonero_c.so" -DEXPECTED=tests/c/abi/monero_c.symbols -P tests/c/abi/check_symbols.cmake
+          cmake -DNM=aarch64-linux-gnu-nm -DLIBRARY="$package_runtimes/linux-arm64/native/libmonero_c.so" -DEXPECTED=tests/c/abi/monero_c.symbols -P tests/c/abi/check_symbols.cmake
+
       - name: Verify all native runtime assets are staged
         run: |
           runtimes=packaging/dotnet-core/runtimes
