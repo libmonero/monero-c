@@ -30,8 +30,12 @@ thread_local std::string g_last_error;
 
 } // namespace
 
-void set_last_error(const std::string& msg) {
-  g_last_error = msg;
+void set_last_error(const char* msg) noexcept {
+  try { g_last_error = msg; } catch (...) { g_last_error.clear(); }
+}
+
+void set_null_error(const char* name) noexcept {
+  try { g_last_error = std::string(name) + " must not be null"; } catch (...) { g_last_error.clear(); }
 }
 
 const std::string& last_error() {

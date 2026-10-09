@@ -52,8 +52,12 @@ namespace monero_c {
 // the monero-cpp connection behind a handle, shared with the daemons and wallets created from it
 std::shared_ptr<monero::monero_rpc_connection> connection_of(::monero_rpc_connection* connection);
 
-// records msg as the calling thread's last error
-void set_last_error(const std::string& msg);
+// records msg as the calling thread's last error. It never throws: if the message can't be
+// stored because memory ran out, the last error is empty
+void set_last_error(const char* msg) noexcept;
+
+// records "<name> must not be null" as the last error, with the same guarantee
+void set_null_error(const char* name) noexcept;
 
 // returns the calling thread's last error, or "" if none
 const std::string& last_error();
@@ -122,7 +126,7 @@ monero_result guard(F&& fn) {
 // checks a required pointer. On failure, sets last_error to "<name> must not be null"
 inline bool require(const void* ptr, const char* name) {
   if (ptr != nullptr) return true;
-  set_last_error(std::string(name) + " must not be null");
+  set_null_error(name);
   return false;
 }
 
