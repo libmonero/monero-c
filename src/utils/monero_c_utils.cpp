@@ -71,19 +71,14 @@ using monero_c::MAX_MNEMONIC_LENGTH;
 using monero_c::dup_buffer;
 using monero_c::dup_string;
 using monero_c::guard;
+using monero_c::network_of;
 using monero_c::require;
 using monero_c::reset_out;
 using monero_c::safe_str;
-using monero_c::set_last_error;
+using monero_c::to_network_type;
 
 std::string safe_bin(const uint8_t* data, size_t len) {
   return data ? std::string(reinterpret_cast<const char*>(data), len) : std::string();
-}
-
-bool to_network_type(int32_t v, monero_network_type& out) {
-  if (v < MONERO_UTILS_NETWORK_MAINNET || v > MONERO_UTILS_NETWORK_REGTEST) return false;
-  out = v == MONERO_UTILS_NETWORK_REGTEST ? monero_network_type::MAINNET : static_cast<monero_network_type>(v);
-  return true;
 }
 
 using binary_to_json_fn = void (*)(const std::string&, std::string&);
@@ -176,9 +171,7 @@ bool monero_utils_is_valid_language(const char* language) {
 }
 
 monero_result monero_utils_validate_address(const char* address, int32_t network_type) {
-  monero_network_type nt;
-  if (!to_network_type(network_type, nt)) { set_last_error("invalid network_type"); return MONERO_ERROR; }
-  return guard([&] { monero_utils::validate_address(safe_str(address), nt); });
+  return guard([&] { monero_utils::validate_address(safe_str(address), network_of<monero_network_type>(network_type)); });
 }
 
 monero_result monero_utils_validate_private_view_key(const char* private_view_key) {
@@ -214,9 +207,8 @@ monero_result monero_utils_validate_mnemonic(const char* mnemonic, const char* l
 monero_result monero_utils_get_integrated_address(int32_t network_type, const char* standard_address, const char* payment_id, char** out_json) {
   reset_out(out_json);
   if (!require(out_json, "out_json")) return MONERO_ERROR;
-  monero_network_type nt;
-  if (!to_network_type(network_type, nt)) { set_last_error("invalid network_type"); return MONERO_ERROR; }
   return guard([&] {
+    monero_network_type nt = network_of<monero_network_type>(network_type);
     monero_integrated_address addr = monero_utils::get_integrated_address(nt, safe_str(standard_address), safe_str(payment_id));
     *out_json = dup_string(addr.serialize());
   });
@@ -225,9 +217,8 @@ monero_result monero_utils_get_integrated_address(int32_t network_type, const ch
 monero_result monero_utils_get_payment_uri(const char* tx_config_json, int32_t network_type, char** out_uri) {
   reset_out(out_uri);
   if (!require(out_uri, "out_uri")) return MONERO_ERROR;
-  monero_network_type nt;
-  if (!to_network_type(network_type, nt)) { set_last_error("invalid network_type"); return MONERO_ERROR; }
   return guard([&] {
+    monero_network_type nt = network_of<monero_network_type>(network_type);
     std::string json = safe_str(tx_config_json);
     check_json_depth(json);
     std::shared_ptr<monero_tx_config> config = monero_tx_config::deserialize(json);
@@ -238,9 +229,8 @@ monero_result monero_utils_get_payment_uri(const char* tx_config_json, int32_t n
 monero_result monero_utils_parse_payment_uri(const char* uri, int32_t network_type, char** out_tx_config_json) {
   reset_out(out_tx_config_json);
   if (!require(out_tx_config_json, "out_tx_config_json")) return MONERO_ERROR;
-  monero_network_type nt;
-  if (!to_network_type(network_type, nt)) { set_last_error("invalid network_type"); return MONERO_ERROR; }
   return guard([&] {
+    monero_network_type nt = network_of<monero_network_type>(network_type);
     std::shared_ptr<monero_tx_config> config = monero_utils::parse_payment_uri(safe_str(uri), nt);
     *out_tx_config_json = dup_string(config->serialize());
   });

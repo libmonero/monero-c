@@ -439,14 +439,15 @@ static void test_failed_calls_reset_outputs(void) {
   uint32_t patch = 7;
   const uint8_t junk[] = {1, 2, 3};
 
-  EXPECT_ERR(monero_utils_get_integrated_address(99, MAINNET_PRIMARY_1, "", &text));
+  EXPECT_ERR_MSG(monero_utils_get_integrated_address(99, MAINNET_PRIMARY_1, "", &text), "unknown network type");
   CHECK(text == NULL);
   text = POISON_PTR;
-  EXPECT_ERR(monero_utils_get_payment_uri("{}", 99, &text));
+  EXPECT_ERR_MSG(monero_utils_get_payment_uri("{}", 99, &text), "unknown network type");
   CHECK(text == NULL);
   text = POISON_PTR;
-  EXPECT_ERR(monero_utils_parse_payment_uri("bitcoin:x", 99, &text));
+  EXPECT_ERR_MSG(monero_utils_parse_payment_uri("bitcoin:x", 99, &text), "unknown network type");
   CHECK(text == NULL);
+  EXPECT_ERR_MSG(monero_utils_validate_address(MAINNET_PRIMARY_1, -1), "unknown network type");
   text = POISON_PTR;
   EXPECT_ERR(monero_utils_binary_blocks_to_json(junk, sizeof(junk), &text));
   CHECK(text == NULL);

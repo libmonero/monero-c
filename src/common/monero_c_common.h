@@ -87,6 +87,23 @@ inline char* dup_string(const std::string& s) {
   return out;
 }
 
+// maps the C network enum to monero-cpp's, which has the same values except regtest. Regtest maps
+// to mainnet, and the caller keeps the flag. Returns false if the value is out of range
+template <class NetworkType>
+bool to_network_type(int32_t network_type, NetworkType& out) {
+  if (network_type < MONERO_UTILS_NETWORK_MAINNET || network_type > MONERO_UTILS_NETWORK_REGTEST) return false;
+  out = network_type == MONERO_UTILS_NETWORK_REGTEST ? NetworkType::MAINNET : static_cast<NetworkType>(network_type);
+  return true;
+}
+
+// like to_network_type(), but throws if the value is out of range
+template <class NetworkType>
+NetworkType network_of(int32_t network_type) {
+  NetworkType out = NetworkType::MAINNET;
+  if (!to_network_type(network_type, out)) throw std::invalid_argument("unknown network type");
+  return out;
+}
+
 // runs fn, converting any thrown exception into MONERO_ERROR + last_error
 template <class F>
 monero_result guard(F&& fn) {

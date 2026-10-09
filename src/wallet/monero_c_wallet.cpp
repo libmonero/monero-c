@@ -44,6 +44,7 @@ using monero_c::dup_string;
 using monero_c::guard;
 using monero_c::json_of_list;
 using monero_c::json_of_strings;
+using monero_c::network_of;
 using monero_c::optional_of;
 using monero_c::require;
 using monero_c::reset_out;
@@ -93,13 +94,6 @@ public:
   }
 };
 
-// monero-cpp's network enum has the same values as the C enum, except regtest, which is mainnet with the regtest flag
-monero::monero_network_type to_network(int32_t network_type) {
-  if (network_type < MONERO_UTILS_NETWORK_MAINNET || network_type > MONERO_UTILS_NETWORK_REGTEST) throw std::runtime_error("unknown network type");
-  if (network_type == MONERO_UTILS_NETWORK_REGTEST) return monero::monero_network_type::MAINNET;
-  return static_cast<monero::monero_network_type>(network_type);
-}
-
 // copies a mnemonic argument, which can't be longer than a valid one
 std::string mnemonic_of(const char* mnemonic) {
   std::string text(mnemonic);
@@ -112,7 +106,7 @@ monero::monero_wallet_config make_config(const char* path, const char* password,
   monero::monero_wallet_config config;
   config.m_path = safe_str(path);
   config.m_password = safe_str(password);
-  config.m_network_type = to_network(network_type);
+  config.m_network_type = network_of<monero::monero_network_type>(network_type);
   std::string language_str = safe_str(language);
   config.m_language = language_str.empty() ? std::string("English") : language_str;
   config.m_server = nullptr;
@@ -313,7 +307,7 @@ monero_result monero_wallet_open(const char* path, const char* password, int32_t
   reset_out(out_wallet);
   if (!require(path, "path") || !require(out_wallet, "out_wallet")) return MONERO_ERROR;
   return guard([&] {
-    *out_wallet = wrap(std::unique_ptr<monero::monero_wallet_full>(monero::monero_wallet_full::open_wallet(std::string(path), safe_str(password), to_network(network_type), network_type == MONERO_UTILS_NETWORK_REGTEST)), network_type);
+    *out_wallet = wrap(std::unique_ptr<monero::monero_wallet_full>(monero::monero_wallet_full::open_wallet(std::string(path), safe_str(password), network_of<monero::monero_network_type>(network_type), network_type == MONERO_UTILS_NETWORK_REGTEST)), network_type);
   });
 }
 
