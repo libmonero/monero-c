@@ -64,5 +64,5 @@ Later:
 - [ ] **monero-c: C# tests for the wallet.** The C# tests declare 29 functions of the utils, the daemon and the connection, and none of the wallet. Add a test that creates a keys-only wallet from a seed and reads its address, which checks the marshalling of `int32_t network_type`.
 - [ ] **monero-c: a version of the C ABI.** The library has no function that returns its version, so a binding can't tell that it loaded a library that doesn't match it. Add `monero_utils_get_abi_version()` before the first release, since it costs more later.
 - [ ] **monero-c: publish from CI.** The package is pushed by hand with `dotnet nuget push`. Add a job with an approval step and the API key as an environment secret.
-- [ ] **monero-c: package metadata.** The nuspec has no tags and no copyright.
+- [x] **monero-c: package metadata.** The nuspec has the tags `monero xmr native ffi wallet` and the copyright `Copyright (c) 2026 Libmonero`, and the commit of the repository, which the pack adds.
 - [ ] **monero-c: add Android, iOS, Linux ARM32 and musl runtime assets.** The native NuGet package currently targets the Linux x64/ARM64, Windows x64 and macOS x64/ARM64 builds. Add and test the missing platform builds before advertising those .NET runtime identifiers.

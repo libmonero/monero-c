@@ -13,6 +13,8 @@
     <PackageId>Monero.Native</PackageId>
     <Version>$(MoneroNativeVersion)</Version>
     <Authors>Libmonero</Authors>
+    <Copyright>Copyright (c) 2026 Libmonero</Copyright>
+    <PackageTags>monero;xmr;native;ffi;wallet</PackageTags>
     <Description>Internal native runtime package for the monero-c .NET binding. Not intended for direct use.</Description>
     <PackageLicenseFile>LICENSE</PackageLicenseFile>
     <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
