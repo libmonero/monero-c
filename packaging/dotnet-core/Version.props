@@ -1,0 +1,8 @@
+<Project>
+
+  <!-- the version of Monero.Native, read by the package project, the tests and the CI -->
+  <PropertyGroup>
+    <MoneroNativeVersion>0.1.0-alpha.1</MoneroNativeVersion>
+  </PropertyGroup>
+
+</Project>

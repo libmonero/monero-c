@@ -66,6 +66,17 @@ jobs:
         with:
           dotnet-version: 8.0.x
 
+      - name: Read the package version
+        run: |
+          version=$(dotnet msbuild packaging/dotnet-core/monero.pkgproj -getProperty:MoneroNativeVersion)
+          test -n "$version" || { echo "no version in packaging/dotnet-core/Version.props"; exit 1; }
+          echo "PACKAGE_VERSION=$version" >> "$GITHUB_ENV"
+
+      - name: Check the tag matches the package version
+        if: github.ref_type == 'tag'
+        run: |
+          [ "${GITHUB_REF_NAME#v}" = "$PACKAGE_VERSION" ] || { echo "tag $GITHUB_REF_NAME does not match package version $PACKAGE_VERSION"; exit 1; }
+
       - name: Stage native libraries for all package RIDs
         run: |
           package_runtimes=packaging/dotnet-core/runtimes
@@ -129,7 +140,7 @@ jobs:
 
       - name: Verify all native runtime assets are in the package
         run: |
-          package=packaging/dotnet-core/packages/Monero.Native.0.1.0-alpha.1.nupkg
+          package="packaging/dotnet-core/packages/Monero.Native.$PACKAGE_VERSION.nupkg"
           unzip -Z1 "$package" > package-files.txt
           for asset in \
             runtimes/linux-x64/native/libmonero_c.so \
@@ -159,7 +170,7 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: monero-native-nuget
-          path: packaging/dotnet-core/packages/Monero.Native.0.1.0-alpha.1.nupkg
+          path: packaging/dotnet-core/packages/Monero.Native.${{ env.PACKAGE_VERSION }}.nupkg
           if-no-files-found: error
 
   test-debian12:

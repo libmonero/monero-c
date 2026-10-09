@@ -1,5 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
+  <Import Project="Version.props" />
+
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
     <NoBuild>true</NoBuild>
@@ -9,7 +11,7 @@
 
   <PropertyGroup>
     <PackageId>Monero.Native</PackageId>
-    <Version>0.1.0-alpha.1</Version>
+    <Version>$(MoneroNativeVersion)</Version>
     <Authors>Libmonero</Authors>
     <Description>Internal native runtime package for the monero-c .NET binding. Not intended for direct use.</Description>
     <PackageLicenseFile>LICENSE</PackageLicenseFile>
