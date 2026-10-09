@@ -46,8 +46,12 @@ extern "C" {
  * with monero_wallet_free().
  *
  * @par Thread safety
- * Don't use one handle from two threads at once. Listener callbacks run inside monero-cpp, so
- * don't free the handle or a listener from a callback.
+ * Don't use one handle from two threads at once. A listener callback runs on a thread of
+ * monero-cpp while the sync holds the lock of the wallet. Don't free the handle or a listener
+ * from it, and don't call monero_wallet_get_balance(), monero_wallet_get_unlocked_balance(),
+ * monero_wallet_get_txs(), monero_wallet_get_outputs() or monero_wallet_get_accounts() on the
+ * same wallet from it, since they wait for that lock and never return. Copy what the callback
+ * gets and make those calls from another thread.
  */
 typedef struct monero_wallet monero_wallet;
 
@@ -68,7 +72,7 @@ typedef struct monero_wallet_listener monero_wallet_listener;
  * @param height is the height of the synced block
  * @param start_height is the starting height of the sync request
  * @param end_height is the ending height of the sync request
- * @param percent_done is the sync progress as a percentage
+ * @param percent_done is the sync progress, from 0 to 1
  * @param message is a human-readable description of the progress
  */
 typedef void (*monero_wallet_on_sync_progress_fn)(void* user_data, uint64_t height, uint64_t start_height, uint64_t end_height, double percent_done, const char* message);

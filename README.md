@@ -191,6 +191,7 @@ What holds today:
 - monero-cpp locks a `monero_rpc_connection`, so one handle can be shared by several threads and by the daemons and RPC wallets created from it.
 - Don't use one `monero_wallet` handle from two threads at once. `monero_wallet_start_syncing()` syncs on a thread owned by monero-cpp, next to the calls on the handle.
 - Listener callbacks run on a thread owned by monero-cpp. Inside a callback, `monero_daemon_remove_listener()` and `monero_daemon_remove_listeners()` are safe. Don't free a wallet, a daemon or a listener from a callback.
+- A wallet callback runs while the sync holds the lock of the wallet, so `monero_wallet_get_balance()`, `monero_wallet_get_unlocked_balance()`, `monero_wallet_get_txs()`, `monero_wallet_get_outputs()` and `monero_wallet_get_accounts()` called on that wallet from it never return. Copy what the callback gets and make those calls from another thread. A daemon callback can call the daemon.
 - Different listeners on one daemon can be managed from different threads.
 - One listener can be on one wallet at a time. Adding it to a second wallet fails.
 - `monero_daemon_wait_for_next_block_header()` blocks only its calling thread, and other calls on the handle run meanwhile.
