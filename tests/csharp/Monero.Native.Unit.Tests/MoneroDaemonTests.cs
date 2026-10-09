@@ -47,7 +47,7 @@ public class MoneroDaemonTests
         Assert.NotEqual(IntPtr.Zero, value);
         try
         {
-            return Marshal.PtrToStringAnsi(value) ?? throw new InvalidOperationException("Native string was null.");
+            return Marshal.PtrToStringUTF8(value) ?? throw new InvalidOperationException("Native string was null.");
         }
         finally
         {
@@ -55,8 +55,8 @@ public class MoneroDaemonTests
         }
     }
 
-    [DllImport("monero_c", EntryPoint = "monero_rpc_connection_create", CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Ansi)]
-    private static extern int CreateConnection(string json, out IntPtr connection);
+    [DllImport("monero_c", EntryPoint = "monero_rpc_connection_create", CallingConvention = CallingConvention.Cdecl)]
+    private static extern int CreateConnection([MarshalAs(UnmanagedType.LPUTF8Str)] string json, out IntPtr connection);
 
     [DllImport("monero_c", EntryPoint = "monero_rpc_connection_free", CallingConvention = CallingConvention.Cdecl)]
     private static extern void FreeConnection(IntPtr connection);

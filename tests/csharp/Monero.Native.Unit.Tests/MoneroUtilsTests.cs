@@ -96,29 +96,29 @@ public class MoneroUtilsTests
     [DllImport("monero_c", EntryPoint = "monero_utils_get_abi_version", CallingConvention = CallingConvention.Cdecl)]
     private static extern int GetAbiVersion(out uint major, out uint minor, out uint patch);
 
-    [DllImport("monero_c", EntryPoint = "monero_utils_is_valid_address", CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Ansi)]
+    [DllImport("monero_c", EntryPoint = "monero_utils_is_valid_address", CallingConvention = CallingConvention.Cdecl)]
     [return: MarshalAs(UnmanagedType.I1)]
-    private static extern bool IsValidAddress(string address, int networkType);
+    private static extern bool IsValidAddress([MarshalAs(UnmanagedType.LPUTF8Str)] string address, int networkType);
 
-    [DllImport("monero_c", EntryPoint = "monero_utils_is_valid_payment_id", CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Ansi)]
+    [DllImport("monero_c", EntryPoint = "monero_utils_is_valid_payment_id", CallingConvention = CallingConvention.Cdecl)]
     [return: MarshalAs(UnmanagedType.I1)]
-    private static extern bool IsValidPaymentId(string paymentId);
+    private static extern bool IsValidPaymentId([MarshalAs(UnmanagedType.LPUTF8Str)] string paymentId);
 
-    [DllImport("monero_c", EntryPoint = "monero_utils_is_valid_payment_id_long", CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Ansi)]
+    [DllImport("monero_c", EntryPoint = "monero_utils_is_valid_payment_id_long", CallingConvention = CallingConvention.Cdecl)]
     [return: MarshalAs(UnmanagedType.I1)]
-    private static extern bool IsValidPaymentIdLong(string paymentId);
+    private static extern bool IsValidPaymentIdLong([MarshalAs(UnmanagedType.LPUTF8Str)] string paymentId);
 
-    [DllImport("monero_c", EntryPoint = "monero_utils_is_valid_payment_id_short", CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Ansi)]
+    [DllImport("monero_c", EntryPoint = "monero_utils_is_valid_payment_id_short", CallingConvention = CallingConvention.Cdecl)]
     [return: MarshalAs(UnmanagedType.I1)]
-    private static extern bool IsValidPaymentIdShort(string paymentId);
+    private static extern bool IsValidPaymentIdShort([MarshalAs(UnmanagedType.LPUTF8Str)] string paymentId);
 
-    [DllImport("monero_c", EntryPoint = "monero_utils_parse_payment_id_long", CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Ansi)]
+    [DllImport("monero_c", EntryPoint = "monero_utils_parse_payment_id_long", CallingConvention = CallingConvention.Cdecl)]
     [return: MarshalAs(UnmanagedType.I1)]
-    private static extern bool ParsePaymentIdLong(string paymentId, [Out] byte[] output);
+    private static extern bool ParsePaymentIdLong([MarshalAs(UnmanagedType.LPUTF8Str)] string paymentId, [Out] byte[] output);
 
-    [DllImport("monero_c", EntryPoint = "monero_utils_parse_payment_id_short", CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Ansi)]
+    [DllImport("monero_c", EntryPoint = "monero_utils_parse_payment_id_short", CallingConvention = CallingConvention.Cdecl)]
     [return: MarshalAs(UnmanagedType.I1)]
-    private static extern bool ParsePaymentIdShort(string paymentId, [Out] byte[] output);
+    private static extern bool ParsePaymentIdShort([MarshalAs(UnmanagedType.LPUTF8Str)] string paymentId, [Out] byte[] output);
 
     [DllImport("monero_c", EntryPoint = "monero_utils_xmr_to_atomic_units", CallingConvention = CallingConvention.Cdecl)]
     private static extern int XmrToAtomicUnits(double amount, out ulong output);

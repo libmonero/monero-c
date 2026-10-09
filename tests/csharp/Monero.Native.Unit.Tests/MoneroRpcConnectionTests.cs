@@ -105,7 +105,7 @@ public class MoneroRpcConnectionTests
         Assert.NotEqual(IntPtr.Zero, value);
         try
         {
-            return Marshal.PtrToStringAnsi(value) ?? throw new InvalidOperationException("Native string was null.");
+            return Marshal.PtrToStringUTF8(value) ?? throw new InvalidOperationException("Native string was null.");
         }
         finally
         {
@@ -143,8 +143,8 @@ public class MoneroRpcConnectionTests
         return status;
     }
 
-    [DllImport("monero_c", EntryPoint = "monero_rpc_connection_create", CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Ansi)]
-    private static extern int CreateConnectionNative(string json, out IntPtr connection);
+    [DllImport("monero_c", EntryPoint = "monero_rpc_connection_create", CallingConvention = CallingConvention.Cdecl)]
+    private static extern int CreateConnectionNative([MarshalAs(UnmanagedType.LPUTF8Str)] string json, out IntPtr connection);
 
     [DllImport("monero_c", EntryPoint = "monero_rpc_connection_free", CallingConvention = CallingConvention.Cdecl)]
     private static extern void FreeConnection(IntPtr connection);
@@ -152,14 +152,14 @@ public class MoneroRpcConnectionTests
     [DllImport("monero_c", EntryPoint = "monero_rpc_connection_serialize", CallingConvention = CallingConvention.Cdecl)]
     private static extern int SerializeNative(IntPtr connection, out IntPtr json);
 
-    [DllImport("monero_c", EntryPoint = "monero_rpc_connection_set_credentials", CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Ansi)]
-    private static extern int SetCredentials(IntPtr connection, string username, string password);
+    [DllImport("monero_c", EntryPoint = "monero_rpc_connection_set_credentials", CallingConvention = CallingConvention.Cdecl)]
+    private static extern int SetCredentials(IntPtr connection, [MarshalAs(UnmanagedType.LPUTF8Str)] string username, [MarshalAs(UnmanagedType.LPUTF8Str)] string password);
 
-    [DllImport("monero_c", EntryPoint = "monero_rpc_connection_set_attribute", CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Ansi)]
-    private static extern int SetAttribute(IntPtr connection, string key, string value);
+    [DllImport("monero_c", EntryPoint = "monero_rpc_connection_set_attribute", CallingConvention = CallingConvention.Cdecl)]
+    private static extern int SetAttribute(IntPtr connection, [MarshalAs(UnmanagedType.LPUTF8Str)] string key, [MarshalAs(UnmanagedType.LPUTF8Str)] string value);
 
-    [DllImport("monero_c", EntryPoint = "monero_rpc_connection_get_attribute", CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Ansi)]
-    private static extern int GetAttributeNative(IntPtr connection, string key, out IntPtr value);
+    [DllImport("monero_c", EntryPoint = "monero_rpc_connection_get_attribute", CallingConvention = CallingConvention.Cdecl)]
+    private static extern int GetAttributeNative(IntPtr connection, [MarshalAs(UnmanagedType.LPUTF8Str)] string key, out IntPtr value);
 
     [DllImport("monero_c", EntryPoint = "monero_rpc_connection_is_onion", CallingConvention = CallingConvention.Cdecl)]
     private static extern int IsOnionNative(IntPtr connection, out byte value);
