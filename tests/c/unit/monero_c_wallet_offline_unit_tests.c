@@ -280,6 +280,52 @@ static void test_key_images_and_outputs(void) {
   remove_files(path);
 }
 
+// a JSON argument that nests too deeply fails before the parser, which would overflow the stack
+static void test_json_depth_limit(void) {
+  const char* path = "monero_c_wallet_offline_depth";
+  monero_wallet* wallet = create_test_wallet(path);
+  if (wallet == NULL) {
+    remove_files(path);
+    return;
+  }
+
+  const char* message = "JSON is nested deeper than 64 levels";
+  char* array = nested_json(100000);
+  char* object = nested_json_object(100000);
+  char* at_limit = nested_json_object(64);
+  char* json = POISON_PTR;
+
+  EXPECT_ERR_MSG(monero_wallet_import_key_images(wallet, array, 0, &json), message);
+  CHECK(json == NULL);
+  json = POISON_PTR;
+  EXPECT_ERR_MSG(monero_wallet_relay_txs_json(wallet, array, &json), message);
+  CHECK(json == NULL);
+  json = POISON_PTR;
+  EXPECT_ERR_MSG(monero_wallet_relay_tx_json(wallet, object, &json), message);
+  CHECK(json == NULL);
+  EXPECT_ERR_MSG(monero_wallet_create_tx(wallet, object, &json), message);
+  EXPECT_ERR_MSG(monero_wallet_create_txs(wallet, object, &json), message);
+  EXPECT_ERR_MSG(monero_wallet_sweep_output(wallet, object, &json), message);
+  EXPECT_ERR_MSG(monero_wallet_sweep_unlocked(wallet, object, &json), message);
+  EXPECT_ERR_MSG(monero_wallet_describe_tx_set(wallet, object, &json), message);
+  EXPECT_ERR_MSG(monero_wallet_get_payment_uri(wallet, object, &json), message);
+  EXPECT_ERR_MSG(monero_wallet_get_txs(wallet, object, &json), message);
+  EXPECT_ERR_MSG(monero_wallet_get_transfers(wallet, object, &json), message);
+  EXPECT_ERR_MSG(monero_wallet_get_outputs(wallet, object, &json), message);
+
+  // 64 levels pass the check, and are then rejected as a config or a transaction
+  EXPECT_ERR(monero_wallet_create_tx(wallet, at_limit, &json));
+  CHECK(strcmp(monero_last_error(), message) != 0);
+  EXPECT_ERR(monero_wallet_relay_tx_json(wallet, at_limit, &json));
+  CHECK(strcmp(monero_last_error(), message) != 0);
+
+  free(array);
+  free(object);
+  free(at_limit);
+  monero_wallet_free(wallet);
+  remove_files(path);
+}
+
 static void test_tx_notes(void) {
   const char* path = "monero_c_wallet_offline_notes";
   monero_wallet* wallet = create_test_wallet(path);
@@ -483,6 +529,7 @@ int main(void) {
   test_attributes_and_settings();
   test_keys_and_version();
   test_key_images_and_outputs();
+  test_json_depth_limit();
   test_tx_notes();
   test_daemon_connection();
   test_close();

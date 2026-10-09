@@ -316,6 +316,67 @@ static void test_null_arguments_reset_outputs(void) {
   CHECK(count == 0);
 }
 
+// a JSON argument that nests too deeply fails before the parser, which would overflow the stack
+static void test_json_depth_limit(monero_daemon* daemon) {
+  const char* message = "JSON is nested deeper than 64 levels";
+  char* at_limit = nested_json(64);
+  char* too_deep = nested_json(65);
+  char* huge = nested_json(100000);
+  char* json = POISON_PTR;
+
+  EXPECT_ERR_MSG(monero_daemon_set_peer_bans(daemon, too_deep), message);
+  EXPECT_ERR_MSG(monero_daemon_set_peer_bans(daemon, huge), message);
+  EXPECT_ERR_MSG(monero_daemon_set_peer_ban(daemon, too_deep), message);
+  EXPECT_ERR_MSG(monero_daemon_set_peer_ban(daemon, huge), message);
+  EXPECT_ERR_MSG(monero_daemon_add_auxiliary_pow(daemon, "00", huge, &json), message);
+  CHECK(json == NULL);
+  json = POISON_PTR;
+  EXPECT_ERR_MSG(monero_daemon_get_outputs(daemon, huge, &json), message);
+  CHECK(json == NULL);
+
+  // 64 levels pass the check, and are then rejected as the elements of an array
+  EXPECT_ERR(monero_daemon_set_peer_bans(daemon, at_limit));
+  CHECK(strcmp(monero_last_error(), message) != 0);
+
+  free(at_limit);
+  free(too_deep);
+  free(huge);
+}
+
+// monero-cpp lists every height before the first request, so a range with no end never finishes
+static void test_blocks_by_range_limit(monero_daemon* daemon) {
+  const char* message = "range is longer than 100000 blocks, use monero_daemon_get_blocks_by_range_chunked()";
+  const uint64_t zero = 0;
+  const uint64_t last_allowed = 99999;
+  const uint64_t first_refused = 100000;
+  const uint64_t max = UINT64_MAX;
+  const uint64_t start = 5;
+  const uint64_t start_end = 5 + 99999;
+  const uint64_t start_refused = 5 + 100000;
+  char* json = POISON_PTR;
+
+  EXPECT_ERR_MSG(monero_daemon_get_blocks_by_range(daemon, &zero, &max, &json), message);
+  CHECK(json == NULL);
+  json = POISON_PTR;
+  EXPECT_ERR_MSG(monero_daemon_get_blocks_by_range(daemon, NULL, &max, &json), message);
+  CHECK(json == NULL);
+  EXPECT_ERR_MSG(monero_daemon_get_blocks_by_range(daemon, &zero, &first_refused, &json), message);
+  EXPECT_ERR_MSG(monero_daemon_get_blocks_by_range(daemon, &start, &start_refused, &json), message);
+
+  // the longest range is sent, and fails on the closed port
+  EXPECT_ERR(monero_daemon_get_blocks_by_range(daemon, &zero, &last_allowed, &json));
+  CHECK(strcmp(monero_last_error(), message) != 0);
+  EXPECT_ERR(monero_daemon_get_blocks_by_range(daemon, &start, &start_end, &json));
+  CHECK(strcmp(monero_last_error(), message) != 0);
+
+  // an end before the start is an empty range, and a missing end is the tip of the chain
+  monero_result result = monero_daemon_get_blocks_by_range(daemon, &start, &zero, &json);
+  CHECK(result == MONERO_OK || strcmp(monero_last_error(), message) != 0);
+  if (result == MONERO_OK) monero_utils_free(json);
+  EXPECT_ERR(monero_daemon_get_blocks_by_range(daemon, &start, NULL, &json));
+  CHECK(strcmp(monero_last_error(), message) != 0);
+}
+
 // the binding's own checks and the messages monero-cpp throws both reach the caller
 static void test_errors_from_the_binding_and_monero_cpp(monero_daemon* daemon) {
   char* json = NULL;
@@ -463,6 +524,8 @@ int main(void) {
   test_null_outputs_are_rejected(daemon);
   test_outputs_are_reset_on_error(daemon);
   test_null_arguments_reset_outputs();
+  test_json_depth_limit(daemon);
+  test_blocks_by_range_limit(daemon);
   test_errors_from_the_binding_and_monero_cpp(daemon);
   test_listener_handles(daemon);
   test_listener_registered_with_one_daemon();

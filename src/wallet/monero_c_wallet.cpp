@@ -38,6 +38,8 @@
 #include <vector>
 
 using monero_c::array_of;
+using monero_c::check_json_depth;
+using monero_c::check_mnemonic_length;
 using monero_c::dup_string;
 using monero_c::guard;
 using monero_c::json_of_list;
@@ -98,6 +100,13 @@ monero::monero_network_type to_network(int32_t network_type) {
   return static_cast<monero::monero_network_type>(network_type);
 }
 
+// copies a mnemonic argument, which can't be longer than a valid one
+std::string mnemonic_of(const char* mnemonic) {
+  std::string text(mnemonic);
+  check_mnemonic_length(text);
+  return text;
+}
+
 // monero-cpp reads most fields with get(), so every field is set, empty when unused
 monero::monero_wallet_config make_config(const char* path, const char* password, int32_t network_type, const char* language) {
   monero::monero_wallet_config config;
@@ -135,6 +144,7 @@ monero::monero_message_signature_type to_signature_type(int32_t signature_type) 
 // parses a JSON array into one monero-cpp model per element. The message is thrown if json is not an array
 template <class T>
 std::vector<std::shared_ptr<T>> parse_list(const std::string& json, const char* message) {
+  check_json_depth(json);
   rapidjson::Document doc;
   if (doc.Parse(json.c_str()).HasParseError() || !doc.IsArray()) throw std::runtime_error(message);
   std::vector<std::shared_ptr<T>> items;
@@ -161,12 +171,14 @@ std::string tx_metadata_of(const rapidjson::Value& tx) {
 }
 
 std::string tx_metadata_of_json(const std::string& json) {
+  check_json_depth(json);
   rapidjson::Document doc;
   if (doc.Parse(json.c_str()).HasParseError()) throw std::runtime_error("tx must be a JSON object");
   return tx_metadata_of(doc);
 }
 
 std::vector<std::string> tx_metadatas_of_json(const std::string& json) {
+  check_json_depth(json);
   rapidjson::Document doc;
   if (doc.Parse(json.c_str()).HasParseError() || !doc.IsArray()) throw std::runtime_error("txs must be a JSON array");
   std::vector<std::string> metadatas;
@@ -180,7 +192,9 @@ std::shared_ptr<T> model_json(const char* json, const char* name) {
   const char* p = json;
   while (p != nullptr && (*p == ' ' || *p == '\t' || *p == '\r' || *p == '\n')) p++;
   if (p == nullptr || *p != '{') throw std::runtime_error(std::string(name) + " must be a JSON object");
-  std::shared_ptr<T> model = T::deserialize(json);
+  std::string text(json);
+  check_json_depth(text);
+  std::shared_ptr<T> model = T::deserialize(text);
   if (model == nullptr) throw std::runtime_error(std::string(name) + " must be a JSON object");
   return model;
 }
@@ -275,7 +289,7 @@ monero_result monero_wallet_create_from_seed(const char* path, const char* passw
   if (!require(path, "path") || !require(seed, "seed") || !require(out_wallet, "out_wallet")) return MONERO_ERROR;
   return guard([&] {
     monero::monero_wallet_config config = make_config(path, password, network_type, language);
-    config.m_seed = std::string(seed);
+    config.m_seed = mnemonic_of(seed);
     config.m_seed_offset = safe_str(seed_offset);
     config.m_restore_height = restore_height;
     *out_wallet = wrap(std::unique_ptr<monero::monero_wallet_full>(monero::monero_wallet_full::create_wallet(config)), network_type);
@@ -328,7 +342,7 @@ monero_result monero_wallet_keys_create_from_seed(int32_t network_type, const ch
   if (!require(seed, "seed") || !require(out_wallet, "out_wallet")) return MONERO_ERROR;
   return guard([&] {
     monero::monero_wallet_config config = make_config(nullptr, nullptr, network_type, language);
-    config.m_seed = std::string(seed);
+    config.m_seed = mnemonic_of(seed);
     config.m_seed_offset = safe_str(seed_offset);
     *out_wallet = wrap(std::unique_ptr<monero::monero_wallet>(monero::monero_wallet_keys::create_wallet_from_seed(config)), network_type);
   });
@@ -1155,7 +1169,7 @@ monero_result monero_wallet_rpc_create_from_seed(const char* uri, const char* us
   if (!require(uri, "uri") || !require(name, "name") || !require(seed, "seed") || !require(out_wallet, "out_wallet")) return MONERO_ERROR;
   return guard([&] {
     auto config = rpc_config(name, wallet_password, language);
-    config->m_seed = std::string(seed);
+    config->m_seed = mnemonic_of(seed);
     config->m_seed_offset = safe_str(seed_offset);
     config->m_restore_height = restore_height;
     *out_wallet = create_rpc_wallet(uri, username, password, config);

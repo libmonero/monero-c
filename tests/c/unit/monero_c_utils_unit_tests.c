@@ -125,6 +125,24 @@ static void test_mnemonic_validation(void) {
   CHECK(!monero_utils_is_valid_mnemonic(NULL, ""));
 }
 
+// a mnemonic is checked up to 4096 bytes, since a longer one is never valid
+static void test_mnemonic_length_limit(void) {
+  char* longest = repeated_text('a', 4096);
+  char* too_long = repeated_text('a', 4097);
+  char* huge = repeated_text('a', 1000000);
+
+  EXPECT_ERR_MSG(monero_utils_validate_mnemonic(longest, ""), "Mnemonic phrased words must be 25");
+  EXPECT_ERR_MSG(monero_utils_validate_mnemonic(too_long, ""), "mnemonic is longer than 4096 bytes");
+  EXPECT_ERR_MSG(monero_utils_validate_mnemonic(huge, ""), "mnemonic is longer than 4096 bytes");
+  CHECK(!monero_utils_is_valid_mnemonic(longest, ""));
+  CHECK(!monero_utils_is_valid_mnemonic(too_long, ""));
+  CHECK(!monero_utils_is_valid_mnemonic(huge, ""));
+
+  free(longest);
+  free(too_long);
+  free(huge);
+}
+
 static void test_seed_language_validation(void) {
   CHECK(monero_utils_is_valid_language("Italian"));
   CHECK(monero_utils_is_valid_language("English"));
@@ -319,6 +337,31 @@ static void test_get_payment_uri(void) {
   }
 }
 
+// a JSON argument that nests too deeply fails before the parser, which would overflow the stack
+static void test_json_depth_limit(void) {
+  const char* message = "JSON is nested deeper than 64 levels";
+  char* object = nested_json_object(100000);
+  char* array = nested_json(65);
+  char* at_limit = nested_json_object(64);
+  char* uri = POISON_PTR;
+  uint8_t* bin = POISON_PTR;
+  size_t bin_len = 7;
+
+  EXPECT_ERR_MSG(monero_utils_get_payment_uri(object, MONERO_UTILS_NETWORK_MAINNET, &uri), message);
+  CHECK(uri == NULL);
+  EXPECT_ERR_MSG(monero_utils_json_to_binary(array, &bin, &bin_len), message);
+  CHECK(bin == NULL && bin_len == 0);
+  EXPECT_ERR_MSG(monero_utils_json_to_binary(object, &bin, &bin_len), message);
+
+  // 64 levels pass the check, and are then rejected as a transaction config
+  EXPECT_ERR(monero_utils_get_payment_uri(at_limit, MONERO_UTILS_NETWORK_MAINNET, &uri));
+  CHECK(strcmp(monero_last_error(), message) != 0);
+
+  free(object);
+  free(array);
+  free(at_limit);
+}
+
 static void test_parse_payment_uri_wrong_scheme(void) {
   char* parsed_json = NULL;
   char uri[256];
@@ -445,6 +488,7 @@ int main(void) {
   test_address_validation();
   test_key_validation();
   test_mnemonic_validation();
+  test_mnemonic_length_limit();
   test_seed_language_validation();
   test_payment_id_validation();
   test_payment_id_long_short_validation();
@@ -458,6 +502,7 @@ int main(void) {
   test_get_integrated_address();
   test_get_payment_uri();
   test_parse_payment_uri_wrong_scheme();
+  test_json_depth_limit();
   test_json_binary_roundtrip();
   test_binary_blocks_to_json();
   test_failed_calls_reset_outputs();

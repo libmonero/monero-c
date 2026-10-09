@@ -35,8 +35,9 @@ extern "C" {
 #endif
 
 // ------------------------------- WALLET ------------------------------------
-// wraps the monero_wallet methods of the same name. On error the call returns MONERO_ERROR,
-// monero_last_error() gives the message, string outputs are NULL and scalar outputs are unchanged
+// wraps the monero_wallet methods of the same name. A JSON argument can't nest deeper than 64
+// levels. On error the call returns MONERO_ERROR, monero_last_error() gives the message, string
+// outputs are NULL and scalar outputs are unchanged
 
 /**
  * Opaque handle to a wallet. Full wallets come from monero_wallet_create_random(),
@@ -137,7 +138,7 @@ MONERO_EXPORT monero_result monero_wallet_create_random(const char* path, const 
  * @param path is the path of the wallet file
  * @param password encrypts the wallet files. NULL or "" for no password
  * @param network_type is the monero_utils_network_type of the wallet
- * @param seed is the mnemonic seed
+ * @param seed is the mnemonic seed, at most 4096 bytes
  * @param seed_offset is the passphrase that extends the seed. NULL or "" for none
  * @param restore_height is the first block to scan. 0 scans from the genesis block
  * @param language is the seed language. NULL for English
@@ -206,7 +207,7 @@ MONERO_EXPORT monero_result monero_wallet_keys_create_random(int32_t network_typ
  * Restore a keys-only wallet from its mnemonic seed.
  *
  * @param network_type is the monero_utils_network_type of the wallet
- * @param seed is the mnemonic seed
+ * @param seed is the mnemonic seed, at most 4096 bytes
  * @param seed_offset is the passphrase that extends the seed. NULL or "" for none
  * @param language is the seed language. NULL for English
  * @param out_wallet receives the handle, released with monero_wallet_free()
@@ -1537,7 +1538,7 @@ MONERO_EXPORT monero_result monero_wallet_rpc_create_random(const char* uri, con
  * @param password is the password of the server. NULL or "" for none
  * @param name is the name of the new wallet on the server
  * @param wallet_password is the password of the wallet. NULL or "" for none
- * @param seed is the mnemonic seed
+ * @param seed is the mnemonic seed, at most 4096 bytes
  * @param seed_offset is the passphrase that extends the seed. NULL or "" for none
  * @param restore_height is the first block to scan. 0 scans from the genesis block
  * @param language is the seed language. NULL for English

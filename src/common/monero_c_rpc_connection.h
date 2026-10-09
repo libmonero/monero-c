@@ -34,8 +34,9 @@ extern "C" {
 #endif
 
 // ----------------------------- RPC CONNECTION -------------------------------
-// each function wraps the monero_rpc_connection method of the same name. On error,
-// string and buffer outputs are set to NULL and scalar outputs are left unchanged
+// each function wraps the monero_rpc_connection method of the same name. A JSON argument can't
+// nest deeper than 64 levels. On error, string and buffer outputs are set to NULL and scalar
+// outputs are left unchanged
 
 /**
  * Opaque handle to a connection to a monerod or monero-wallet-rpc server. Create it with

@@ -38,4 +38,22 @@ const std::string& last_error() {
   return g_last_error;
 }
 
+void check_json_depth(const std::string& json) {
+  size_t depth = 0;
+  bool in_string = false;
+  for (size_t i = 0; i < json.size(); i++) {
+    char c = json[i];
+    if (in_string) {
+      if (c == '\\') i++;
+      else if (c == '"') in_string = false;
+    } else if (c == '"') {
+      in_string = true;
+    } else if (c == '[' || c == '{') {
+      if (++depth > MAX_JSON_DEPTH) throw std::invalid_argument("JSON is nested deeper than " + std::to_string(MAX_JSON_DEPTH) + " levels");
+    } else if ((c == ']' || c == '}') && depth > 0) {
+      depth--;
+    }
+  }
+}
+
 } // namespace monero_c

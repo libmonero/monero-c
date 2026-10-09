@@ -115,6 +115,41 @@ static inline int json_string(const char* json, const char* key, char* out, size
 // a value no call returns: an output set to it before a call that fails has to be reset
 #define POISON_PTR ((void*) 1)
 
+// a JSON array that nests depth levels around a 1, e.g. [[1]] for 2. The caller frees it
+static inline char* nested_json(size_t depth) {
+  char* json = (char*) malloc(depth * 2 + 2);
+  if (json == NULL) return NULL;
+  memset(json, '[', depth);
+  json[depth] = '1';
+  memset(json + depth + 1, ']', depth);
+  json[depth * 2 + 1] = '\0';
+  return json;
+}
+
+// a JSON object that nests depth levels around a 1, e.g. {"a":{"a":1}} for 2. The caller frees it
+static inline char* nested_json_object(size_t depth) {
+  char* json = (char*) malloc(depth * 6 + 2);
+  if (json == NULL) return NULL;
+  char* p = json;
+  for (size_t i = 0; i < depth; i++) {
+    memcpy(p, "{\"a\":", 5);
+    p += 5;
+  }
+  *p++ = '1';
+  memset(p, '}', depth);
+  p[depth] = '\0';
+  return json;
+}
+
+// length copies of ch as a string. The caller frees it
+static inline char* repeated_text(char ch, size_t length) {
+  char* text = (char*) malloc(length + 1);
+  if (text == NULL) return NULL;
+  memset(text, ch, length);
+  text[length] = '\0';
+  return text;
+}
+
 // counts the words of a seed, which are separated by spaces. Returns 0 for an empty seed
 static inline size_t count_words(const char* seed) {
   size_t words = 0;

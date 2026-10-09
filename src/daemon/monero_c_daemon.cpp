@@ -46,6 +46,7 @@ struct monero_daemon {
 namespace {
 
 using monero_c::array_of;
+using monero_c::check_json_depth;
 using monero_c::dup_array;
 using monero_c::dup_string;
 using monero_c::guard;
@@ -58,8 +59,13 @@ using monero_c::safe_str;
 using monero_c::set_last_error;
 using monero_c::string_array;
 
+// monero-cpp lists the height of every block in the range before the first request, so a range
+// with no real end, such as UINT64_MAX, never finishes. The chunked variant has no such limit
+const uint64_t MAX_BLOCKS_BY_RANGE = 100000;
+
 // splits a JSON array into its elements, each serialized again as a JSON document
 std::vector<std::string> split_json_array(const std::string& json) {
+  check_json_depth(json);
   rapidjson::Document doc;
   doc.Parse(json.c_str());
   if (doc.HasParseError() || !doc.IsArray()) throw std::invalid_argument("expected a JSON array");
@@ -426,7 +432,13 @@ monero_result monero_daemon_get_blocks_by_height(monero_daemon* daemon, const ui
 monero_result monero_daemon_get_blocks_by_range(monero_daemon* daemon, const uint64_t* start_height, const uint64_t* end_height, char** out_json) {
   reset_out(out_json);
   if (!require(daemon, "daemon") || !require(out_json, "out_json")) return MONERO_ERROR;
-  return guard([&] { *out_json = dup_string(json_of_list(daemon->rpc->get_blocks_by_range(optional_of(start_height), optional_of(end_height)))); });
+  return guard([&] {
+    uint64_t start = start_height != nullptr ? *start_height : 0;
+    if (end_height != nullptr && *end_height >= start && *end_height - start >= MAX_BLOCKS_BY_RANGE) {
+      throw std::invalid_argument("range is longer than " + std::to_string(MAX_BLOCKS_BY_RANGE) + " blocks, use monero_daemon_get_blocks_by_range_chunked()");
+    }
+    *out_json = dup_string(json_of_list(daemon->rpc->get_blocks_by_range(optional_of(start_height), optional_of(end_height))));
+  });
 }
 
 monero_result monero_daemon_get_blocks_by_range_chunked(monero_daemon* daemon, const uint64_t* start_height, const uint64_t* end_height, const uint64_t* max_chunk_size, char** out_json) {
@@ -675,7 +687,11 @@ monero_result monero_daemon_set_peer_bans(monero_daemon* daemon, const char* ban
 
 monero_result monero_daemon_set_peer_ban(monero_daemon* daemon, const char* ban_json) {
   if (!require(daemon, "daemon")) return MONERO_ERROR;
-  return guard([&] { daemon->rpc->set_peer_ban(gen_utils::deserialize<monero::monero_ban>(safe_str(ban_json))); });
+  return guard([&] {
+    std::string json = safe_str(ban_json);
+    check_json_depth(json);
+    daemon->rpc->set_peer_ban(gen_utils::deserialize<monero::monero_ban>(json));
+  });
 }
 
 monero_result monero_daemon_get_peer_ban(monero_daemon* daemon, const char* address, char** out_json) {

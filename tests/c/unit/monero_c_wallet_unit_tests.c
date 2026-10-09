@@ -199,6 +199,29 @@ static void test_invalid_arguments(void) {
   monero_wallet_listener_free(NULL);
 }
 
+// a seed is checked up to 4096 bytes, since a longer one can't be a mnemonic
+static void test_seed_length_limit(void) {
+  const char* path = "monero_c_wallet_unit_long_seed";
+  char* longest = repeated_text('a', 4096);
+  char* too_long = repeated_text('a', 4097);
+  monero_wallet* wallet = POISON_PTR;
+  remove_files(path);
+
+  EXPECT_ERR(monero_wallet_create_from_seed(path, PASSWORD, NETWORK, longest, NULL, 0, NULL, &wallet));
+  CHECK(strstr(monero_last_error(), "longer than") == NULL);
+  CHECK(wallet == NULL);
+  wallet = POISON_PTR;
+  EXPECT_ERR_MSG(monero_wallet_create_from_seed(path, PASSWORD, NETWORK, too_long, NULL, 0, NULL, &wallet), "mnemonic is longer than 4096 bytes");
+  CHECK(wallet == NULL);
+  wallet = POISON_PTR;
+  EXPECT_ERR_MSG(monero_wallet_rpc_create_from_seed("http://127.0.0.1:1", NULL, NULL, "name", NULL, too_long, NULL, 0, NULL, &wallet), "mnemonic is longer than 4096 bytes");
+  CHECK(wallet == NULL);
+
+  free(longest);
+  free(too_long);
+  remove_files(path);
+}
+
 // a call that fails on a NULL argument resets its outputs too, whichever output it can reach
 static void test_null_arguments_reset_outputs(void) {
   monero_wallet* wallet = POISON_PTR;
@@ -480,6 +503,7 @@ int main(void) {
   test_create_random();
   test_restore_and_open();
   test_invalid_arguments();
+  test_seed_length_limit();
   test_null_arguments_reset_outputs();
   test_listeners();
   test_listener_outlives_wallet();

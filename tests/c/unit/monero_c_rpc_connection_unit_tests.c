@@ -201,6 +201,11 @@ static void test_rpc_wallet_from_connection(void) {
   EXPECT_ERR(monero_wallet_rpc_open_wallet(wallet, "name", "password"));
   EXPECT_ERR_MSG(monero_wallet_rpc_create_wallet(wallet, "[]"), "config must be a JSON object");
   EXPECT_ERR_MSG(monero_wallet_rpc_open_wallet(wallet, NULL, NULL), "name must not be null");
+
+  // a config that nests too deeply fails before the parser
+  char* deep = nested_json_object(100000);
+  EXPECT_ERR_MSG(monero_wallet_rpc_create_wallet(wallet, deep), "JSON is nested deeper than 64 levels");
+  free(deep);
   monero_wallet_free(wallet);
 }
 
@@ -261,6 +266,41 @@ static void test_null_arguments_reset_outputs(void) {
   EXPECT_ERR(monero_rpc_connection_send_binary_request(valid, NULL, "{}", NULL, &data, &count));
   CHECK(data == NULL && count == 0);
   monero_rpc_connection_free(valid);
+}
+
+// a JSON argument that nests too deeply fails before the parser, which would overflow the stack
+static void test_json_depth_limit(void) {
+  const char* message = "JSON is nested deeper than 64 levels";
+  char* at_limit = nested_json(64);
+  char* too_deep = nested_json(65);
+  char* huge = nested_json(100000);
+  monero_rpc_connection* connection = POISON_PTR;
+  char* json = POISON_PTR;
+
+  EXPECT_ERR_MSG(monero_rpc_connection_create(too_deep, &connection), message);
+  CHECK(connection == NULL);
+  EXPECT_ERR_MSG(monero_rpc_connection_create(huge, &connection), message);
+
+  monero_rpc_connection* valid = create_connection(UNREACHABLE);
+  if (valid != NULL) {
+    EXPECT_ERR_MSG(monero_rpc_connection_send_json_request(valid, "x", too_deep, NULL, &json), message);
+    CHECK(json == NULL);
+    EXPECT_ERR_MSG(monero_rpc_connection_send_json_request(valid, "x", huge, NULL, &json), message);
+    EXPECT_ERR_MSG(monero_rpc_connection_send_path_request(valid, "x", huge, NULL, &json), message);
+    monero_rpc_connection_free(valid);
+  }
+
+  // 64 levels pass the check, and are then rejected as the parameters of a request
+  monero_rpc_connection* other = create_connection(UNREACHABLE);
+  if (other != NULL) {
+    EXPECT_ERR(monero_rpc_connection_send_json_request(other, "x", at_limit, NULL, &json));
+    CHECK(strcmp(monero_last_error(), message) != 0);
+    monero_rpc_connection_free(other);
+  }
+
+  free(at_limit);
+  free(too_deep);
+  free(huge);
 }
 
 #if !defined(_WIN32)
@@ -458,6 +498,7 @@ int main(void) {
   test_rpc_wallet_from_connection();
   test_every_function_rejects_null_connection();
   test_null_arguments_reset_outputs();
+  test_json_depth_limit();
 #if !defined(_WIN32)
   // a client that closes its socket while the server writes must not stop the program
   signal(SIGPIPE, SIG_IGN);

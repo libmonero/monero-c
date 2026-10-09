@@ -35,9 +35,10 @@ extern "C" {
 // ------------------------------ DAEMON RPC ----------------------------------
 // each function wraps the monero_daemon method of the same name (monero-cpp's
 // monero_daemon interface). Results are JSON in monero-cpp's serializable_struct
-// format unless the parameter says otherwise. On error, string and array outputs
-// are set to NULL (counts to 0) and scalar outputs are left unchanged. The thread
-// safety rules are documented on monero_daemon and monero_daemon_listener
+// format unless the parameter says otherwise. A JSON argument can't nest deeper than
+// 64 levels. On error, string and array outputs are set to NULL (counts to 0) and scalar
+// outputs are left unchanged. The thread safety rules are documented on monero_daemon and
+// monero_daemon_listener
 
 /**
  * Opaque handle to a daemon RPC client. Create it with monero_daemon_connect()
@@ -488,7 +489,8 @@ MONERO_EXPORT monero_result monero_daemon_get_block_by_height(monero_daemon* dae
 MONERO_EXPORT monero_result monero_daemon_get_blocks_by_height(monero_daemon* daemon, const uint64_t* heights, size_t num_heights, char** out_json);
 
 /**
- * Get blocks in the given height range.
+ * Get blocks in the given height range. A range of more than 100000 blocks fails, so use
+ * monero_daemon_get_blocks_by_range_chunked() for a longer one.
  *
  * @param daemon is the handle returned by monero_daemon_connect()
  * @param start_height is the lower bound of the range, inclusive, or NULL for none

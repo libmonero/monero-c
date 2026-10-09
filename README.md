@@ -175,6 +175,10 @@ All the tests include only the public header and call only exported functions, t
 
 Any `out_*` parameter that receives a string or byte buffer (`char**`, `uint8_t**`) is heap-allocated by monero_c and must be freed by the caller with `monero_utils_free()`, as shown above -- the sample's `monero_utils_free(json)` call is not optional. Fixed-size out-params (e.g. `uint8_t out_payment_id[32]`) write into a buffer the caller already owns, so there's nothing to free. See [src/utils/monero_c_utils.h](src/utils/monero_c_utils.h) for the one exception (`monero_last_error()`). Handles are released with their matching `*_free()` function: `monero_daemon_free()`, `monero_wallet_free()`, `monero_rpc_connection_free()` and the listener functions. A daemon or RPC wallet created from a `monero_rpc_connection` keeps the connection, so the connection handle can be freed right after. To save a full wallet, close it with `monero_wallet_close(wallet, true)` before freeing it. After a failed call, the string, buffer, array and handle outputs are NULL and the counts are 0, even when the failure was a NULL argument, so there is nothing to free.
 
+## Limits
+
+A JSON argument can't nest deeper than 64 levels, and a mnemonic can't be longer than 4096 bytes. `monero_daemon_get_blocks_by_range()` takes at most 100000 blocks per call, and `monero_daemon_get_blocks_by_range_chunked()` has no limit. A call over a limit fails with `MONERO_ERROR` before any parser or request runs.
+
 ## Thread Safety
 
 > [!WARNING]

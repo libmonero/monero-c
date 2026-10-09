@@ -40,6 +40,7 @@ struct monero_rpc_connection {
 
 namespace {
 
+using monero_c::check_json_depth;
 using monero_c::dup_buffer;
 using monero_c::dup_string;
 using monero_c::guard;
@@ -53,6 +54,7 @@ struct json_params : public monero::monero_request_params {
   rapidjson::Document m_doc;
 
   explicit json_params(const char* json) {
+    check_json_depth(json);
     if (m_doc.Parse(json).HasParseError() || !m_doc.IsObject()) throw std::runtime_error("params must be a JSON object");
   }
 
@@ -170,7 +172,9 @@ monero_result monero_rpc_connection_create(const char* connection_json, ::monero
   if (!require(connection_json, "connection_json") || !require(out_connection, "out_connection")) return MONERO_ERROR;
   return guard([&] {
     std::unique_ptr<::monero_rpc_connection> handle(new ::monero_rpc_connection());
-    handle->connection = monero::monero_rpc_connection::deserialize(std::string(connection_json));
+    std::string json(connection_json);
+    check_json_depth(json);
+    handle->connection = monero::monero_rpc_connection::deserialize(json);
     *out_connection = handle.release();
   });
 }

@@ -65,6 +65,9 @@
 
 namespace {
 
+using monero_c::check_json_depth;
+using monero_c::check_mnemonic_length;
+using monero_c::MAX_MNEMONIC_LENGTH;
 using monero_c::dup_buffer;
 using monero_c::dup_string;
 using monero_c::guard;
@@ -164,7 +167,8 @@ bool monero_utils_is_valid_payment_id(const char* payment_id) {
 }
 
 bool monero_utils_is_valid_mnemonic(const char* mnemonic, const char* language) {
-  return monero_utils::is_valid_mnemonic(safe_str(mnemonic), safe_str(language));
+  std::string text = safe_str(mnemonic);
+  return text.size() <= MAX_MNEMONIC_LENGTH && monero_utils::is_valid_mnemonic(text, safe_str(language));
 }
 
 bool monero_utils_is_valid_language(const char* language) {
@@ -198,7 +202,11 @@ monero_result monero_utils_validate_payment_id(const char* payment_id) {
 }
 
 monero_result monero_utils_validate_mnemonic(const char* mnemonic, const char* language) {
-  return guard([&] { monero_utils::validate_mnemonic(safe_str(mnemonic), safe_str(language)); });
+  return guard([&] {
+    std::string text = safe_str(mnemonic);
+    check_mnemonic_length(text);
+    monero_utils::validate_mnemonic(text, safe_str(language));
+  });
 }
 
 // --------------------------- INTEGRATED ADDRESS / URIS ----------------------
@@ -220,7 +228,9 @@ monero_result monero_utils_get_payment_uri(const char* tx_config_json, int32_t n
   monero_network_type nt;
   if (!to_network_type(network_type, nt)) { set_last_error("invalid network_type"); return MONERO_ERROR; }
   return guard([&] {
-    std::shared_ptr<monero_tx_config> config = monero_tx_config::deserialize(safe_str(tx_config_json));
+    std::string json = safe_str(tx_config_json);
+    check_json_depth(json);
+    std::shared_ptr<monero_tx_config> config = monero_tx_config::deserialize(json);
     *out_uri = dup_string(monero_utils::get_payment_uri(*config, nt));
   });
 }
@@ -243,8 +253,10 @@ monero_result monero_utils_json_to_binary(const char* json, uint8_t** out_data, 
   reset_out(out_len);
   if (!require(out_data, "out_data") || !require(out_len, "out_len")) return MONERO_ERROR;
   return guard([&] {
+    std::string text = safe_str(json);
+    check_json_depth(text);
     std::string bin;
-    monero_utils::json_to_binary(safe_str(json), bin);
+    monero_utils::json_to_binary(text, bin);
     *out_data = dup_buffer(bin, out_len);
   });
 }

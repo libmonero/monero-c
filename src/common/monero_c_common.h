@@ -62,6 +62,22 @@ inline std::string safe_str(const char* s) {
   return s ? std::string(s) : std::string();
 }
 
+// the deepest nesting that a JSON argument may have. The parsers behind the arguments
+// recurse once per level, so a deeper document overflows the stack
+const size_t MAX_JSON_DEPTH = 64;
+
+// throws std::invalid_argument if json nests objects and arrays deeper than MAX_JSON_DEPTH
+void check_json_depth(const std::string& json);
+
+// the longest mnemonic that is checked. A valid one is a few hundred bytes, and monero-project
+// splits it in time quadratic in its length, so a megabyte of text would hold a call for minutes
+const size_t MAX_MNEMONIC_LENGTH = 4096;
+
+// throws std::invalid_argument if the mnemonic is longer than MAX_MNEMONIC_LENGTH
+inline void check_mnemonic_length(const std::string& mnemonic) {
+  if (mnemonic.size() > MAX_MNEMONIC_LENGTH) throw std::invalid_argument("mnemonic is longer than " + std::to_string(MAX_MNEMONIC_LENGTH) + " bytes");
+}
+
 // mallocs at least 1 byte so a successful zero-length allocation is never
 // mistaken for malloc() failure (which is the only case this throws)
 inline char* dup_string(const std::string& s) {

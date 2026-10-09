@@ -207,6 +207,23 @@ static void test_invalid_arguments(void) {
   CHECK(wallet == NULL);
 }
 
+// a seed is checked up to 4096 bytes, since a longer one can't be a mnemonic
+static void test_seed_length_limit(void) {
+  char* longest = repeated_text('a', 4096);
+  char* too_long = repeated_text('a', 4097);
+  monero_wallet* wallet = POISON_PTR;
+
+  EXPECT_ERR(monero_wallet_keys_create_from_seed(MAINNET, longest, NULL, NULL, &wallet));
+  CHECK(strstr(monero_last_error(), "longer than") == NULL);
+  CHECK(wallet == NULL);
+  wallet = POISON_PTR;
+  EXPECT_ERR_MSG(monero_wallet_keys_create_from_seed(MAINNET, too_long, NULL, NULL, &wallet), "mnemonic is longer than 4096 bytes");
+  CHECK(wallet == NULL);
+
+  free(longest);
+  free(too_long);
+}
+
 static void test_addresses(void) {
   monero_wallet* wallet = NULL;
   EXPECT_OK(monero_wallet_keys_create_from_seed(MAINNET, SEED, NULL, NULL, &wallet));
@@ -486,6 +503,7 @@ int main(void) {
   test_create_from_keys();
   test_view_only_from_keys();
   test_invalid_arguments();
+  test_seed_length_limit();
   test_addresses();
   test_subaddresses_json();
   test_account_json();

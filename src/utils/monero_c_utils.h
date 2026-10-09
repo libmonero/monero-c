@@ -215,7 +215,7 @@ MONERO_EXPORT bool monero_utils_is_valid_public_spend_key(const char* public_spe
 MONERO_EXPORT bool monero_utils_is_valid_payment_id(const char* payment_id);
 
 /**
- * Check whether a mnemonic seed is valid.
+ * Check whether a mnemonic seed is valid. A mnemonic of more than 4096 bytes is never valid.
  *
  * @param mnemonic is the mnemonic seed to validate
  * @param language restricts validation to that seed language, or "" to accept any language
@@ -290,7 +290,7 @@ MONERO_EXPORT monero_result monero_utils_validate_payment_id(const char* payment
 
 /**
  * Validate a mnemonic seed, like monero_utils_is_valid_mnemonic() but reports the reason
- * through monero_last_error() on failure.
+ * through monero_last_error() on failure. A mnemonic of more than 4096 bytes fails.
  *
  * @param mnemonic is the mnemonic seed to validate
  * @param language restricts validation to that seed language, or "" to accept any language
