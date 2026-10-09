@@ -126,6 +126,9 @@ jobs:
             libsodium-ISC.txt \
             protobuf-BSD-3-Clause.txt \
             libevent-BSD-3-Clause.txt \
+            winpthreads-COPYING.txt \
+            gcc-runtime-GPL-3.0.txt \
+            gcc-runtime-COPYING.RUNTIME.txt \
             easyloggingpp-MIT.txt \
             qrcodegen-MIT.txt \
             openaes-BSD-3-Clause.txt; do

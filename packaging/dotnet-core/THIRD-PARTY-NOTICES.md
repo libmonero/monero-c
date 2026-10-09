@@ -26,6 +26,8 @@ configuration.
 | HIDAPI (BSD-style license selected) | BSD-3-Clause | `licenses/hidapi-BSD-3-Clause.txt` |
 | libusb | LGPL-2.1-or-later | `licenses/libusb-LGPL-2.1.txt` |
 | libevent, if linked | BSD-3-Clause | `licenses/libevent-BSD-3-Clause.txt` |
+| winpthreads (mingw-w64), Windows only | MIT and BSD-3-Clause (Lockless Inc.) | `licenses/winpthreads-COPYING.txt` |
+| GCC runtime libraries (libgcc, libstdc++), Windows only, linked statically | GPL-3.0-or-later with the GCC Runtime Library Exception 3.1 | `licenses/gcc-runtime-GPL-3.0.txt` and `licenses/gcc-runtime-COPYING.RUNTIME.txt` |
 
 The build disables Trezor support (`USE_DEVICE_TREZOR=OFF`), so the LGPL-3.0
 Trezor common code is not intended to be part of these binaries.
