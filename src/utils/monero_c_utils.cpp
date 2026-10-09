@@ -68,6 +68,7 @@ namespace {
 using monero_c::dup_buffer;
 using monero_c::dup_string;
 using monero_c::guard;
+using monero_c::require;
 using monero_c::safe_str;
 using monero_c::set_last_error;
 
@@ -107,6 +108,16 @@ const char* monero_last_error(void) {
 
 void monero_utils_free(void* ptr) {
   std::free(ptr);
+}
+
+// ---------------------------------- VERSION ---------------------------------
+
+monero_result monero_utils_get_abi_version(uint32_t* out_major, uint32_t* out_minor, uint32_t* out_patch) {
+  if (!require(out_major, "out_major") || !require(out_minor, "out_minor") || !require(out_patch, "out_patch")) return MONERO_ERROR;
+  *out_major = MONERO_C_ABI_VERSION_MAJOR;
+  *out_minor = MONERO_C_ABI_VERSION_MINOR;
+  *out_patch = MONERO_C_ABI_VERSION_PATCH;
+  return MONERO_OK;
 }
 
 // --------------------------------- LOGGING ----------------------------------

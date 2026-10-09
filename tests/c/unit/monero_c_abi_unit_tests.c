@@ -81,10 +81,18 @@ static void test_bool_size(void) {
   CHECK(sizeof(bool) == 1);
 }
 
+// change the version together with an enum value, a layout or a signature above
+static void test_abi_version(void) {
+  CHECK(MONERO_C_ABI_VERSION_MAJOR == 0);
+  CHECK(MONERO_C_ABI_VERSION_MINOR == 1);
+  CHECK(MONERO_C_ABI_VERSION_PATCH == 0);
+}
+
 int main(void) {
   test_enum_values();
   test_callback_layout();
   test_bool_size();
+  test_abi_version();
 
   printf("%d/%d checks passed\n", g_checks - g_failures, g_checks);
   return g_failures == 0 ? EXIT_SUCCESS : EXIT_FAILURE;

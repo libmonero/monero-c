@@ -112,6 +112,27 @@ MONERO_EXPORT const char* monero_last_error(void);
  */
 MONERO_EXPORT void monero_utils_free(void* ptr);
 
+// ---------------------------------- VERSION ---------------------------------
+
+// the version of the C ABI, as major.minor.patch like the releases of monero-cpp. While the major
+// version is 0, a change of the minor version can break callers. From 1, only a change of the major
+// version breaks callers, and the minor version grows when functions are added. The patch version
+// changes for fixes that leave the ABI as it is
+#define MONERO_C_ABI_VERSION_MAJOR 0
+#define MONERO_C_ABI_VERSION_MINOR 1
+#define MONERO_C_ABI_VERSION_PATCH 0
+
+/**
+ * Get the version of the C ABI of the loaded library. A binding compares it with the version it
+ * was written for, to detect a library that doesn't match.
+ *
+ * @param out_major receives the major version
+ * @param out_minor receives the minor version
+ * @param out_patch receives the patch version
+ * @return MONERO_OK or MONERO_ERROR
+ */
+MONERO_EXPORT monero_result monero_utils_get_abi_version(uint32_t* out_major, uint32_t* out_minor, uint32_t* out_patch);
+
 // --------------------------------- LOGGING ----------------------------------
 
 /**

@@ -79,6 +79,23 @@ public class MoneroUtilsTests
         Assert.Equal(16, GetRingSize());
     }
 
+    // the version of the C ABI that this test was written for. A binding checks it after loading the library
+    private const uint ExpectedAbiMajor = 0;
+    private const uint ExpectedAbiMinor = 1;
+    private const uint ExpectedAbiPatch = 0;
+
+    [Fact]
+    public void ReturnsTheAbiVersionThisBindingWasWrittenFor()
+    {
+        Assert.Equal(0, GetAbiVersion(out var major, out var minor, out var patch));
+        Assert.Equal(ExpectedAbiMajor, major);
+        Assert.Equal(ExpectedAbiMinor, minor);
+        Assert.Equal(ExpectedAbiPatch, patch);
+    }
+
+    [DllImport("monero_c", EntryPoint = "monero_utils_get_abi_version", CallingConvention = CallingConvention.Cdecl)]
+    private static extern int GetAbiVersion(out uint major, out uint minor, out uint patch);
+
     [DllImport("monero_c", EntryPoint = "monero_utils_is_valid_address", CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Ansi)]
     [return: MarshalAs(UnmanagedType.I1)]
     private static extern bool IsValidAddress(string address, int networkType);

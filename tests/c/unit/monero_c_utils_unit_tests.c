@@ -239,6 +239,19 @@ static void test_get_ring_size(void) {
   CHECK(monero_utils_get_ring_size() == 16);
 }
 
+static void test_get_abi_version(void) {
+  uint32_t major = 99;
+  uint32_t minor = 99;
+  uint32_t patch = 99;
+  EXPECT_OK(monero_utils_get_abi_version(&major, &minor, &patch));
+  CHECK(major == MONERO_C_ABI_VERSION_MAJOR);
+  CHECK(minor == MONERO_C_ABI_VERSION_MINOR);
+  CHECK(patch == MONERO_C_ABI_VERSION_PATCH);
+  EXPECT_ERR_MSG(monero_utils_get_abi_version(NULL, &minor, &patch), "out_major must not be null");
+  EXPECT_ERR_MSG(monero_utils_get_abi_version(&major, NULL, &patch), "out_minor must not be null");
+  EXPECT_ERR_MSG(monero_utils_get_abi_version(&major, &minor, NULL), "out_patch must not be null");
+}
+
 // --------------------------- INTEGRATED ADDRESS -----------------------------
 
 static void test_get_integrated_address(void) {
@@ -404,6 +417,7 @@ int main(void) {
   test_xmr_to_atomic_units_invalid_amount();
   test_xmr_to_atomic_units_overflow();
   test_get_ring_size();
+  test_get_abi_version();
   test_get_integrated_address();
   test_get_payment_uri();
   test_parse_payment_uri_wrong_scheme();
