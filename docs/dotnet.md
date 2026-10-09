@@ -15,7 +15,7 @@ dotnet pack packaging/dotnet-core/monero.pkgproj --configuration Release
 dotnet test monero-c.sln --configuration Release
 ```
 
-Unit tests need no daemon. The integration test loads the package and calls `monero_utils_get_ring_size()`.
+Unit tests need no daemon. The integration test loads the package and calls `monero_utils_get_ring_size()`. NuGet keeps a package by id and version in `~/.nuget/packages`, so after rebuilding the library under the same version, delete `~/.nuget/packages/monero.native/<version>` before `dotnet test`, or the tests run on the old library.
 
 ## Package contents
 

@@ -20,9 +20,14 @@ Not supported: Linux distributions with an older glibc (Ubuntu 22.04 and RHEL 9 
 
 * Strings are UTF-8. On Windows, `CharSet.Ansi` uses the system code page, so declare string parameters as `UnmanagedType.LPUTF8Str`.
 * A C `bool` is one byte. Declare `bool` parameters and return values with `UnmanagedType.U1`, because the default `bool` of the marshaller is four bytes.
-* A string or buffer that a function returns in an `out_*` parameter must be released with `monero_utils_free()`, not with `Marshal.FreeHGlobal()` or `Marshal.FreeCoTaskMem()`.
+* A string or buffer that a function returns in an `out_*` parameter must be released with `monero_utils_free()`, not with `Marshal.FreeHGlobal()` or `Marshal.FreeCoTaskMem()`. Declare such a parameter as `IntPtr`: a `string` output of `DllImport` or `LibraryImport` is freed by the marshaller with `FreeCoTaskMem()`, which is not the allocator of the library on Windows.
 * Call `monero_utils_get_abi_version()` after loading the library and compare the major and minor versions with the ones your code was written for. While the major version is 0, a different minor version can break callers. The patch version never changes the ABI.
-* `monero_last_error()` returns the error of the calling thread.
+* `monero_last_error()` returns the error of the calling thread. Read it right after the failing call, before any `await`, because the continuation can run on another thread.
+* A callback is a function pointer. Get it with `Marshal.GetFunctionPointerForDelegate()` from a delegate declared with `[UnmanagedFunctionPointer(CallingConvention.Cdecl)]`, and keep the delegate referenced until the listener is freed. Callbacks run on threads of monero-c, and an exception that leaves one ends the process. The `percent_done` of a sync goes from 0 to 1.
+* A wallet callback runs while the sync holds the lock of the wallet, so `monero_wallet_get_balance()`, `monero_wallet_get_unlocked_balance()`, `monero_wallet_get_txs()`, `monero_wallet_get_outputs()` and `monero_wallet_get_accounts()` called on that wallet from it never return. Copy the arguments and make those calls from another thread.
+* An optional parameter is a pointer, and NULL means none. For a `ref ulong` parameter, pass `ref Unsafe.NullRef<ulong>()`.
+* Don't use one handle from two threads at once. A finalizer can call `monero_wallet_free()` on a wallet that still syncs. To save a wallet, call `monero_wallet_close(wallet, true)` before freeing it.
+* A JSON argument can't nest deeper than 64 levels, a mnemonic can't be longer than 4096 bytes, and `monero_daemon_get_blocks_by_range()` takes at most 100000 blocks.
 
 ## Licenses
 
