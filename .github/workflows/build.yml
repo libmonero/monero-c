@@ -137,7 +137,7 @@ jobs:
           cmake --build . --target monero-cpp-static -j3
           cd ../../..
 
-      - name: Build monero_c library
+      - name: Build monero-c library
         run: |
           mkdir -p build
           cd build
@@ -166,7 +166,7 @@ jobs:
       - name: Check exported symbols
         run: cmake -DLIBRARY=build/libmonero_c.so -DEXPECTED=tests/c/abi/monero_c.symbols -P tests/c/abi/check_symbols.cmake
 
-      - name: Stage monero_c build
+      - name: Stage monero-c build
         run: |
           mkdir -p dist
           mkdir -p dist/licenses
@@ -192,7 +192,7 @@ jobs:
           cp build/tests/c/unit/monero_c_utils_unit_tests build/tests/c/unit/monero_c_daemon_unit_tests build/tests/c/integration/monero_c_daemon_integration_tests dist/
           cp build/tests/c/unit/monero_c_wallet_unit_tests build/tests/c/unit/monero_c_wallet_keys_unit_tests build/tests/c/unit/monero_c_wallet_offline_unit_tests build/tests/c/unit/monero_c_wallet_multisig_unit_tests build/tests/c/unit/monero_c_rpc_connection_unit_tests build/tests/c/unit/monero_c_abi_unit_tests build/tests/c/unit/monero_c_cpp_unit_tests build/tests/c/integration/monero_c_wallet_integration_tests dist/
 
-      - name: Upload monero_c build
+      - name: Upload monero-c build
         uses: actions/upload-artifact@v7
         with:
           name: monero-c-${{ matrix.arch }}
@@ -200,7 +200,7 @@ jobs:
           if-no-files-found: error
           retention-days: 1
 
-      - name: Build monero_c with coverage
+      - name: Build monero-c with coverage
         if: env.COVERAGE == 'true'
         run: |
           cmake -S . -B build-coverage -DBUILD_TESTS=ON -DENABLE_COVERAGE=ON -DBOOST_ROOT=/usr/local -DBoost_NO_SYSTEM_PATHS=ON
@@ -264,7 +264,7 @@ jobs:
           retention-days: 7
 
       # sanitizers on monero_c only, the static archives aren't instrumented
-      - name: Build monero_c with sanitizers
+      - name: Build monero-c with sanitizers
         if: env.COVERAGE == 'true'
         run: |
           flags="-fsanitize=address,undefined -fno-omit-frame-pointer -fno-sanitize-recover=undefined"
@@ -383,7 +383,7 @@ jobs:
           cmake --build . --target monero-cpp-static
           cd ../../..
 
-      - name: Build monero_c library
+      - name: Build monero-c library
         shell: msys2 {0}
         run: |
           mkdir -p build
@@ -409,7 +409,7 @@ jobs:
             exit 1
           fi
 
-      - name: Stage monero_c build
+      - name: Stage monero-c build
         shell: msys2 {0}
         run: |
           mkdir -p dist
@@ -419,7 +419,7 @@ jobs:
           cp build/monero_c_utils_unit_tests.exe build/monero_c_daemon_unit_tests.exe dist/
           cp build/monero_c_wallet_unit_tests.exe build/monero_c_wallet_keys_unit_tests.exe build/monero_c_wallet_offline_unit_tests.exe build/monero_c_wallet_multisig_unit_tests.exe build/monero_c_rpc_connection_unit_tests.exe build/monero_c_abi_unit_tests.exe build/monero_c_cpp_unit_tests.exe dist/
 
-      - name: Upload monero_c build
+      - name: Upload monero-c build
         uses: actions/upload-artifact@v7
         with:
           name: monero-c-windows
@@ -510,7 +510,7 @@ jobs:
           cmake --build . --target monero-cpp-static -j3
           cd ../../..
 
-      - name: Build monero_c library
+      - name: Build monero-c library
         run: |
           mkdir -p build
           cd build
@@ -539,7 +539,7 @@ jobs:
           fi
           printf '%s\n' "$dependencies" | grep -Fxq '@loader_path/libusb-1.0.0.dylib' || { echo "libusb is not bundled dynamically"; exit 1; }
 
-      - name: Stage monero_c build
+      - name: Stage monero-c build
         run: |
           mkdir -p dist
           cp build/libmonero_c.dylib dist/
@@ -547,7 +547,7 @@ jobs:
           cp build/tests/c/unit/monero_c_utils_unit_tests build/tests/c/unit/monero_c_daemon_unit_tests dist/
           cp build/tests/c/unit/monero_c_wallet_unit_tests build/tests/c/unit/monero_c_wallet_keys_unit_tests build/tests/c/unit/monero_c_wallet_offline_unit_tests build/tests/c/unit/monero_c_wallet_multisig_unit_tests build/tests/c/unit/monero_c_rpc_connection_unit_tests build/tests/c/unit/monero_c_abi_unit_tests build/tests/c/unit/monero_c_cpp_unit_tests dist/
 
-      - name: Upload monero_c build
+      - name: Upload monero-c build
         uses: actions/upload-artifact@v7
         with:
           name: monero-c-${{ matrix.arch }}

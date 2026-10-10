@@ -71,7 +71,7 @@ jobs:
             arch: linux-arm64
 
     steps:
-      - name: Download monero_c build
+      - name: Download monero-c build
         uses: actions/download-artifact@v8
         with:
           name: monero-c-${{ matrix.arch }}
@@ -120,7 +120,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v5
 
-      - name: Download monero_c build
+      - name: Download monero-c build
         uses: actions/download-artifact@v8
         with:
           name: monero-c-linux-x86_64
@@ -187,7 +187,7 @@ jobs:
         shell: msys2 {0}
 
     steps:
-      - name: Download monero_c build
+      - name: Download monero-c build
         uses: actions/download-artifact@v8
         with:
           name: monero-c-windows
@@ -244,7 +244,7 @@ jobs:
             arch: mac-x86_64
 
     steps:
-      - name: Download monero_c build
+      - name: Download monero-c build
         uses: actions/download-artifact@v8
         with:
           name: monero-c-${{ matrix.arch }}
