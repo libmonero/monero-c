@@ -418,7 +418,7 @@ static void test_every_function_rejects_null_wallet(void) {
   EXPECT_ERR_MSG(monero_wallet_set_tx_note(NULL, "x", "x"), "wallet must not be null");
   EXPECT_ERR_MSG(monero_wallet_get_tx_notes(NULL, NULL, 0, &json), "wallet must not be null");
   EXPECT_ERR_MSG(monero_wallet_set_tx_notes(NULL, NULL, NULL, 0), "wallet must not be null");
-  EXPECT_ERR_MSG(monero_wallet_set_daemon_connection(NULL, "x", "x", "x", "x", false, false), "wallet must not be null");
+  EXPECT_ERR_MSG(monero_wallet_set_daemon_connection(NULL, "x", "x", "x", "x", NULL, false), "wallet must not be null");
   EXPECT_ERR_MSG(monero_wallet_get_daemon_connection(NULL, &json), "wallet must not be null");
   EXPECT_ERR_MSG(monero_wallet_is_daemon_trusted(NULL, &flag), "wallet must not be null");
   EXPECT_ERR_MSG(monero_wallet_add_listener(NULL, listener), "wallet must not be null");

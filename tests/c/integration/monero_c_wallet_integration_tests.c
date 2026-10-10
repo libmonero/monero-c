@@ -112,6 +112,7 @@ static void test_daemon(const char* daemon_uri) {
   char view_key[128];
   char spend_key[128];
   bool flag = false;
+  bool trusted = true;
   uint64_t value = 0;
   monero_wallet_listener* listener = NULL;
   monero_wallet_listener_callbacks callbacks = {NULL, NULL, NULL, NULL, on_output_received, on_output_spent};
@@ -134,7 +135,7 @@ static void test_daemon(const char* daemon_uri) {
     return;
   }
 
-  EXPECT_OK(monero_wallet_set_daemon_connection(a, daemon_uri, "", "", "", true, false));
+  EXPECT_OK(monero_wallet_set_daemon_connection(a, daemon_uri, "", "", "", &trusted, false));
   EXPECT_OK(monero_wallet_get_primary_address(a, &json));
   CHECK(json != NULL && snprintf(address_a, sizeof(address_a), "%s", json) > 0);
   monero_utils_free(json);
@@ -205,7 +206,7 @@ static void test_daemon(const char* daemon_uri) {
   EXPECT_OK(monero_wallet_create_from_keys(path_c, PASSWORD, NETWORK, address_a, view_key, spend_key, 0, NULL, &c));
   CHECK(c != NULL);
   if (c != NULL) {
-    EXPECT_OK(monero_wallet_set_daemon_connection(c, daemon_uri, "", "", "", true, false));
+    EXPECT_OK(monero_wallet_set_daemon_connection(c, daemon_uri, "", "", "", &trusted, false));
     g_received = 0;
     EXPECT_OK(monero_wallet_sync(c, NULL, listener, &json));
     monero_utils_free(json);
@@ -331,7 +332,7 @@ static void test_daemon(const char* daemon_uri) {
   EXPECT_OK(monero_wallet_create_from_keys(path_v, PASSWORD, NETWORK, address_a, view_key, NULL, 0, NULL, &v));
   CHECK(v != NULL);
   if (v != NULL) {
-    EXPECT_OK(monero_wallet_set_daemon_connection(v, daemon_uri, "", "", "", true, false));
+    EXPECT_OK(monero_wallet_set_daemon_connection(v, daemon_uri, "", "", "", &trusted, false));
     EXPECT_OK(monero_wallet_sync(v, NULL, NULL, &json));
     monero_utils_free(json);
     json = NULL;
