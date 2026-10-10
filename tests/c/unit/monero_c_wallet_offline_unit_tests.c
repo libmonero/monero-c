@@ -444,6 +444,12 @@ static void test_close(void) {
     return;
   }
 
+  // a binding closes the wallet, frees its one native listener, then frees the wallet
+  monero_wallet_listener_callbacks callbacks = {NULL, NULL, NULL, NULL};
+  monero_wallet_listener* listener = NULL;
+  EXPECT_OK(monero_wallet_listener_create(&callbacks, &listener));
+  EXPECT_OK(monero_wallet_add_listener(wallet, listener));
+
   bool closed = true;
   EXPECT_OK(monero_wallet_is_closed(wallet, &closed));
   CHECK(!closed);
@@ -457,6 +463,7 @@ static void test_close(void) {
   CHECK(closed);
   EXPECT_OK(monero_wallet_request_shutdown(wallet));
 
+  monero_wallet_listener_free(listener);
   monero_wallet_free(wallet);
   remove_files(path);
 }
