@@ -25,7 +25,9 @@
 #include "wallet/monero_wallet_full.h"
 #include "wallet/monero_wallet_keys.h"
 #include "wallet/monero_wallet_rpc.h"
+#include "utils/monero_utils.h"
 
+#include "misc_language.h"
 #include "rapidjson/document.h"
 #include "rapidjson/stringbuffer.h"
 #include "rapidjson/writer.h"
@@ -886,12 +888,24 @@ monero_result monero_wallet_stop_mining(::monero_wallet* wallet) {
 }
 
 // ------------------------------ TRANSACTIONS ---------------------------------
+// the models of monero-cpp point to their parents with shared_ptr (a tx to its block and its tx set, an output or a transfer to its tx),
+// so a result is only freed after monero_utils::free() resets those pointers. The calls that return models free them once their JSON
+// is built, with a scope handler, so that it runs when the call throws too
 
 monero_result monero_wallet_get_txs(::monero_wallet* wallet, const char* query_json, char** out_json) {
   reset_out(out_json);
   if (!require(wallet, "wallet") || !require(out_json, "out_json")) return MONERO_ERROR;
   return guard([&] {
-    auto txs = query_json ? wallet->wallet->get_txs(*model_json<monero::monero_tx_query>(query_json, "query")) : wallet->wallet->get_txs();
+    // a query with a transfer, input or output query points to them and they point back. monero_utils::free() resets the
+    // transfer and the output query, so the input query is reset here
+    std::shared_ptr<monero::monero_tx_query> query;
+    if (query_json) query = model_json<monero::monero_tx_query>(query_json, "query");
+    auto free_query = epee::misc_utils::create_scope_leave_handler([&] {
+      if (query != nullptr && query->m_input_query != nullptr) query->m_input_query->m_tx_query.reset();
+      monero_utils::free(query);
+    });
+    auto txs = query ? wallet->wallet->get_txs(*query) : wallet->wallet->get_txs();
+    auto free_txs = epee::misc_utils::create_scope_leave_handler([&] { monero_utils::free(txs); });
     *out_json = dup_string(json_of_list(txs));
   });
 }
@@ -899,19 +913,35 @@ monero_result monero_wallet_get_txs(::monero_wallet* wallet, const char* query_j
 monero_result monero_wallet_get_transfers(::monero_wallet* wallet, const char* query_json, char** out_json) {
   reset_out(out_json);
   if (!require(wallet, "wallet") || !require(out_json, "out_json")) return MONERO_ERROR;
-  return guard([&] { *out_json = dup_string(json_of_list(wallet->wallet->get_transfers(*query_of<monero::monero_transfer_query>(query_json)))); });
+  return guard([&] {
+    std::shared_ptr<monero::monero_transfer_query> query = query_of<monero::monero_transfer_query>(query_json);
+    auto free_query = epee::misc_utils::create_scope_leave_handler([&] { monero_utils::free(query->m_tx_query); });
+    auto transfers = wallet->wallet->get_transfers(*query);
+    auto free_transfers = epee::misc_utils::create_scope_leave_handler([&] { monero_utils::free(transfers); });
+    *out_json = dup_string(json_of_list(transfers));
+  });
 }
 
 monero_result monero_wallet_get_outputs(::monero_wallet* wallet, const char* query_json, char** out_json) {
   reset_out(out_json);
   if (!require(wallet, "wallet") || !require(out_json, "out_json")) return MONERO_ERROR;
-  return guard([&] { *out_json = dup_string(json_of_list(wallet->wallet->get_outputs(*query_of<monero::monero_output_query>(query_json)))); });
+  return guard([&] {
+    std::shared_ptr<monero::monero_output_query> query = query_of<monero::monero_output_query>(query_json);
+    auto free_query = epee::misc_utils::create_scope_leave_handler([&] { monero_utils::free(query->m_tx_query); });
+    auto outputs = wallet->wallet->get_outputs(*query);
+    auto free_outputs = epee::misc_utils::create_scope_leave_handler([&] { monero_utils::free(outputs); });
+    *out_json = dup_string(json_of_list(outputs));
+  });
 }
 
 monero_result monero_wallet_create_tx(::monero_wallet* wallet, const char* config_json, char** out_json) {
   reset_out(out_json);
   if (!require(wallet, "wallet") || !require(config_json, "config_json") || !require(out_json, "out_json")) return MONERO_ERROR;
-  return guard([&] { *out_json = dup_string(wallet->wallet->create_tx(*model_json<monero::monero_tx_config>(config_json, "config"))->serialize()); });
+  return guard([&] {
+    auto tx = wallet->wallet->create_tx(*model_json<monero::monero_tx_config>(config_json, "config"));
+    auto free_tx = epee::misc_utils::create_scope_leave_handler([&] { monero_utils::free(tx); });
+    *out_json = dup_string(tx->serialize());
+  });
 }
 
 monero_result monero_wallet_create_txs(::monero_wallet* wallet, const char* config_json, char** out_json) {
@@ -920,6 +950,7 @@ monero_result monero_wallet_create_txs(::monero_wallet* wallet, const char* conf
   return guard([&] {
     // the transactions share one tx set, which holds the unsigned hex that sign_txs() takes
     auto txs = wallet->wallet->create_txs(*model_json<monero::monero_tx_config>(config_json, "config"));
+    auto free_txs = epee::misc_utils::create_scope_leave_handler([&] { monero_utils::free(txs); });
     if (txs.empty() || txs[0]->m_tx_set == nullptr) throw std::runtime_error("no transactions were created");
     *out_json = dup_string(txs[0]->m_tx_set->serialize());
   });
@@ -958,31 +989,53 @@ monero_result monero_wallet_submit_txs(::monero_wallet* wallet, const char* sign
 monero_result monero_wallet_sign_txs(::monero_wallet* wallet, const char* unsigned_tx_hex, char** out_json) {
   reset_out(out_json);
   if (!require(wallet, "wallet") || !require(unsigned_tx_hex, "unsigned_tx_hex") || !require(out_json, "out_json")) return MONERO_ERROR;
-  return guard([&] { *out_json = dup_string(wallet->wallet->sign_txs(std::string(unsigned_tx_hex)).serialize()); });
+  return guard([&] {
+    monero::monero_tx_set tx_set = wallet->wallet->sign_txs(std::string(unsigned_tx_hex));
+    auto free_txs = epee::misc_utils::create_scope_leave_handler([&] { monero_utils::free(tx_set.m_txs); });
+    *out_json = dup_string(tx_set.serialize());
+  });
 }
 
 monero_result monero_wallet_describe_tx_set(::monero_wallet* wallet, const char* tx_set_json, char** out_json) {
   reset_out(out_json);
   if (!require(wallet, "wallet") || !require(tx_set_json, "tx_set_json") || !require(out_json, "out_json")) return MONERO_ERROR;
-  return guard([&] { *out_json = dup_string(wallet->wallet->describe_tx_set(*model_json<monero::monero_tx_set>(tx_set_json, "tx_set")).serialize()); });
+  return guard([&] {
+    std::shared_ptr<monero::monero_tx_set> tx_set = model_json<monero::monero_tx_set>(tx_set_json, "tx_set");
+    auto free_tx_set = epee::misc_utils::create_scope_leave_handler([&] { monero_utils::free(tx_set->m_txs); });
+    monero::monero_tx_set described = wallet->wallet->describe_tx_set(*tx_set);
+    auto free_described = epee::misc_utils::create_scope_leave_handler([&] { monero_utils::free(described.m_txs); });
+    *out_json = dup_string(described.serialize());
+  });
 }
 
 monero_result monero_wallet_sweep_output(::monero_wallet* wallet, const char* config_json, char** out_json) {
   reset_out(out_json);
   if (!require(wallet, "wallet") || !require(config_json, "config_json") || !require(out_json, "out_json")) return MONERO_ERROR;
-  return guard([&] { *out_json = dup_string(wallet->wallet->sweep_output(*model_json<monero::monero_tx_config>(config_json, "config"))->serialize()); });
+  return guard([&] {
+    auto tx = wallet->wallet->sweep_output(*model_json<monero::monero_tx_config>(config_json, "config"));
+    auto free_tx = epee::misc_utils::create_scope_leave_handler([&] { monero_utils::free(tx); });
+    *out_json = dup_string(tx->serialize());
+  });
 }
 
 monero_result monero_wallet_sweep_dust(::monero_wallet* wallet, bool relay, char** out_json) {
   reset_out(out_json);
   if (!require(wallet, "wallet") || !require(out_json, "out_json")) return MONERO_ERROR;
-  return guard([&] { *out_json = dup_string(json_of_list(wallet->wallet->sweep_dust(relay))); });
+  return guard([&] {
+    auto txs = wallet->wallet->sweep_dust(relay);
+    auto free_txs = epee::misc_utils::create_scope_leave_handler([&] { monero_utils::free(txs); });
+    *out_json = dup_string(json_of_list(txs));
+  });
 }
 
 monero_result monero_wallet_sweep_unlocked(::monero_wallet* wallet, const char* config_json, char** out_json) {
   reset_out(out_json);
   if (!require(wallet, "wallet") || !require(config_json, "config_json") || !require(out_json, "out_json")) return MONERO_ERROR;
-  return guard([&] { *out_json = dup_string(json_of_list(wallet->wallet->sweep_unlocked(*model_json<monero::monero_tx_config>(config_json, "config")))); });
+  return guard([&] {
+    auto txs = wallet->wallet->sweep_unlocked(*model_json<monero::monero_tx_config>(config_json, "config"));
+    auto free_txs = epee::misc_utils::create_scope_leave_handler([&] { monero_utils::free(txs); });
+    *out_json = dup_string(json_of_list(txs));
+  });
 }
 
 monero_result monero_wallet_move_to(::monero_wallet* wallet, const char* path, const char* password) {
