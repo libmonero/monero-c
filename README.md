@@ -179,6 +179,10 @@ Any `out_*` parameter that receives a string or byte buffer (`char**`, `uint8_t*
 
 A JSON argument can't nest deeper than 64 levels, and a mnemonic can't be longer than 4096 bytes. `monero_daemon_get_blocks_by_range()` takes at most 100000 blocks per call, and `monero_daemon_get_blocks_by_range_chunked()` has no limit. A call over a limit fails with `MONERO_ERROR` before any parser or request runs.
 
+## TLS
+
+A connection to an `https` server checks the certificate against the CA certificates of the system, unless its `sslVerify` is false. The library carries its own OpenSSL, which looks for the certificates in the directory of the machine that built it, so on Linux and macOS the library sets `SSL_CERT_FILE` and `SSL_CERT_DIR` when it is loaded, to the bundle and the directory of the system (the Debian, Fedora, openSUSE, Alpine and macOS ones, and Android's directory). It leaves the environment alone if you set one of the two, or if OpenSSL finds the certificates by itself, as it does on Debian and Ubuntu. Windows reads the root store of the system, and nothing is set there.
+
 ## Thread Safety
 
 > [!WARNING]
