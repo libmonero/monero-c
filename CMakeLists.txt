@@ -353,6 +353,8 @@ if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
   target_link_options(monero_c PRIVATE -Wl,--exclude-libs,ALL)
   # bind every symbol at load time, so the GOT is read-only after it (full RELRO)
   target_link_options(monero_c PRIVATE -Wl,-z,relro,-z,now)
+  # fail the link, not the load, if the static archives of the closure are incomplete
+  target_link_options(monero_c PRIVATE -Wl,--no-undefined)
   # the static lib has no link step, so its consumers must get the flag
   target_link_options(monero_c-static INTERFACE -Wl,-z,noexecstack)
 endif()
