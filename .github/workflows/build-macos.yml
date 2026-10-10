@@ -1,0 +1,139 @@
+# The macOS build of the library. Called by build.yml
+name: Build macOS
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: ${{ matrix.cpu }}
+    runs-on: ${{ matrix.os }}
+
+    env:
+      MACOSX_DEPLOYMENT_TARGET: "11.0"
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-15
+            arch: mac-arm64
+            cpu: arm64
+            march: armv8-a
+            filearch: arm64
+          - os: macos-15-intel
+            arch: mac-x86_64
+            cpu: x86_64
+            march: x86-64
+            filearch: x86_64
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        with:
+          submodules: recursive
+
+      - name: Install dependencies
+        run: |
+          HOMEBREW_NO_AUTO_UPDATE=1 brew install libsodium openssl zmq libpgm miniupnpc expat libunwind-headers protobuf unbound libevent libnghttp2
+          # record versions of the brew libraries that get statically linked into the shipped binary
+          brew list --versions | sort
+
+      - name: Install libusb 1.0.27
+        run: |
+          curl --retry 5 --retry-delay 5 --retry-max-time 150 -fsSLO https://github.com/libusb/libusb/releases/download/v1.0.27/libusb-1.0.27.tar.bz2
+          echo "ffaa41d741a8a3bee244ac8e54a72ea05bf2879663c098c82fc5757853441575  libusb-1.0.27.tar.bz2" | shasum -a 256 -c
+          tar -xf libusb-1.0.27.tar.bz2
+          cd libusb-1.0.27
+          ./configure --prefix=/usr/local --disable-static --enable-shared --disable-udev --with-pic
+          make
+          sudo make install
+          test -s /usr/local/lib/libusb-1.0.0.dylib
+
+      - name: Install hidapi (static)
+        run: |
+          # brew has no static hidapi, so build it from source to get a standalone library
+          curl --retry 5 --retry-delay 5 --retry-max-time 150 -fsSLO https://github.com/libusb/hidapi/archive/refs/tags/hidapi-0.14.0.tar.gz
+          echo "a5714234abe6e1f53647dd8cba7d69f65f71c558b7896ed218864ffcf405bcbd  hidapi-0.14.0.tar.gz" | shasum -a 256 -c
+          tar xzf hidapi-0.14.0.tar.gz
+          cd hidapi-hidapi-0.14.0
+          cmake -B build -DBUILD_SHARED_LIBS=OFF -DCMAKE_POSITION_INDEPENDENT_CODE=ON -DCMAKE_POLICY_VERSION_MINIMUM=3.5 .
+          cmake --build build
+          sudo cmake --install build
+
+      - name: Install boost
+        run: |
+          # brew has no static boost, so build it from source at the 11.0 deployment target
+          curl --retry 5 --retry-delay 5 --retry-max-time 150 -fsSLO https://archives.boost.io/release/1.85.0/source/boost_1_85_0.tar.bz2
+          echo "7009fe1faa1697476bdc7027703a2badb84e849b7b0baad5086b087b971f8617  boost_1_85_0.tar.bz2" | shasum -a 256 -c
+          tar xf boost_1_85_0.tar.bz2
+          cd boost_1_85_0
+          ./bootstrap.sh --with-libraries=chrono,date_time,filesystem,locale,program_options,regex,serialization,system,thread
+          ./b2 -j3 cxxflags=-fPIC cflags=-fPIC link=static runtime-link=shared boost.locale.icu=off
+          sudo -E ./b2 -j3 cxxflags=-fPIC cflags=-fPIC link=static runtime-link=shared boost.locale.icu=off install
+
+      - name: Build monero-project
+        run: |
+          cd external/monero-cpp/external/monero-project
+          mkdir -p build/release
+          cd build/release
+          cmake -DSTATIC=ON -DBUILD_64=ON -DARCH="${{ matrix.march }}" -DCMAKE_BUILD_TYPE=Release -DUSE_DEVICE_TREZOR=OFF ../../
+          make -j3 wallet cryptonote_protocol
+          cd ../../../../../../
+
+      - name: Build monero-cpp libraries
+        run: |
+          cd external/monero-cpp
+          mkdir -p build
+          cd build
+          cmake -DBUILD_LIBRARY=ON -DBUILD_SAMPLE=OFF -DBUILD_SCRATCHPAD=OFF -DBUILD_TESTS=OFF -DBOOST_ROOT=/usr/local -DBoost_NO_SYSTEM_PATHS=ON ..
+          cmake --build . --target monero-cpp-static -j3
+          cd ../../..
+
+      - name: Build monero-c library
+        run: |
+          mkdir -p build
+          cd build
+          cmake -DBUILD_TESTS=ON -DMONERO_C_STATIC_DEPENDENCIES=ON -DMONERO_C_LIBUSB_SHARED_LIBRARY:FILEPATH=/usr/local/lib/libusb-1.0.0.dylib -DBOOST_ROOT=/usr/local -DBoost_NO_SYSTEM_PATHS=ON ..
+          grep -Fxq 'MONERO_C_LIBUSB_SHARED_LIBRARY:FILEPATH=/usr/local/lib/libusb-1.0.0.dylib' CMakeCache.txt
+          cmake --build . -j3
+          cd ..
+
+      - name: Relocate bundled libusb
+        run: |
+          dependency=$(otool -L build/libmonero_c.dylib | awk '/libusb-1.0/ {print $1; exit}')
+          test -n "$dependency" || { echo "libusb is not dynamically linked"; exit 1; }
+          install_name_tool -change "$dependency" "@loader_path/libusb-1.0.0.dylib" build/libmonero_c.dylib
+
+      - name: Verify native runtime dependencies
+        run: |
+          lipo -archs build/libmonero_c.dylib | grep -qx '${{ matrix.filearch }}' || { echo "wrong native library architecture: $(lipo -archs build/libmonero_c.dylib)"; exit 1; }
+          otool -l build/libmonero_c.dylib | grep -q 'minos 11.0' || { echo "unexpected macOS deployment target"; exit 1; }
+          dependencies=$(otool -L build/libmonero_c.dylib | tail -n +2 | awk '{print $1}')
+          echo "$dependencies"
+          unexpected=$(echo "$dependencies" | grep -vE '^(/usr/lib/|/System/Library/|@rpath/libmonero_c\.dylib$|@loader_path/libusb-1\.0\.0\.dylib$)' || true)
+          if [ -n "$unexpected" ]; then
+            echo "unexpected non-system runtime dependencies:"
+            echo "$unexpected"
+            exit 1
+          fi
+          printf '%s\n' "$dependencies" | grep -Fxq '@loader_path/libusb-1.0.0.dylib' || { echo "libusb is not bundled dynamically"; exit 1; }
+
+      - name: Stage monero-c build
+        run: |
+          mkdir -p dist
+          cp build/libmonero_c.dylib dist/
+          cp /usr/local/lib/libusb-1.0.0.dylib dist/
+          cp build/tests/c/unit/monero_c_utils_unit_tests build/tests/c/unit/monero_c_daemon_unit_tests dist/
+          cp build/tests/c/unit/monero_c_wallet_unit_tests build/tests/c/unit/monero_c_wallet_keys_unit_tests build/tests/c/unit/monero_c_wallet_offline_unit_tests build/tests/c/unit/monero_c_wallet_multisig_unit_tests build/tests/c/unit/monero_c_rpc_connection_unit_tests build/tests/c/unit/monero_c_abi_unit_tests build/tests/c/unit/monero_c_cpp_unit_tests dist/
+
+      - name: Upload monero-c build
+        uses: actions/upload-artifact@v7
+        with:
+          name: monero-c-${{ matrix.arch }}
+          path: dist/
+          if-no-files-found: error
+          retention-days: 1

@@ -1,0 +1,152 @@
+# The Windows build of the library. Called by build.yml
+name: Build Windows
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: x86_64
+    runs-on: windows-latest
+
+    defaults:
+      run:
+        shell: msys2 {0}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        with:
+          submodules: recursive
+
+      - name: Setup MSYS2 MINGW64
+        uses: msys2/setup-msys2@ec48f7c5447b3140e2b088413ae3a55687bccb6e # v2.33.0
+        with:
+          msystem: MINGW64
+          update: true
+          install: >-
+            mingw-w64-x86_64-toolchain
+            mingw-w64-x86_64-cmake
+            mingw-w64-x86_64-openssl
+            mingw-w64-x86_64-zeromq
+            mingw-w64-x86_64-libsodium
+            mingw-w64-x86_64-hidapi
+            mingw-w64-x86_64-unbound
+            mingw-w64-x86_64-protobuf
+            mingw-w64-x86_64-expat
+            mingw-w64-x86_64-ntldd
+            git
+            make
+            gettext
+            base-devel
+            autoconf
+            automake
+            libtool
+            wget
+
+      - name: Install ICU v76.1
+        shell: msys2 {0}
+        run: |
+          wget --tries=5 --waitretry=5 --timeout=30 --retry-on-http-error=500,502,503,504 https://repo.msys2.org/mingw/mingw64/mingw-w64-x86_64-icu-76.1-1-any.pkg.tar.zst
+          echo "43908bc001071edca02849e65bca94e9fedd5b9984400c7311bfaad9a292d200  mingw-w64-x86_64-icu-76.1-1-any.pkg.tar.zst" | sha256sum -c
+          pacman -U --noconfirm mingw-w64-x86_64-icu-76.1-1-any.pkg.tar.zst
+
+      - name: Install boost v1.87.0
+        shell: msys2 {0}
+        run: |
+          # boost depends on boost-libs without a version, so install both from files or pacman takes the newest boost-libs
+          wget --tries=5 --waitretry=5 --timeout=30 --retry-on-http-error=500,502,503,504 https://repo.msys2.org/mingw/mingw64/mingw-w64-x86_64-boost-1.87.0-3-any.pkg.tar.zst
+          wget --tries=5 --waitretry=5 --timeout=30 --retry-on-http-error=500,502,503,504 https://repo.msys2.org/mingw/mingw64/mingw-w64-x86_64-boost-libs-1.87.0-3-any.pkg.tar.zst
+          echo "241919a5885a9270d0e0937e71cf5e146c2a8cabecc2714f09248350181cb1b6  mingw-w64-x86_64-boost-1.87.0-3-any.pkg.tar.zst" | sha256sum -c
+          echo "5fd77df3e5983ba0d9c689f46151119e0e59b3da6850c5a0ba54068eeae7749c  mingw-w64-x86_64-boost-libs-1.87.0-3-any.pkg.tar.zst" | sha256sum -c
+          pacman -U --noconfirm mingw-w64-x86_64-boost-libs-1.87.0-3-any.pkg.tar.zst mingw-w64-x86_64-boost-1.87.0-3-any.pkg.tar.zst
+          # record versions of the msys2 libraries that get statically linked into the shipped binary
+          pacman -Q | grep mingw-w64 | sort
+
+      - name: Install libusb 1.0.27
+        shell: msys2 {0}
+        run: |
+          wget --tries=5 --waitretry=5 --timeout=30 --retry-on-http-error=500,502,503,504 https://github.com/libusb/libusb/releases/download/v1.0.27/libusb-1.0.27.tar.bz2
+          echo "ffaa41d741a8a3bee244ac8e54a72ea05bf2879663c098c82fc5757853441575  libusb-1.0.27.tar.bz2" | sha256sum -c
+          tar -xf libusb-1.0.27.tar.bz2
+          cd libusb-1.0.27
+          ./configure --prefix="$MINGW_PREFIX" --disable-static --enable-shared
+          make
+          make install
+          test -s "$MINGW_PREFIX/lib/libusb-1.0.dll.a"
+          test -s "$MINGW_PREFIX/bin/libusb-1.0.dll"
+
+      - name: Build monero-project
+        shell: msys2 {0}
+        run: |
+          cd external/monero-cpp/external/monero-project
+          mkdir -p build/release
+          cd build/release
+          cmake -G "MSYS Makefiles" \
+            -D STATIC=ON \
+            -D ARCH="x86-64" \
+            -D BUILD_64=ON \
+            -D CMAKE_BUILD_TYPE=Release \
+            -D BUILD_TAG="win-x64" \
+            -D CMAKE_TOOLCHAIN_FILE="../../cmake/64-bit-toolchain.cmake" \
+            -D MSYS2_FOLDER=$(cd $MINGW_PREFIX/.. && pwd -W) \
+            -D USE_DEVICE_TREZOR=OFF \
+            ../../
+          make wallet cryptonote_protocol
+
+      - name: Build monero-cpp libraries
+        shell: msys2 {0}
+        run: |
+          cd external/monero-cpp
+          mkdir -p build
+          cd build
+          cmake -DBUILD_LIBRARY=ON -DBUILD_SAMPLE=OFF -DBUILD_SCRATCHPAD=OFF -DBUILD_TESTS=OFF ..
+          cmake --build . --target monero-cpp-static
+          cd ../../..
+
+      - name: Build monero-c library
+        shell: msys2 {0}
+        run: |
+          mkdir -p build
+          cd build
+          libusb_import=$(cygpath -m "$MINGW_PREFIX/lib/libusb-1.0.dll.a")
+          cmake -DBUILD_TESTS=ON -DMONERO_C_STATIC_DEPENDENCIES=ON -DMONERO_C_LIBUSB_SHARED_LIBRARY:FILEPATH="$libusb_import" ..
+          grep -Fxq "MONERO_C_LIBUSB_SHARED_LIBRARY:FILEPATH=$libusb_import" CMakeCache.txt
+          cmake --build .
+          cd ..
+
+      - name: Verify native runtime dependencies
+        shell: msys2 {0}
+        run: |
+          objdump -f build/libmonero_c.dll | grep -q "x86-64" || { echo "wrong native library architecture"; exit 1; }
+          ntldd_out=$(ntldd build/libmonero_c.dll)
+          echo "$ntldd_out"
+          if echo "$ntldd_out" | grep -qiE 'libusb-1\.0\.dll.*(not found|not_found)'; then
+            echo "libusb runtime DLL was not resolved"
+            exit 1
+          fi
+          if echo "$ntldd_out" | grep -ivE 'ntdll|kernel32|kernelbase|msvcrt|ws2_32|advapi32|user32|shell32|ole32|oleaut32|rpcrt4|crypt32|bcrypt|secur32|dnsapi|iphlpapi|setupapi|cfgmgr32|gdi32|winmm|userenv|version\.dll|api-ms-win|libusb-1\.0\.dll' | grep -iE '\.dll'; then
+            echo "native library depends on non-system runtime DLLs above"
+            exit 1
+          fi
+
+      - name: Stage monero-c build
+        shell: msys2 {0}
+        run: |
+          mkdir -p dist
+          cp build/libmonero_c.dll dist/
+          cp "$MINGW_PREFIX/bin/libusb-1.0.dll" dist/
+          # on Windows CMake puts the executables in the build root, see CMakeLists.txt
+          cp build/monero_c_utils_unit_tests.exe build/monero_c_daemon_unit_tests.exe dist/
+          cp build/monero_c_wallet_unit_tests.exe build/monero_c_wallet_keys_unit_tests.exe build/monero_c_wallet_offline_unit_tests.exe build/monero_c_wallet_multisig_unit_tests.exe build/monero_c_rpc_connection_unit_tests.exe build/monero_c_abi_unit_tests.exe build/monero_c_cpp_unit_tests.exe dist/
+
+      - name: Upload monero-c build
+        uses: actions/upload-artifact@v7
+        with:
+          name: monero-c-windows
+          path: dist/
+          if-no-files-found: error
+          retention-days: 1
