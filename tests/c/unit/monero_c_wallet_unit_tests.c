@@ -360,6 +360,7 @@ static void test_every_function_rejects_null_wallet(void) {
 
   EXPECT_ERR_MSG(monero_wallet_save(NULL), "wallet must not be null");
   EXPECT_ERR_MSG(monero_wallet_close(NULL, false), "wallet must not be null");
+  EXPECT_ERR_MSG(monero_wallet_request_shutdown(NULL), "wallet must not be null");
   EXPECT_ERR_MSG(monero_wallet_get_network_type(NULL, &network), "wallet must not be null");
   EXPECT_ERR_MSG(monero_wallet_is_view_only(NULL, &flag), "wallet must not be null");
   EXPECT_ERR_MSG(monero_wallet_is_multisig(NULL, &flag), "wallet must not be null");

@@ -445,9 +445,14 @@ static void test_close(void) {
   EXPECT_OK(monero_wallet_is_closed(wallet, &closed));
   CHECK(!closed);
 
+  // a shutdown request with nothing in flight leaves the wallet open, and closing it still works, and so does asking again
+  EXPECT_OK(monero_wallet_request_shutdown(wallet));
+  EXPECT_OK(monero_wallet_is_closed(wallet, &closed));
+  CHECK(!closed);
   EXPECT_OK(monero_wallet_close(wallet, false));
   EXPECT_OK(monero_wallet_is_closed(wallet, &closed));
   CHECK(closed);
+  EXPECT_OK(monero_wallet_request_shutdown(wallet));
 
   monero_wallet_free(wallet);
   remove_files(path);
