@@ -567,7 +567,7 @@ jobs:
     uses: ./.github/workflows/docs.yml
 
   dotnet:
-    name: .NET package and tests
+    name: .NET package
     needs: [ubuntu, windows, mac-os]
     permissions:
       contents: read

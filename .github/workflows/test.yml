@@ -47,7 +47,7 @@ jobs:
           fi
           MISSING=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$RUN_ID/artifacts" --jq '
             [.artifacts[] | select(.expired | not) | .name] as $available |
-            ["monero-c-linux-x86_64", "monero-c-linux-arm64", "monero-c-mac-x86_64", "monero-c-mac-arm64", "monero-c-windows"] |
+            ["monero-c-linux-x86_64", "monero-c-linux-arm64", "monero-c-mac-x86_64", "monero-c-mac-arm64", "monero-c-windows", "monero-native-nuget"] |
             map(select(. as $name | $available | index($name) == null)) | .[]')
           if [ -n "$MISSING" ]; then
             echo "Build run $RUN_ID is missing required artifacts:"
@@ -281,3 +281,104 @@ jobs:
           artifact/monero_c_rpc_connection_unit_tests
           artifact/monero_c_abi_unit_tests
           artifact/monero_c_cpp_unit_tests
+
+  dotnet-linux:
+    name: .NET (${{ matrix.platform }})
+    needs: wait-build
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: Ubuntu 24.04 x64
+            os: ubuntu-24.04
+            arch: x86_64
+            debian12: false
+          - platform: Debian 12 x64
+            os: ubuntu-24.04
+            arch: x86_64
+            debian12: true
+          - platform: Ubuntu 24.04 arm64
+            os: ubuntu-24.04-arm
+            arch: aarch64
+            debian12: false
+          - platform: Debian 12 arm64
+            os: ubuntu-24.04-arm
+            arch: aarch64
+            debian12: true
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Download native NuGet package
+        uses: actions/download-artifact@v8
+        with:
+          name: monero-native-nuget
+          path: packaging/dotnet-core/packages
+          run-id: ${{ needs.wait-build.outputs.run-id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up .NET
+        if: ${{ !matrix.debian12 }}
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Run managed tests
+        if: ${{ !matrix.debian12 }}
+        env:
+          ARCH: ${{ matrix.arch }}
+        run: |
+          test "$(uname -m)" = "$ARCH"
+          dotnet test monero-c.sln --configuration Release
+
+      - name: Run managed tests on Debian 12
+        if: ${{ matrix.debian12 }}
+        env:
+          ARCH: ${{ matrix.arch }}
+        run: |
+          docker run --rm \
+            --env ARCH \
+            --volume "$GITHUB_WORKSPACE:/workspace" \
+            --workdir /workspace \
+            mcr.microsoft.com/dotnet/sdk:8.0-bookworm-slim \
+            sh -c 'test "$(uname -m)" = "$ARCH" && dotnet test monero-c.sln --configuration Release'
+
+  dotnet-windows-macos:
+    name: .NET (${{ matrix.platform }})
+    needs: wait-build
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: Windows x64
+            os: windows-latest
+          - platform: macOS ARM64
+            os: macos-15
+          - platform: macOS x64
+            os: macos-15-intel
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Download native NuGet package
+        uses: actions/download-artifact@v8
+        with:
+          name: monero-native-nuget
+          path: packaging/dotnet-core/packages
+          run-id: ${{ needs.wait-build.outputs.run-id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Run managed tests
+        run: dotnet test monero-c.sln --configuration Release

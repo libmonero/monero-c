@@ -7,8 +7,8 @@ permissions:
   contents: read
 
 jobs:
-  package-and-test:
-    name: Package all RIDs and test Linux x64
+  package:
+    name: Package all RIDs
     runs-on: ubuntu-24.04
 
     steps:
@@ -180,112 +180,9 @@ jobs:
             grep -Fxq "$notice_path" package-files.txt || { echo "package is missing third-party notice: $notice_path"; exit 1; }
           done
 
-      - name: Run managed tests
-        run: dotnet test monero-c.sln --configuration Release
-
       - name: Upload native NuGet package
         uses: actions/upload-artifact@v7
         with:
           name: monero-native-nuget
           path: packaging/dotnet-core/packages/Monero.Native.${{ env.PACKAGE_VERSION }}.nupkg
           if-no-files-found: error
-
-  test-debian12:
-    name: Test package on Debian 12
-    needs: package-and-test
-    runs-on: ubuntu-24.04
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v5
-
-      - name: Download native NuGet package
-        uses: actions/download-artifact@v8
-        with:
-          name: monero-native-nuget
-          path: packaging/dotnet-core/packages
-
-      - name: Run managed tests on Debian 12
-        run: |
-          docker run --rm \
-            --volume "$GITHUB_WORKSPACE:/workspace" \
-            --workdir /workspace \
-            mcr.microsoft.com/dotnet/sdk:8.0-bookworm-slim \
-            dotnet test monero-c.sln --configuration Release
-
-  test-linux-arm64:
-    name: Test package (${{ matrix.platform }})
-    needs: package-and-test
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - platform: Ubuntu 24.04 arm64
-            debian12: false
-          - platform: Debian 12 arm64
-            debian12: true
-    runs-on: ubuntu-24.04-arm
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v5
-
-      - name: Download native NuGet package
-        uses: actions/download-artifact@v8
-        with:
-          name: monero-native-nuget
-          path: packaging/dotnet-core/packages
-
-      - name: Set up .NET
-        if: ${{ !matrix.debian12 }}
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: 8.0.x
-
-      - name: Run managed tests
-        if: ${{ !matrix.debian12 }}
-        run: |
-          test "$(uname -m)" = "aarch64"
-          dotnet test monero-c.sln --configuration Release
-
-      - name: Run managed tests on Debian 12
-        if: ${{ matrix.debian12 }}
-        run: |
-          docker run --rm \
-            --volume "$GITHUB_WORKSPACE:/workspace" \
-            --workdir /workspace \
-            mcr.microsoft.com/dotnet/sdk:8.0-bookworm-slim \
-            sh -c 'test "$(uname -m)" = "aarch64" && dotnet test monero-c.sln --configuration Release'
-
-  test-windows-macos:
-    name: Test package (${{ matrix.platform }})
-    needs: package-and-test
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - platform: Windows x64
-            os: windows-latest
-          - platform: macOS ARM64
-            os: macos-15
-          - platform: macOS x64
-            os: macos-15-intel
-    runs-on: ${{ matrix.os }}
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v5
-
-      - name: Download native NuGet package
-        uses: actions/download-artifact@v8
-        with:
-          name: monero-native-nuget
-          path: packaging/dotnet-core/packages
-
-      - name: Set up .NET
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: 8.0.x
-
-      - name: Run managed tests
-        run: dotnet test monero-c.sln --configuration Release
