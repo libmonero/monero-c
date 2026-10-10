@@ -169,6 +169,35 @@ MONERO_EXPORT monero_result monero_wallet_create_from_seed(const char* path, con
 MONERO_EXPORT monero_result monero_wallet_create_from_keys(const char* path, const char* password, int32_t network_type, const char* address, const char* private_view_key, const char* private_spend_key, uint64_t restore_height, const char* language, monero_wallet** out_wallet);
 
 /**
+ * Create a full wallet from a monero_wallet_config, which the other creation functions can't do: it can connect the wallet
+ * to a daemon when it is created, set the trust in the daemon, scan more accounts and subaddresses than the 50 and 200 of
+ * wallet2, and restore a multisig wallet. The wallet is restored from its seed if the config has one, from its keys if it has
+ * the address or the private keys, and has a new random seed otherwise.
+ *
+ * The fields of the JSON, all optional but networkType, and the ones that are null are ignored:
+ * - path: the wallet file, written with its .keys file. Without it the wallet stays in memory
+ * - password: encrypts the wallet files
+ * - networkType: a monero_utils_network_type. 3 is regtest
+ * - seed, seedOffset: the mnemonic to restore, and its offset
+ * - primaryAddress, privateViewKey, privateSpendKey: the keys to restore. The spend key can be left out for a view-only wallet
+ * - restoreHeight: the first block to scan, 0 by default
+ * - language: the seed language, English by default
+ * - server: the daemon, as the JSON of a monero_rpc_connection (uri, username, password, proxyUri, sslVerify)
+ * - isTrustedDaemon: unset trusts a daemon on a local address only
+ * - accountLookahead, subaddressLookahead: the accounts and the subaddresses of each that the wallet scans. Both or none
+ * - isMultisig: restores a multisig wallet, and the seed is then its multisig data in hex, which monero_wallet_get_seed()
+ *   returns for a multisig wallet
+ *
+ * A seed and keys together fail. So does a restore height with neither of them, since a random wallet starts from the current
+ * height, or from 0 on regtest, and it can't start from another.
+ *
+ * @param config_json is the JSON-serialized monero_wallet_config
+ * @param out_wallet receives the handle, released with monero_wallet_free()
+ * @return MONERO_OK or MONERO_ERROR
+ */
+MONERO_EXPORT monero_result monero_wallet_create(const char* config_json, monero_wallet** out_wallet);
+
+/**
  * Open a wallet from its files on disk.
  *
  * @param path is the path of the wallet file

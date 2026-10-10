@@ -312,6 +312,9 @@ static void test_json_depth_limit(void) {
   EXPECT_ERR_MSG(monero_wallet_get_txs(wallet, object, &json), message);
   EXPECT_ERR_MSG(monero_wallet_get_transfers(wallet, object, &json), message);
   EXPECT_ERR_MSG(monero_wallet_get_outputs(wallet, object, &json), message);
+  monero_wallet* created = POISON_PTR;
+  EXPECT_ERR_MSG(monero_wallet_create(object, &created), message);
+  CHECK(created == NULL);
 
   // 64 levels pass the check, and are then rejected as a config or a transaction
   EXPECT_ERR(monero_wallet_create_tx(wallet, at_limit, &json));
@@ -605,6 +608,153 @@ static void test_regtest_random_restore_height(void) {
   remove_files(path);
 }
 
+// true if the text of a result is the expected one. It frees the text
+static int text_is(char* text, const char* expected) {
+  int same = text != NULL && strcmp(text, expected) == 0;
+  monero_utils_free(text);
+  return same;
+}
+
+static monero_wallet* create_with_config(const char* config) {
+  monero_wallet* wallet = NULL;
+  EXPECT_OK(monero_wallet_create(config, &wallet));
+  CHECK(wallet != NULL);
+  return wallet;
+}
+
+// the creation from a config: a seed, keys or neither, with a daemon, a lookahead, and the regtest network. The calls that fail do
+// it before monero-cpp allocates the wallet, since it leaks the wallet when it throws later, see TODO.md
+static void test_create_from_config(void) {
+  const char* path = "monero_c_wallet_offline_config";
+  char config[2048];
+  char view_key[128] = "";
+  char spend_key[128] = "";
+  char* text = NULL;
+  uint64_t height = 1;
+  bool flag = false;
+  monero_utils_network_type network = MAINNET;
+  monero_wallet* wallet = NULL;
+  remove_files(path);
+
+  // a seed gives its address, from the restore height, and the daemon is trusted since it is on this machine
+  snprintf(config, sizeof(config), "{\"path\":\"%s\",\"password\":\"" PASSWORD "\",\"networkType\":0,\"seed\":\"" SEED "\",\"restoreHeight\":1234,"
+           "\"server\":{\"uri\":\"http://127.0.0.1:1\",\"sslVerify\":false},\"accountLookahead\":3,\"subaddressLookahead\":5}", path);
+  wallet = create_with_config(config);
+  if (wallet != NULL) {
+    EXPECT_OK(monero_wallet_get_primary_address(wallet, &text));
+    CHECK(text_is(text, ADDRESS));
+    EXPECT_OK(monero_wallet_get_restore_height(wallet, &height));
+    CHECK(height == 1234);
+    EXPECT_OK(monero_wallet_get_path(wallet, &text));
+    CHECK(text_is(text, path));
+    EXPECT_OK(monero_wallet_get_daemon_connection(wallet, &text));
+    CHECK(contains(text, "\"uri\":\"http://127.0.0.1:1\"") && contains(text, "\"sslVerify\":false"));
+    monero_utils_free(text);
+    EXPECT_OK(monero_wallet_is_daemon_trusted(wallet, &flag));
+    CHECK(flag);
+    EXPECT_OK(monero_wallet_get_private_view_key(wallet, &text));
+    CHECK(text != NULL && snprintf(view_key, sizeof(view_key), "%s", text) > 0);
+    monero_utils_free(text);
+    EXPECT_OK(monero_wallet_get_private_spend_key(wallet, &text));
+    CHECK(text != NULL && snprintf(spend_key, sizeof(spend_key), "%s", text) > 0);
+    monero_utils_free(text);
+    monero_wallet_free(wallet);
+  }
+  remove_files(path);
+
+  // isTrustedDaemon decides over the address, either way
+  wallet = create_with_config("{\"networkType\":0,\"seed\":\"" SEED "\",\"server\":{\"uri\":\"http://127.0.0.1:1\"},\"isTrustedDaemon\":false}");
+  if (wallet != NULL) {
+    EXPECT_OK(monero_wallet_is_daemon_trusted(wallet, &flag));
+    CHECK(!flag);
+    monero_wallet_free(wallet);
+  }
+  wallet = create_with_config("{\"networkType\":0,\"seed\":\"" SEED "\",\"server\":{\"uri\":\"http://192.0.2.1:18081\"},\"isTrustedDaemon\":true}");
+  if (wallet != NULL) {
+    EXPECT_OK(monero_wallet_is_daemon_trusted(wallet, &flag));
+    CHECK(flag);
+    monero_wallet_free(wallet);
+  }
+
+  // the keys, with the spend key and without it
+  snprintf(config, sizeof(config), "{\"networkType\":0,\"primaryAddress\":\"" ADDRESS "\",\"privateViewKey\":\"%s\",\"privateSpendKey\":\"%s\"}", view_key, spend_key);
+  wallet = create_with_config(config);
+  if (wallet != NULL) {
+    EXPECT_OK(monero_wallet_get_primary_address(wallet, &text));
+    CHECK(text_is(text, ADDRESS));
+    EXPECT_OK(monero_wallet_is_view_only(wallet, &flag));
+    CHECK(!flag);
+    monero_wallet_free(wallet);
+  }
+  snprintf(config, sizeof(config), "{\"networkType\":0,\"primaryAddress\":\"" ADDRESS "\",\"privateViewKey\":\"%s\"}", view_key);
+  wallet = create_with_config(config);
+  if (wallet != NULL) {
+    EXPECT_OK(monero_wallet_get_primary_address(wallet, &text));
+    CHECK(text_is(text, ADDRESS));
+    EXPECT_OK(monero_wallet_is_view_only(wallet, &flag));
+    CHECK(flag);
+    monero_wallet_free(wallet);
+  }
+
+  // a new seed, in the language of the config. The members that are null are not set, the seed and the server among them
+  snprintf(config, sizeof(config), "{\"path\":\"%s\",\"networkType\":0,\"language\":\"Spanish\",\"seed\":null,\"restoreHeight\":null,\"server\":null,\"password\":null}", path);
+  wallet = create_with_config(config);
+  if (wallet != NULL) {
+    EXPECT_OK(monero_wallet_get_seed_language(wallet, &text));
+    CHECK(text_is(text, "Spanish"));
+    EXPECT_OK(monero_wallet_get_restore_height(wallet, &height));
+    CHECK(height > 0);
+    monero_wallet_free(wallet);
+  }
+  remove_files(path);
+
+  // network type 3 is regtest, which monero-cpp takes as mainnet with a flag, in memory or not. A new wallet there scans from 0
+  snprintf(config, sizeof(config), "{\"path\":\"%s\",\"password\":\"" PASSWORD "\",\"networkType\":3}", path);
+  wallet = create_with_config(config);
+  if (wallet != NULL) {
+    EXPECT_OK(monero_wallet_get_network_type(wallet, &network));
+    CHECK(network == MONERO_UTILS_NETWORK_REGTEST);
+    monero_wallet_free(wallet);
+    wallet = NULL;
+    EXPECT_OK(monero_wallet_open(path, PASSWORD, MONERO_UTILS_NETWORK_REGTEST, &wallet));
+    if (wallet != NULL) {
+      EXPECT_OK(monero_wallet_get_restore_height(wallet, &height));
+      CHECK(height == 0);
+      monero_wallet_free(wallet);
+    }
+  }
+  remove_files(path);
+  wallet = create_with_config("{\"networkType\":3,\"regtest\":false}");
+  if (wallet != NULL) {
+    EXPECT_OK(monero_wallet_get_network_type(wallet, &network));
+    CHECK(network == MONERO_UTILS_NETWORK_REGTEST);
+    EXPECT_OK(monero_wallet_get_restore_height(wallet, &height));
+    CHECK(height == 0);
+    monero_wallet_free(wallet);
+  }
+
+  // what a config can't have
+  EXPECT_ERR_MSG(monero_wallet_create("{}", &wallet), "Must provide wallet network type");
+  CHECK(wallet == NULL);
+  EXPECT_ERR_MSG(monero_wallet_create("{\"networkType\":null}", &wallet), "Must provide wallet network type");
+  EXPECT_ERR_MSG(monero_wallet_create("{\"networkType\":4}", &wallet), "unknown network type");
+  EXPECT_ERR_MSG(monero_wallet_create("{\"networkType\":\"mainnet\"}", &wallet), "unknown network type");
+  EXPECT_ERR_MSG(monero_wallet_create("{\"networkType\":1,\"regtest\":true}", &wallet), "Network type must be mainnet when using regtest option");
+  EXPECT_ERR_MSG(monero_wallet_create("[]", &wallet), "config must be a JSON object");
+  EXPECT_ERR_MSG(monero_wallet_create("{", &wallet), "config must be a JSON object");
+  EXPECT_ERR_MSG(monero_wallet_create("{\"networkType\":0,\"server\":\"http://127.0.0.1:1\"}", &wallet), "server must be a JSON object");
+  EXPECT_ERR_MSG(monero_wallet_create("{\"networkType\":0,\"language\":\"Klingon\"}", &wallet), "Unknown language: Klingon");
+  EXPECT_ERR_MSG(monero_wallet_create("{\"networkType\":0,\"seed\":\"not a mnemonic\"}", &wallet), "Invalid mnemonic");
+  EXPECT_ERR_MSG(monero_wallet_create("{\"networkType\":0,\"seed\":\"" SEED "\",\"primaryAddress\":\"" ADDRESS "\"}", &wallet), "Wallet may be initialized with a seed or keys but not both");
+  EXPECT_ERR_MSG(monero_wallet_create("{\"networkType\":0,\"accountLookahead\":3}", &wallet), "No subaddress lookahead provided with account lookahead");
+  EXPECT_ERR_MSG(monero_wallet_create("{\"networkType\":0,\"subaddressLookahead\":3}", &wallet), "No account lookahead provided with subaddress lookahead");
+  EXPECT_ERR_MSG(monero_wallet_create("{\"networkType\":0,\"restoreHeight\":10}", &wallet), "Cannot specify restore height when creating random wallet");
+  EXPECT_ERR_MSG(monero_wallet_create("{\"networkType\":0,\"seedOffset\":\"offset\"}", &wallet), "Cannot specify seed offset when creating random wallet");
+  CHECK(wallet == NULL);
+
+  remove_files(path);
+}
+
 // one listener can be on one wallet at a time, so it can't join a second wallet
 static void test_listener_one_wallet(void) {
   const char* path_a = "monero_c_wallet_offline_listener_a";
@@ -636,6 +786,7 @@ int main(void) {
   test_change_password();
   test_regtest_network();
   test_regtest_random_restore_height();
+  test_create_from_config();
   test_listener_one_wallet();
   test_attributes_and_settings();
   test_keys_and_version();

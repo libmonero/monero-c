@@ -222,6 +222,43 @@ std::shared_ptr<monero::monero_tx_set> tx_set_of_hex(const char* json) {
   return tx_set;
 }
 
+// monero-cpp reads a null as the text "null", so a caller that writes its unset fields as null would set them
+void drop_nulls(rapidjson::Value& object) {
+  for (auto it = object.MemberBegin(); it != object.MemberEnd();) {
+    if (it->value.IsNull()) it = object.EraseMember(it);
+    else ++it;
+  }
+}
+
+// parses the config of a wallet. monero-cpp has regtest as a flag on mainnet, and the ABI as the network type 3, so the type is
+// translated before the parser reads it
+std::shared_ptr<monero::monero_wallet_config> wallet_config_of(const char* json) {
+  std::string text(json);
+  check_json_depth(text);
+  rapidjson::Document doc;
+  if (doc.Parse(text.c_str()).HasParseError() || !doc.IsObject()) throw std::runtime_error("config must be a JSON object");
+  drop_nulls(doc);
+  auto server = doc.FindMember("server");
+  if (server != doc.MemberEnd()) {
+    if (!server->value.IsObject()) throw std::runtime_error("server must be a JSON object");
+    drop_nulls(server->value);
+  }
+  auto network = doc.FindMember("networkType");
+  if (network != doc.MemberEnd()) {
+    if (!network->value.IsInt() || network->value.GetInt() < MONERO_UTILS_NETWORK_MAINNET || network->value.GetInt() > MONERO_UTILS_NETWORK_REGTEST) throw std::invalid_argument("unknown network type");
+    if (network->value.GetInt() == MONERO_UTILS_NETWORK_REGTEST) {
+      network->value.SetInt(MONERO_UTILS_NETWORK_MAINNET);
+      auto regtest = doc.FindMember("regtest");
+      if (regtest != doc.MemberEnd()) regtest->value.SetBool(true);
+      else doc.AddMember("regtest", true, doc.GetAllocator());
+    }
+  }
+  rapidjson::StringBuffer buffer;
+  rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+  doc.Accept(writer);
+  return monero::monero_wallet_config::deserialize(buffer.GetString());
+}
+
 // parses an optional query. NULL gives the default query, which matches everything
 template <class T>
 std::shared_ptr<T> query_of(const char* json) {
@@ -325,6 +362,24 @@ monero_result monero_wallet_create_from_keys(const char* path, const char* passw
     config.m_private_spend_key = safe_str(private_spend_key);
     config.m_restore_height = restore_height;
     *out_wallet = wrap(std::unique_ptr<monero::monero_wallet_full>(monero::monero_wallet_full::create_wallet(config)), network_type);
+  });
+}
+
+monero_result monero_wallet_create(const char* config_json, ::monero_wallet** out_wallet) {
+  reset_out(out_wallet);
+  if (!require(config_json, "config_json") || !require(out_wallet, "out_wallet")) return MONERO_ERROR;
+  return guard([&] {
+    std::shared_ptr<monero::monero_wallet_config> config = wallet_config_of(config_json);
+    bool has_seed = config->m_seed != boost::none && !config->m_seed->empty();
+    bool has_keys = (config->m_primary_address != boost::none && !config->m_primary_address->empty()) || (config->m_private_view_key != boost::none && !config->m_private_view_key->empty()) ||
+                    (config->m_private_spend_key != boost::none && !config->m_private_spend_key->empty());
+    if (has_seed && has_keys) throw std::invalid_argument("Wallet may be initialized with a seed or keys but not both");
+    // the seed of a multisig wallet is hex data, which can be longer than any mnemonic
+    if (has_seed && !(config->m_is_multisig != boost::none && *config->m_is_multisig)) check_mnemonic_length(*config->m_seed);
+    bool regtest = config->m_regtest != boost::none && *config->m_regtest;
+    std::unique_ptr<monero::monero_wallet_full> wallet(monero::monero_wallet_full::create_wallet(*config));
+    if (regtest && !has_seed && !has_keys) restart_from_genesis(*wallet, config->m_password != boost::none ? *config->m_password : std::string());
+    *out_wallet = wrap(std::move(wallet), regtest ? MONERO_UTILS_NETWORK_REGTEST : static_cast<int32_t>(*config->m_network_type));
   });
 }
 
