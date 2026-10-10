@@ -1,0 +1,113 @@
+name: .NET tests
+
+on:
+  workflow_call:
+    inputs:
+      run-id:
+        description: the Build run whose artifacts are tested
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  dotnet-linux:
+    name: ${{ matrix.platform }}
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: Ubuntu 24.04 x86_64
+            os: ubuntu-24.04
+            arch: x86_64
+            debian12: false
+          - platform: Debian 12 x86_64
+            os: ubuntu-24.04
+            arch: x86_64
+            debian12: true
+          - platform: Ubuntu 24.04 arm64
+            os: ubuntu-24.04-arm
+            arch: aarch64
+            debian12: false
+          - platform: Debian 12 arm64
+            os: ubuntu-24.04-arm
+            arch: aarch64
+            debian12: true
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Download native NuGet package
+        uses: actions/download-artifact@v8
+        with:
+          name: monero-native-nuget
+          path: packaging/dotnet-core/packages
+          run-id: ${{ inputs.run-id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up .NET
+        if: ${{ !matrix.debian12 }}
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Run C# tests
+        if: ${{ !matrix.debian12 }}
+        env:
+          ARCH: ${{ matrix.arch }}
+        run: |
+          test "$(uname -m)" = "$ARCH"
+          dotnet test monero-c.sln --configuration Release
+
+      - name: Run C# tests on Debian 12
+        if: ${{ matrix.debian12 }}
+        env:
+          ARCH: ${{ matrix.arch }}
+        run: |
+          docker run --rm \
+            --env ARCH \
+            --volume "$GITHUB_WORKSPACE:/workspace" \
+            --workdir /workspace \
+            mcr.microsoft.com/dotnet/sdk:8.0-bookworm-slim \
+            sh -c 'test "$(uname -m)" = "$ARCH" && dotnet test monero-c.sln --configuration Release'
+
+  dotnet-windows-macos:
+    name: ${{ matrix.platform }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: Windows x86_64
+            os: windows-latest
+          - platform: macOS arm64
+            os: macos-15
+          - platform: macOS x86_64
+            os: macos-15-intel
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Download native NuGet package
+        uses: actions/download-artifact@v8
+        with:
+          name: monero-native-nuget
+          path: packaging/dotnet-core/packages
+          run-id: ${{ inputs.run-id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Run C# tests
+        run: dotnet test monero-c.sln --configuration Release

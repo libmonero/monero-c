@@ -1,0 +1,153 @@
+name: Unit tests
+
+on:
+  workflow_call:
+    inputs:
+      run-id:
+        description: the Build run whose artifacts are tested
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+env:
+  UNIT_TESTS: utils daemon wallet wallet_keys wallet_offline wallet_multisig rpc_connection abi cpp
+
+jobs:
+  unit-linux:
+    name: ${{ matrix.platform }}
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: Linux x86_64
+            os: ubuntu-24.04
+            artifact: linux-x86_64
+          - platform: Linux arm64
+            os: ubuntu-24.04-arm
+            artifact: linux-arm64
+
+    steps:
+      - name: Download monero-c build
+        uses: actions/download-artifact@v8
+        with:
+          name: monero-c-${{ matrix.artifact }}
+          path: artifact
+          run-id: ${{ inputs.run-id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install runtime libraries
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libsodium23 libunbound8
+          ldd_out=$(ldd artifact/libmonero_c.so || true)
+          if grep -q 'not found' <<< "$ldd_out"; then
+            echo "$ldd_out"
+            echo "missing runtime libraries above"; exit 1
+          fi
+
+      - name: Run unit tests
+        env:
+          LD_LIBRARY_PATH: ${{ github.workspace }}/artifact
+        run: |
+          for test in $UNIT_TESTS; do
+            chmod +x "artifact/monero_c_${test}_unit_tests"
+            "artifact/monero_c_${test}_unit_tests" || exit 1
+          done
+
+  unit-macos:
+    name: ${{ matrix.platform }}
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: macOS arm64
+            os: macos-15
+            artifact: mac-arm64
+          - platform: macOS x86_64
+            os: macos-15-intel
+            artifact: mac-x86_64
+
+    steps:
+      - name: Download monero-c build
+        uses: actions/download-artifact@v8
+        with:
+          name: monero-c-${{ matrix.artifact }}
+          path: artifact
+          run-id: ${{ inputs.run-id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install runtime libraries
+        run: |
+          HOMEBREW_NO_AUTO_UPDATE=1 brew install libsodium openssl@3 libusb unbound
+          # the library links these Homebrew dylibs, so each one must exist before the tests run
+          for dep in $(otool -L artifact/libmonero_c.dylib | tail -n +2 | awk '{print $1}'); do
+            case "$dep" in
+              @rpath/*|/usr/lib/*|/System/Library/*) ;;
+              @loader_path/*)
+                resolved_dep="artifact/${dep#@loader_path/}"
+                test -e "$resolved_dep" || { echo "missing dependency: $dep ($resolved_dep)"; exit 1; }
+                ;;
+              *) test -e "$dep" || { echo "missing dependency: $dep"; exit 1; } ;;
+            esac
+          done
+
+      - name: Run unit tests
+        env:
+          DYLD_LIBRARY_PATH: ${{ github.workspace }}/artifact
+        run: |
+          for test in $UNIT_TESTS; do
+            chmod +x "artifact/monero_c_${test}_unit_tests"
+            "artifact/monero_c_${test}_unit_tests" || exit 1
+          done
+
+  unit-windows:
+    name: Windows x86_64
+    runs-on: windows-latest
+
+    defaults:
+      run:
+        shell: msys2 {0}
+
+    steps:
+      - name: Download monero-c build
+        uses: actions/download-artifact@v8
+        with:
+          name: monero-c-windows
+          path: artifact
+          run-id: ${{ inputs.run-id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      # the MINGW64 packages that provide the DLLs monero_c.dll loads, the same ones the build job links
+      - name: Setup MSYS2 MINGW64
+        uses: msys2/setup-msys2@ec48f7c5447b3140e2b088413ae3a55687bccb6e # v2.33.0
+        with:
+          msystem: MINGW64
+          install: >-
+            mingw-w64-x86_64-gcc-libs
+            mingw-w64-x86_64-ntldd
+            mingw-w64-x86_64-openssl
+            mingw-w64-x86_64-hidapi
+            mingw-w64-x86_64-libsodium
+            mingw-w64-x86_64-unbound
+
+      - name: Check runtime dependencies
+        run: |
+          # ntldd reports the Windows API sets and some system DLLs as not found, so only the MinGW libraries are checked
+          ntldd_out=$(ntldd -R artifact/libmonero_c.dll || true)
+          if grep -qE '^[[:space:]]*lib[^[:space:]]*\.dll => not found' <<< "$ntldd_out"; then
+            echo "$ntldd_out"
+            echo "missing runtime libraries above"; exit 1
+          fi
+
+      - name: Run unit tests
+        run: |
+          for test in $UNIT_TESTS; do
+            "artifact/monero_c_${test}_unit_tests.exe" || exit 1
+          done

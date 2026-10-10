@@ -1,0 +1,85 @@
+# The library against a real regtest node. Called by test.yml with the Build run to test
+name: Integration tests
+
+on:
+  workflow_call:
+    inputs:
+      run-id:
+        description: the Build run whose artifacts are tested
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  integration:
+    name: Linux x86_64 (regtest node)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+
+    env:
+      MONERO_C_TEST_DAEMON_URI: http://127.0.0.1:18081
+      MONERO_C_TEST_WALLET_RPC_URI: http://127.0.0.1:18082
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Download monero-c build
+        uses: actions/download-artifact@v8
+        with:
+          name: monero-c-linux-x86_64
+          path: artifact
+          run-id: ${{ inputs.run-id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install runtime libraries
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libsodium23 libunbound8
+          ldd_out=$(ldd artifact/libmonero_c.so || true)
+          if grep -q 'not found' <<< "$ldd_out"; then
+            echo "$ldd_out"
+            echo "missing runtime libraries above"; exit 1
+          fi
+
+      - name: Start regtest monerod and monero-wallet-rpc
+        run: docker compose -f tests/c/integration/docker-compose.yml up -d
+
+      - name: Wait for monerod
+        run: |
+          for _ in $(seq 1 60); do
+            if curl -fsS -m 5 -X POST "$MONERO_C_TEST_DAEMON_URI/json_rpc" -d '{"jsonrpc":"2.0","id":"0","method":"get_block_count"}' | grep -q '"count"'; then
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "monerod did not answer"; exit 1
+
+      - name: Wait for monero-wallet-rpc
+        run: |
+          for _ in $(seq 1 60); do
+            if curl -fsS -m 5 -X POST "$MONERO_C_TEST_WALLET_RPC_URI/json_rpc" -d '{"jsonrpc":"2.0","id":"0","method":"get_version"}' | grep -q '"version"'; then
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "monero-wallet-rpc did not answer"; exit 1
+
+      - name: Run integration tests
+        env:
+          LD_LIBRARY_PATH: ${{ github.workspace }}/artifact
+        run: |
+          chmod +x artifact/monero_c_daemon_integration_tests artifact/monero_c_wallet_integration_tests
+          artifact/monero_c_daemon_integration_tests
+          artifact/monero_c_wallet_integration_tests
+
+      - name: Show monerod and monero-wallet-rpc logs on failure
+        if: failure()
+        run: docker compose -f tests/c/integration/docker-compose.yml logs
+
+      - name: Stop regtest monerod and monero-wallet-rpc
+        if: always()
+        run: docker compose -f tests/c/integration/docker-compose.yml down -v
