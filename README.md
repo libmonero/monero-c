@@ -198,6 +198,7 @@ What holds today:
 - A wallet callback runs while the sync holds the lock of the wallet, so `monero_wallet_get_balance()`, `monero_wallet_get_unlocked_balance()`, `monero_wallet_get_txs()`, `monero_wallet_get_outputs()` and `monero_wallet_get_accounts()` called on that wallet from it never return. Copy what the callback gets and make those calls from another thread. A daemon callback can call the daemon.
 - Different listeners on one daemon can be managed from different threads.
 - One listener can be on one wallet at a time. Adding it to a second wallet fails.
+- A binding avoids the races of adding, removing and freeing a wallet listener by keeping one native listener per wallet and fanning out to its own listeners. It adds the native listener once, when the first of its own arrives, and doesn't remove it. It frees it after `monero_wallet_close()` has returned, which waits for the callbacks in flight, and then frees the wallet. monero-java works this way.
 - `monero_daemon_wait_for_next_block_header()` blocks only its calling thread, and other calls on the handle run meanwhile.
 - `monero_last_error()` is per thread: it returns the last error of the calling thread.
 
