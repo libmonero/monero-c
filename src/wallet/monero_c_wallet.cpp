@@ -386,6 +386,16 @@ monero_result monero_wallet_close(::monero_wallet* wallet, bool save) {
   return guard([&] { wallet->wallet->close(save); });
 }
 
+monero_result monero_wallet_request_shutdown(::monero_wallet* wallet) {
+  if (!require(wallet, "wallet")) return MONERO_ERROR;
+  return guard([&] {
+    // only the full wallet has a sync and requests to abort. It is the one call that runs while another thread is inside the wallet
+    monero::monero_wallet_full* full = dynamic_cast<monero::monero_wallet_full*>(wallet->wallet.get());
+    if (full == nullptr) throw std::runtime_error("request_shutdown() not supported");
+    full->request_shutdown();
+  });
+}
+
 void monero_wallet_free(::monero_wallet* wallet) {
   delete wallet;
 }

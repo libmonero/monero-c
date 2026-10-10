@@ -242,6 +242,7 @@ monero_wallet_relay_txs
 monero_wallet_relay_txs_json
 monero_wallet_remove_listener
 monero_wallet_remove_listeners
+monero_wallet_request_shutdown
 monero_wallet_rescan_blockchain
 monero_wallet_rescan_spent
 monero_wallet_rpc_connect

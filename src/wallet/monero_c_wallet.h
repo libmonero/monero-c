@@ -46,8 +46,8 @@ extern "C" {
  * with monero_wallet_free().
  *
  * @par Thread safety
- * Don't use one handle from two threads at once. A listener callback runs on a thread of
- * monero-cpp while the sync holds the lock of the wallet. Don't free the handle or a listener
+ * Don't use one handle from two threads at once, except to call monero_wallet_request_shutdown().
+ * A listener callback runs on a thread of monero-cpp while the sync holds the lock of the wallet. Don't free the handle or a listener
  * from it, and don't call monero_wallet_get_balance(), monero_wallet_get_unlocked_balance(),
  * monero_wallet_get_txs(), monero_wallet_get_outputs() or monero_wallet_get_accounts() on the
  * same wallet from it, since they wait for that lock and never return. Copy what the callback
@@ -248,6 +248,18 @@ MONERO_EXPORT monero_result monero_wallet_save(monero_wallet* wallet);
  * @return MONERO_OK or MONERO_ERROR
  */
 MONERO_EXPORT monero_result monero_wallet_close(monero_wallet* wallet, bool save);
+
+/**
+ * Ask a full wallet to stop what it is doing, so that the calls that other threads have in flight on it return soon. A
+ * request to the daemon is aborted and its call fails, and a sync stops after the batch of blocks that it is on. The calls that
+ * need the daemon fail from then on. It is the only function that may run while another thread is inside a call of the same
+ * wallet. Call monero_wallet_close() and monero_wallet_free() once those calls have returned, since they can't use a closed or
+ * freed wallet. A wallet that is already closed ignores it. Keys-only and RPC wallets have nothing to abort, so it fails for them.
+ *
+ * @param wallet is the wallet handle
+ * @return MONERO_OK or MONERO_ERROR
+ */
+MONERO_EXPORT monero_result monero_wallet_request_shutdown(monero_wallet* wallet);
 
 /**
  * Release a wallet handle. A wallet that is still open is closed without saving, so call

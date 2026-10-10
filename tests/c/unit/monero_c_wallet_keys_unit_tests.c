@@ -426,6 +426,7 @@ static void test_close(void) {
   CHECK(wallet != NULL);
   if (wallet == NULL) return;
 
+  EXPECT_ERR_MSG(monero_wallet_request_shutdown(wallet), "request_shutdown() not supported");
   EXPECT_OK(monero_wallet_close(wallet, false));
   EXPECT_OK(monero_wallet_close(wallet, false));  // closing a closed wallet has no effect
 

@@ -201,6 +201,7 @@ static void test_rpc_wallet_from_connection(void) {
   EXPECT_ERR(monero_wallet_rpc_open_wallet(wallet, "name", "password"));
   EXPECT_ERR_MSG(monero_wallet_rpc_create_wallet(wallet, "[]"), "config must be a JSON object");
   EXPECT_ERR_MSG(monero_wallet_rpc_open_wallet(wallet, NULL, NULL), "name must not be null");
+  EXPECT_ERR_MSG(monero_wallet_request_shutdown(wallet), "request_shutdown() not supported");
 
   // the array is checked before any request, and a config that nests too deeply before the parser
   json = POISON_PTR;
@@ -324,6 +325,7 @@ typedef struct fake_server {
   const char* body;
   char request[4096];  // body of the last request, which may be binary
   size_t request_len;
+  int requests;  // how many requests were read
 } fake_server;
 
 // reads one request and keeps its body. Returns 0 when the client closed the connection
@@ -352,11 +354,12 @@ static int read_request(fake_server* server, int client) {
   pthread_mutex_lock(&server->lock);
   for (size_t i = 0; i < body_len; i++) server->request[i] = buffer[header_len + i];
   server->request_len = body_len;
+  server->requests++;
   pthread_mutex_unlock(&server->lock);
   return 1;
 }
 
-// sets the body that the server answers with
+// sets the body that the server answers with. NULL makes it hold the requests without an answer, until it stops
 static void set_body(fake_server* server, const char* body) {
   pthread_mutex_lock(&server->lock);
   server->body = body;
@@ -368,6 +371,14 @@ static const char* get_body(fake_server* server) {
   const char* body = server->body;
   pthread_mutex_unlock(&server->lock);
   return body;
+}
+
+// how many requests the server has read
+static int request_count(fake_server* server) {
+  pthread_mutex_lock(&server->lock);
+  int count = server->requests;
+  pthread_mutex_unlock(&server->lock);
+  return count;
 }
 
 static int is_stopped(fake_server* server) {
@@ -410,6 +421,10 @@ static void* serve(void* arg) {
     while (!is_stopped(server) && read_request(server, client)) {
       char header[256];
       const char* body = get_body(server);
+      if (body == NULL) {
+        while (!is_stopped(server)) usleep(10000);
+        break;
+      }
       int body_len = snprintf(NULL, 0, "%s", body);
       int header_len = snprintf(header, sizeof(header), "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: %d\r\n\r\n", body_len);
       if (send(client, header, (size_t) header_len, 0) < 0 || send(client, body, (size_t) body_len, 0) < 0) break;
@@ -434,6 +449,7 @@ static int start_server(fake_server* server, pthread_t* thread) {
     return 0;
   }
   server->port = ntohs(addr.sin_port);
+  server->body = "{}";  // what a request gets before the test sets a body, and not a held request
   pthread_mutex_init(&server->lock, NULL);
   if (pthread_create(thread, NULL, serve, server) != 0) {
     pthread_mutex_destroy(&server->lock);
@@ -620,12 +636,12 @@ static void test_daemon_models_are_released(void) {
     CHECK(!"cannot start the fake server");
     return;
   }
+  set_body(&server, GET_BLOCK_RESPONSE);
   snprintf(config, sizeof(config), "{\"uri\":\"http://127.0.0.1:%d\",\"timeoutMs\":10000}", server.port);
   connection = create_connection(config);
   if (connection != NULL) EXPECT_OK(monero_daemon_connect_with(connection, &daemon));
 
   if (daemon != NULL) {
-    set_body(&server, GET_BLOCK_RESPONSE);
     EXPECT_OK(monero_daemon_get_block_by_height(daemon, 5, &json));
     CHECK(has(json, "\"height\":5") && has(json, "\"minerTx\":{") && has(json, "\"outputs\":["));
     monero_utils_free(json);
@@ -657,6 +673,70 @@ static void test_daemon_models_are_released(void) {
   stop_server(&server, thread);
 }
 
+// a sync on a thread, and its result
+typedef struct sync_call {
+  monero_wallet* wallet;
+  volatile int done;
+  monero_result result;
+  char error[256];
+} sync_call;
+
+static void* run_sync(void* arg) {
+  sync_call* call = (sync_call*) arg;
+  char* json = NULL;
+  monero_result result = monero_wallet_sync(call->wallet, NULL, NULL, &json);
+  snprintf(call->error, sizeof(call->error), "%s", result == MONERO_OK ? "" : monero_last_error());
+  monero_utils_free(json);
+  call->result = result;
+  call->done = 1;
+  return NULL;
+}
+
+// a sync that waits for a daemon that never answers returns when another thread asks the wallet to shut down. If it doesn't, the
+// server closes the connection after 20 seconds, so that the join can't hang
+static void test_request_shutdown_aborts_a_sync(void) {
+  fake_server server;
+  pthread_t server_thread;
+  pthread_t sync_thread;
+  char uri[64];
+  const char* path = "monero_c_rpc_connection_shutdown";
+  monero_wallet* wallet = NULL;
+  sync_call call;
+  memset(&server, 0, sizeof(server));
+  memset(&call, 0, sizeof(call));
+  if (!start_server(&server, &server_thread)) {
+    CHECK(!"cannot start the fake server");
+    return;
+  }
+  set_body(&server, NULL);
+  EXPECT_OK(monero_wallet_create_random(path, "password", MONERO_UTILS_NETWORK_MAINNET, NULL, &wallet));
+  if (wallet != NULL) {
+    snprintf(uri, sizeof(uri), "http://127.0.0.1:%d", server.port);
+    EXPECT_OK(monero_wallet_set_daemon_connection(wallet, uri, "", "", "", NULL, false));
+    call.wallet = wallet;
+    CHECK(pthread_create(&sync_thread, NULL, run_sync, &call) == 0);
+
+    // the sync is in flight once the server has read its request
+    for (int i = 0; i < 1000 && request_count(&server) == 0; i++) usleep(10000);
+    CHECK(request_count(&server) > 0);
+    EXPECT_OK(monero_wallet_request_shutdown(wallet));
+    for (int i = 0; i < 2000 && !call.done; i++) usleep(10000);
+    CHECK(call.done);
+    if (!call.done) {
+      stop_server(&server, server_thread);
+      server.fd = -1;
+    }
+    pthread_join(sync_thread, NULL);
+    CHECK(call.result == MONERO_ERROR && strcmp(call.error, "Wallet is not connected to daemon") == 0);
+
+    // the wallet can be closed once the call has returned
+    EXPECT_OK(monero_wallet_close(wallet, false));
+    monero_wallet_free(wallet);
+    remove_files(path);
+  }
+  if (server.fd != -1) stop_server(&server, server_thread);
+}
+
 #endif
 
 int main(void) {
@@ -674,6 +754,7 @@ int main(void) {
   signal(SIGPIPE, SIG_IGN);
   test_response_types();
   test_daemon_models_are_released();
+  test_request_shutdown_aborts_a_sync();
 #endif
 
   printf("%d/%d checks passed\n", g_checks - g_failures, g_checks);
