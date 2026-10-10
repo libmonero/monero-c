@@ -55,7 +55,7 @@ monero_utils_free(txs_in_pool);
 monero_wallet* wallet_full = NULL;
 monero_wallet_create_from_seed("sample_wallet_full", "supersecretpassword123", MONERO_UTILS_NETWORK_STAGENET,
                                "hefty value scenic...", "", 573936, NULL, &wallet_full);
-monero_wallet_set_daemon_connection(wallet_full, "http://localhost:38081", "superuser", "abctesting123", "", true, true);
+monero_wallet_set_daemon_connection(wallet_full, "http://localhost:38081", "superuser", "abctesting123", "", NULL, true); // NULL trusts a local daemon
 
 // synchronize the wallet and receive progress notifications
 monero_wallet_listener_callbacks sync_callbacks = {NULL, on_sync_progress, NULL, NULL, NULL, NULL};

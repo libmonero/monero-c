@@ -725,13 +725,13 @@ monero_result monero_wallet_set_tx_notes(::monero_wallet* wallet, const char* co
   return guard([&] { wallet->wallet->set_tx_notes(string_array(tx_hashes, num_tx_hashes, "tx_hashes"), string_array(notes, num_tx_hashes, "notes")); });
 }
 
-monero_result monero_wallet_set_daemon_connection(::monero_wallet* wallet, const char* uri, const char* username, const char* password, const char* proxy_uri, bool is_trusted, bool ssl_verify) {
+monero_result monero_wallet_set_daemon_connection(::monero_wallet* wallet, const char* uri, const char* username, const char* password, const char* proxy_uri, const bool* is_trusted, bool ssl_verify) {
   if (!require(wallet, "wallet") || !require(uri, "uri")) return MONERO_ERROR;
   return guard([&] {
     // the connection object carries ssl_verify, the uri overload of monero-cpp doesn't take it
     std::shared_ptr<monero::monero_rpc_connection> connection = std::make_shared<monero::monero_rpc_connection>(std::string(uri), safe_str(username), safe_str(password), safe_str(proxy_uri));
     connection->m_ssl_verify = ssl_verify;
-    wallet->wallet->set_daemon_connection(connection, boost::optional<bool>(is_trusted));
+    wallet->wallet->set_daemon_connection(connection, optional_of(is_trusted));
   });
 }
 

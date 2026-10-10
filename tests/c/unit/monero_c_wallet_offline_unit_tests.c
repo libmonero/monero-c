@@ -410,12 +410,22 @@ static void test_daemon_connection(void) {
   EXPECT_OK(monero_wallet_get_daemon_connection(wallet, &json));
   CHECK(json == NULL);
 
-  EXPECT_OK(monero_wallet_set_daemon_connection(wallet, "http://127.0.0.1:1", "", "", "", true, false));
+  bool yes = true;
+  bool no = false;
+  EXPECT_OK(monero_wallet_set_daemon_connection(wallet, "http://127.0.0.1:1", "", "", "", &yes, false));
   EXPECT_OK(monero_wallet_get_daemon_connection(wallet, &json));
   CHECK(contains(json, "\"uri\":\"http://127.0.0.1:1\"") && contains(json, "\"sslVerify\":false"));
   monero_utils_free(json);
 
   bool trusted = false;
+  EXPECT_OK(monero_wallet_is_daemon_trusted(wallet, &trusted));
+  CHECK(trusted);
+
+  // false wins over a local address, and NULL leaves the choice to the address, which is loopback here
+  EXPECT_OK(monero_wallet_set_daemon_connection(wallet, "http://127.0.0.1:1", "", "", "", &no, false));
+  EXPECT_OK(monero_wallet_is_daemon_trusted(wallet, &trusted));
+  CHECK(!trusted);
+  EXPECT_OK(monero_wallet_set_daemon_connection(wallet, "http://127.0.0.1:1", "", "", "", NULL, false));
   EXPECT_OK(monero_wallet_is_daemon_trusted(wallet, &trusted));
   CHECK(trusted);
 

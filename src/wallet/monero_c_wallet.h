@@ -870,11 +870,11 @@ MONERO_EXPORT monero_result monero_wallet_set_tx_notes(monero_wallet* wallet, co
  * @param username is the username of the daemon. NULL or "" for none
  * @param password is the password of the daemon. NULL or "" for none
  * @param proxy_uri is the URI of a proxy. NULL or "" for none
- * @param is_trusted is true if the daemon is trusted
+ * @param is_trusted is true if the daemon is trusted and false if it is not. NULL trusts it only if its address is local
  * @param ssl_verify is true to verify the daemon's TLS certificate and hostname
  * @return MONERO_OK or MONERO_ERROR
  */
-MONERO_EXPORT monero_result monero_wallet_set_daemon_connection(monero_wallet* wallet, const char* uri, const char* username, const char* password, const char* proxy_uri, bool is_trusted, bool ssl_verify);
+MONERO_EXPORT monero_result monero_wallet_set_daemon_connection(monero_wallet* wallet, const char* uri, const char* username, const char* password, const char* proxy_uri, const bool* is_trusted, bool ssl_verify);
 
 /**
  * Get the daemon connection of the wallet.
