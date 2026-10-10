@@ -569,6 +569,42 @@ static void test_regtest_network(void) {
   remove_files(path);
 }
 
+// a new random wallet starts from an estimate of the current date, so on regtest it is set to 0, and the keys file keeps it
+static void test_regtest_random_restore_height(void) {
+  const char* path = "monero_c_wallet_offline_regtest_random";
+  uint64_t height = 1;
+  monero_wallet* wallet = NULL;
+  remove_files(path);
+
+  EXPECT_OK(monero_wallet_create_random(path, PASSWORD, MONERO_UTILS_NETWORK_REGTEST, NULL, &wallet));
+  if (wallet != NULL) {
+    EXPECT_OK(monero_wallet_get_restore_height(wallet, &height));
+    CHECK(height == 0);
+    monero_wallet_free(wallet);
+  }
+
+  wallet = NULL;
+  height = 1;
+  EXPECT_OK(monero_wallet_open(path, PASSWORD, MONERO_UTILS_NETWORK_REGTEST, &wallet));
+  if (wallet != NULL) {
+    EXPECT_OK(monero_wallet_get_restore_height(wallet, &height));
+    CHECK(height == 0);
+    monero_wallet_free(wallet);
+  }
+
+  // on mainnet it stays the estimate
+  remove_files(path);
+  wallet = NULL;
+  EXPECT_OK(monero_wallet_create_random(path, PASSWORD, MAINNET, NULL, &wallet));
+  if (wallet != NULL) {
+    EXPECT_OK(monero_wallet_get_restore_height(wallet, &height));
+    CHECK(height > 0);
+    monero_wallet_free(wallet);
+  }
+
+  remove_files(path);
+}
+
 // one listener can be on one wallet at a time, so it can't join a second wallet
 static void test_listener_one_wallet(void) {
   const char* path_a = "monero_c_wallet_offline_listener_a";
@@ -599,6 +635,7 @@ int main(void) {
   test_accounts_and_subaddresses();
   test_change_password();
   test_regtest_network();
+  test_regtest_random_restore_height();
   test_listener_one_wallet();
   test_attributes_and_settings();
   test_keys_and_version();

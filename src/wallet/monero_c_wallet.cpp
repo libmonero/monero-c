@@ -123,6 +123,13 @@ monero::monero_wallet_config make_config(const char* path, const char* password,
   return config;
 }
 
+// a new wallet starts from an estimate of the current date, which is past the height of a regtest chain. The keys file holds the
+// height, and store() doesn't write that file, but a password does, so the same one is set again
+void restart_from_genesis(monero::monero_wallet_full& wallet, const std::string& password) {
+  wallet.set_restore_height(0);
+  if (!wallet.get_path().empty()) wallet.change_password(password, password);
+}
+
 // takes ownership of a wallet returned by monero-cpp, created or opened on network_type
 ::monero_wallet* wrap(std::unique_ptr<monero::monero_wallet> wallet, int32_t network_type) {
   std::unique_ptr<::monero_wallet> handle(new ::monero_wallet());
@@ -291,11 +298,7 @@ monero_result monero_wallet_create_random(const char* path, const char* password
   return guard([&] {
     monero::monero_wallet_config config = make_config(path, password, network_type, language);
     std::unique_ptr<monero::monero_wallet_full> wallet(monero::monero_wallet_full::create_wallet(config));
-    // a new wallet starts from an estimate of the current date, which is past the height of a regtest chain
-    if (network_type == MONERO_UTILS_NETWORK_REGTEST) {
-      wallet->set_restore_height(0);
-      wallet->save();
-    }
+    if (network_type == MONERO_UTILS_NETWORK_REGTEST) restart_from_genesis(*wallet, *config.m_password);
     *out_wallet = wrap(std::move(wallet), network_type);
   });
 }
