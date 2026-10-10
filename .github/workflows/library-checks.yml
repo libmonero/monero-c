@@ -88,6 +88,9 @@ jobs:
             filearch: x86_64
 
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
       - name: Download monero-c build
         uses: actions/download-artifact@v8
         with:
@@ -109,6 +112,9 @@ jobs:
             exit 1
           fi
           printf '%s\n' "$dependencies" | grep -Fxq '@loader_path/libusb-1.0.0.dylib' || { echo "libusb is not bundled dynamically"; exit 1; }
+
+      - name: Check exported symbols
+        run: cmake -DLIBRARY=artifact/libmonero_c.dylib -DEXPECTED=tests/c/abi/monero_c.symbols -P tests/c/abi/check_symbols.cmake
 
   library-windows:
     name: Windows x86_64
