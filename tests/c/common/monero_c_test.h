@@ -131,9 +131,9 @@ static inline char* nested_json_object(size_t depth) {
   char* json = (char*) malloc(depth * 6 + 2);
   if (json == NULL) return NULL;
   char* p = json;
+  const char* unit = "{\"a\":";
   for (size_t i = 0; i < depth; i++) {
-    memcpy(p, "{\"a\":", 5);
-    p += 5;
+    for (size_t k = 0; k < 5; k++) *p++ = unit[k];
   }
   *p++ = '1';
   memset(p, '}', depth);

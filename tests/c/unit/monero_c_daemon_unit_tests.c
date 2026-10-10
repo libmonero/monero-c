@@ -442,7 +442,7 @@ static void test_errors_from_the_binding_and_monero_cpp(monero_daemon* daemon) {
   // the daemon can't be reached: the message from monero-cpp reaches the caller
   EXPECT_ERR(monero_daemon_get_peer_ban(daemon, "1.2.3.4", &json));
   CHECK(json == NULL);
-  CHECK(strlen(monero_last_error()) > 0);
+  CHECK(monero_last_error()[0] != '\0');
 }
 
 // ------------------------------- LISTENERS ----------------------------------

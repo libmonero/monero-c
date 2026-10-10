@@ -269,7 +269,7 @@ public class MoneroMarshallingTests
     private delegate void OnBlockHeader(IntPtr userData, IntPtr headerJson);
 
     [StructLayout(LayoutKind.Sequential)]
-    private struct DaemonListenerCallbacks
+    private record struct DaemonListenerCallbacks
     {
         public IntPtr UserData;
         public IntPtr OnBlockHeader;
