@@ -8,13 +8,13 @@ This is an alpha version. The C API can still change between versions.
 
 | Runtime identifier | Tested on | Needs |
 | --- | --- | --- |
-| `linux-x64` | Debian 12, Ubuntu 24.04 | glibc 2.36 and libstdc++ 3.4.29 (GCC 11) or newer |
-| `linux-arm64` | Debian 12, Ubuntu 24.04 | glibc 2.36 and libstdc++ 3.4.29 (GCC 11) or newer |
+| `linux-x64` | Debian 12, Ubuntu 22.04 and 24.04 | glibc 2.34 and libstdc++ 3.4.29 (GCC 11) or newer |
+| `linux-arm64` | Debian 12, Ubuntu 22.04 and 24.04 | glibc 2.34 and libstdc++ 3.4.29 (GCC 11) or newer |
 | `win-x64` | GitHub `windows-latest` | Windows 8 or newer, the DLL imports the `api-ms-win-core-synch-l1-2-0` API set |
 | `osx-x64` | macOS 15 | macOS 11.0 or newer |
 | `osx-arm64` | macOS 15 | macOS 11.0 or newer |
 
-Not supported: Linux distributions with an older glibc (Ubuntu 22.04 and RHEL 9 have 2.35 and 2.34), musl (Alpine), 32-bit systems, Windows ARM64, Android and iOS.
+Not supported: Linux distributions with an older glibc (Ubuntu 20.04 and Debian 11 have 2.31), musl (Alpine), 32-bit systems, Windows ARM64, Android and iOS.
 
 ## Notes for callers
 

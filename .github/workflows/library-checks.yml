@@ -26,12 +26,12 @@ jobs:
             os: ubuntu-24.04
             artifact: linux-x86_64
             filearch: x86-64
-            glibc_floor: GLIBC_2.36
+            glibc_floor: GLIBC_2.34
           - platform: Linux arm64
             os: ubuntu-24.04-arm
             artifact: linux-arm64
             filearch: aarch64
-            glibc_floor: GLIBC_2.36
+            glibc_floor: GLIBC_2.34
 
     steps:
       - name: Checkout repository
@@ -45,16 +45,18 @@ jobs:
           run-id: ${{ inputs.run-id }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
-      # the glibc floor is the one of the debian:12 container of the build
+      # 2.34 is the release that moved the pthread and dl functions into libc.so.6. A newer version means that a library of the build calls something newer, as unbound did with arc4random
       - name: Check runtime dependencies
         env:
           LD_LIBRARY_PATH: ${{ github.workspace }}/artifact
         run: |
           file artifact/libmonero_c.so | grep -q '${{ matrix.filearch }}' || { echo "wrong architecture: $(file artifact/libmonero_c.so)"; exit 1; }
-          floor=$(objdump -T artifact/libmonero_c.so | grep -o 'GLIBC_[0-9.]*' | sort -uV | tail -1)
-          echo "glibc floor: $floor"
-          test -n "$floor" || { echo "could not determine glibc floor"; exit 1; }
-          test "$(printf '%s\n${{ matrix.glibc_floor }}\n' "$floor" | sort -V | tail -1)" = "${{ matrix.glibc_floor }}" || { echo "glibc floor $floor exceeds ${{ matrix.glibc_floor }}"; exit 1; }
+          for library in libmonero_c.so libusb-1.0.so.0; do
+            floor=$(objdump -T "artifact/$library" | grep -o 'GLIBC_[0-9.]*' | sort -uV | tail -1)
+            echo "$library glibc floor: $floor"
+            test -n "$floor" || { echo "could not determine the glibc floor of $library"; exit 1; }
+            test "$(printf '%s\n${{ matrix.glibc_floor }}\n' "$floor" | sort -V | tail -1)" = "${{ matrix.glibc_floor }}" || { echo "the glibc floor of $library is $floor, above ${{ matrix.glibc_floor }}"; exit 1; }
+          done
           ldd_out=$(ldd artifact/libmonero_c.so)
           echo "$ldd_out"
           unexpected=$(echo "$ldd_out" | awk '/=>/ {print $1} /^\// {name=$1; sub(".*/", "", name); print name}' | grep -Ev '^(linux-vdso\.so\.[0-9]+|libc\.so(\.[0-9]+)*|libm\.so(\.[0-9]+)*|libstdc\+\+\.so(\.[0-9]+)*|libgcc_s\.so(\.[0-9]+)*|libpthread\.so(\.[0-9]+)*|librt\.so(\.[0-9]+)*|libdl\.so(\.[0-9]+)*|ld-linux[^ ]*|libusb-1\.0\.so\.0|libudev\.so\.1)$' || true)

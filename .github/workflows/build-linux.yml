@@ -11,7 +11,7 @@ jobs:
   build:
     name: ${{ matrix.cpu }}
     runs-on: ${{ matrix.os }}
-    # debian:12 provides a supported build environment with a glibc 2.36 baseline
+    # debian:12 provides a supported build environment. The library needs glibc 2.34, see the unbound step
     container: ${{ matrix.container }}
     env:
       # coverage runs on pull requests and on main
@@ -77,7 +77,9 @@ jobs:
           echo "c5dd1bdef5d5685b2cedb749158dd152c52d44f65529a34ac15cd88d4b1b3d43  unbound-1.22.0.tar.gz" | sha256sum -c
           tar xzf unbound-1.22.0.tar.gz
           cd unbound-1.22.0
-          ./configure --with-libexpat=/usr/local --with-ssl=/usr/local --enable-static --disable-shared --with-pic
+          # arc4random and arc4random_uniform are in glibc 2.36, and the ones that unbound finds there would make the library need it.
+          # Without them it builds its own, and the next highest version of the library is 2.34
+          ./configure --with-libexpat=/usr/local --with-ssl=/usr/local --enable-static --disable-shared --with-pic ac_cv_func_arc4random=no ac_cv_func_arc4random_uniform=no
           make
           make install
 
