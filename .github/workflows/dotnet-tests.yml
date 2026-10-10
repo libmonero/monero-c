@@ -21,6 +21,10 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          - platform: Ubuntu 22.04 x86_64
+            os: ubuntu-22.04
+            arch: x86_64
+            debian12: false
           - platform: Ubuntu 24.04 x86_64
             os: ubuntu-24.04
             arch: x86_64
@@ -29,6 +33,10 @@ jobs:
             os: ubuntu-24.04
             arch: x86_64
             debian12: true
+          - platform: Ubuntu 22.04 arm64
+            os: ubuntu-22.04-arm
+            arch: aarch64
+            debian12: false
           - platform: Ubuntu 24.04 arm64
             os: ubuntu-24.04-arm
             arch: aarch64
