@@ -141,8 +141,8 @@ Flags are cached in `./build/CMakeCache.txt`, so pass them on every build to cha
 4. Relaunch MSYS2 (if necessary) and install dependencies:
    ```
    pacman -S mingw-w64-x86_64-toolchain mingw-w64-x86_64-cmake mingw-w64-x86_64-openssl mingw-w64-x86_64-zeromq mingw-w64-x86_64-libsodium mingw-w64-x86_64-hidapi mingw-w64-x86_64-unbound mingw-w64-x86_64-protobuf mingw-w64-x86_64-libusb mingw-w64-x86_64-expat mingw-w64-x86_64-ntldd git make gettext base-devel wget
-   wget https://repo.msys2.org/mingw/mingw64/mingw-w64-x86_64-icu-75.1-2-any.pkg.tar.zst
-   pacman -U mingw-w64-x86_64-icu-75.1-2-any.pkg.tar.zst
+   wget https://repo.msys2.org/mingw/mingw64/mingw-w64-x86_64-icu-76.1-1-any.pkg.tar.zst
+   pacman -U mingw-w64-x86_64-icu-76.1-1-any.pkg.tar.zst
    wget https://repo.msys2.org/mingw/mingw64/mingw-w64-x86_64-boost-1.87.0-3-any.pkg.tar.zst
    pacman -U mingw-w64-x86_64-boost-1.87.0-3-any.pkg.tar.zst
    ```
