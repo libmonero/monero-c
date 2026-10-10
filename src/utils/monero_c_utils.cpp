@@ -59,6 +59,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <memory>
+#include <mutex>
 #include <new>
 #include <stdexcept>
 #include <string>
@@ -76,6 +77,12 @@ using monero_c::require;
 using monero_c::reset_out;
 using monero_c::safe_str;
 using monero_c::to_network_type;
+
+// the logging of monero-project is one global state, and two threads that change it together crash
+std::mutex& logging_mutex() {
+  static std::mutex mutex;
+  return mutex;
+}
 
 std::string safe_bin(const uint8_t* data, size_t len) {
   return data ? std::string(reinterpret_cast<const char*>(data), len) : std::string();
@@ -122,14 +129,17 @@ monero_result monero_utils_get_abi_version(uint32_t* out_major, uint32_t* out_mi
 // --------------------------------- LOGGING ----------------------------------
 
 void monero_utils_set_log_level(int32_t level) {
+  std::lock_guard<std::mutex> lock(logging_mutex());
   monero_utils::set_log_level(static_cast<int>(level));
 }
 
 void monero_utils_set_log_categories(const char* categories) {
+  std::lock_guard<std::mutex> lock(logging_mutex());
   monero_utils::set_log_categories(safe_str(categories));
 }
 
 void monero_utils_configure_logging(const char* path, bool console) {
+  std::lock_guard<std::mutex> lock(logging_mutex());
   monero_utils::configure_logging(safe_str(path), console);
 }
 

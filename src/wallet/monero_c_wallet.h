@@ -1018,6 +1018,8 @@ MONERO_EXPORT monero_result monero_wallet_get_daemon_max_peer_height(monero_wall
 /**
  * Wait until the next block is added to the chain. It blocks until a block arrives, and the wallet
  * must be syncing in the background with monero_wallet_start_syncing(), or it never returns.
+ * Neither monero_wallet_stop_syncing() nor monero_wallet_close() wakes it, so call it from a thread
+ * that the application can leave behind, or use a listener instead.
  *
  * @param wallet is the wallet handle
  * @param out_height receives the height of the new block

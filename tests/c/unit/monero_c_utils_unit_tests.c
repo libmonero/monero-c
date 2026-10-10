@@ -25,6 +25,10 @@
 #include <math.h>
 #include <stdlib.h>
 
+#if !defined(_WIN32)
+#include <pthread.h>
+#endif
+
 // finds "key":"value" in a compact JSON string and copies value into out.
 // only good enough for this test's known output shape, not a general JSON parser
 static int extract_json_string(const char* json, const char* key, char* out, size_t out_cap, size_t* out_len) {
@@ -467,6 +471,36 @@ static void test_failed_calls_reset_outputs(void) {
   CHECK(minor == 7 && patch == 7);
 }
 
+#if !defined(_WIN32)
+
+// the logging of monero-project is global, and two threads that configure it together used to crash
+static void* configure_logging_worker(void* arg) {
+  const char* path = (const char*) arg;
+  for (int i = 0; i < 100; i++) {
+    monero_utils_configure_logging(path, i % 3 == 0);
+    monero_utils_set_log_level(i % 5);
+    monero_utils_set_log_categories(i % 2 ? "*:INFO" : "*:WARNING");
+  }
+  return NULL;
+}
+
+static void test_logging_from_several_threads(void) {
+  const char* paths[4] = {"monero_c_utils_unit_tests_a.log", "monero_c_utils_unit_tests_b.log", "monero_c_utils_unit_tests_a.log", "monero_c_utils_unit_tests_b.log"};
+  pthread_t threads[4];
+  int started = 0;
+  for (int i = 0; i < 4; i++) {
+    if (pthread_create(&threads[i], NULL, configure_logging_worker, (void*) paths[i]) == 0) started++;
+  }
+  CHECK(started == 4);
+  for (int i = 0; i < started; i++) pthread_join(threads[i], NULL);
+  monero_utils_configure_logging(NULL, false);
+  monero_utils_set_log_level(0);
+  remove(paths[0]);
+  remove(paths[1]);
+}
+
+#endif
+
 static void test_logging(void) {
   const char* path = "monero_c_utils_unit_tests.log";
   FILE* file = NULL;
@@ -508,6 +542,9 @@ int main(void) {
   test_binary_blocks_to_json();
   test_failed_calls_reset_outputs();
   test_logging();
+#if !defined(_WIN32)
+  test_logging_from_several_threads();
+#endif
 
   printf("%d/%d checks passed\n", g_checks - g_failures, g_checks);
   return g_failures == 0 ? EXIT_SUCCESS : EXIT_FAILURE;
