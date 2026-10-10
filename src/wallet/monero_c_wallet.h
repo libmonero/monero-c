@@ -1203,10 +1203,11 @@ MONERO_EXPORT monero_result monero_wallet_submit_txs(monero_wallet* wallet, cons
 MONERO_EXPORT monero_result monero_wallet_sign_txs(monero_wallet* wallet, const char* unsigned_tx_hex, char** out_json);
 
 /**
- * Describe a transaction set with unsigned or multisig hex as structured transactions.
+ * Describe a transaction set with unsigned or multisig hex as structured transactions. Only the hex
+ * of the set is read, so the output of monero_wallet_create_txs() can be passed as it is.
  *
  * @param wallet is the wallet handle
- * @param tx_set_json is the JSON-serialized monero_tx_set
+ * @param tx_set_json is the JSON-serialized monero_tx_set, with its unsignedTxHex or multisigTxHex
  * @param out_json receives the JSON-serialized monero_tx_set with the structured transactions. Free with monero_utils_free()
  * @return MONERO_OK or MONERO_ERROR
  */

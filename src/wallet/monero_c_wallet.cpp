@@ -195,6 +195,26 @@ std::shared_ptr<T> model_json(const char* json, const char* name) {
   return model;
 }
 
+// reads the hex of a tx set and nothing else. monero-cpp can't parse the txs of a set that it created, because of their outgoing
+// transfers, and describe_tx_set() only reads the hex, so the set of create_txs() can be passed as it is
+std::shared_ptr<monero::monero_tx_set> tx_set_of_hex(const char* json) {
+  std::string text(json);
+  check_json_depth(text);
+  rapidjson::Document doc;
+  if (doc.Parse(text.c_str()).HasParseError() || !doc.IsObject()) throw std::runtime_error("tx_set must be a JSON object");
+  std::shared_ptr<monero::monero_tx_set> tx_set = std::make_shared<monero::monero_tx_set>();
+  auto read = [&](const char* name, boost::optional<std::string>& hex) {
+    auto it = doc.FindMember(name);
+    if (it == doc.MemberEnd() || it->value.IsNull()) return;
+    if (!it->value.IsString()) throw std::runtime_error(std::string(name) + " must be a string");
+    if (it->value.GetStringLength() > 0) hex = std::string(it->value.GetString(), it->value.GetStringLength());
+  };
+  read("unsignedTxHex", tx_set->m_unsigned_tx_hex);
+  read("signedTxHex", tx_set->m_signed_tx_hex);
+  read("multisigTxHex", tx_set->m_multisig_tx_hex);
+  return tx_set;
+}
+
 // parses an optional query. NULL gives the default query, which matches everything
 template <class T>
 std::shared_ptr<T> query_of(const char* json) {
@@ -1000,9 +1020,7 @@ monero_result monero_wallet_describe_tx_set(::monero_wallet* wallet, const char*
   reset_out(out_json);
   if (!require(wallet, "wallet") || !require(tx_set_json, "tx_set_json") || !require(out_json, "out_json")) return MONERO_ERROR;
   return guard([&] {
-    std::shared_ptr<monero::monero_tx_set> tx_set = model_json<monero::monero_tx_set>(tx_set_json, "tx_set");
-    auto free_tx_set = epee::misc_utils::create_scope_leave_handler([&] { monero_utils::free(tx_set->m_txs); });
-    monero::monero_tx_set described = wallet->wallet->describe_tx_set(*tx_set);
+    monero::monero_tx_set described = wallet->wallet->describe_tx_set(*tx_set_of_hex(tx_set_json));
     auto free_described = epee::misc_utils::create_scope_leave_handler([&] { monero_utils::free(described.m_txs); });
     *out_json = dup_string(described.serialize());
   });
