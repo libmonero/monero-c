@@ -21,6 +21,14 @@
  */
 
 #include "monero_c_common.h"
+#include "monero_c_tls.h"
+
+#if !defined(_WIN32)
+#include <dirent.h>
+#include <openssl/x509.h>
+#include <sys/stat.h>
+#include <cctype>
+#endif
 
 namespace monero_c {
 
@@ -61,3 +69,44 @@ void check_json_depth(const std::string& json) {
 }
 
 } // namespace monero_c
+
+#if !defined(_WIN32)
+
+namespace {
+
+bool is_file_with_content(const std::string& path) {
+  struct stat info;
+  return stat(path.c_str(), &info) == 0 && S_ISREG(info.st_mode) && info.st_size > 0;
+}
+
+// true if the directory has a certificate by its hashed name, such as 5ad8a5d6.0
+bool has_hashed_certificates(const std::string& path) {
+  DIR* dir = opendir(path.c_str());
+  if (dir == nullptr) return false;
+  bool found = false;
+  while (struct dirent* entry = readdir(dir)) {
+    const char* name = entry->d_name;
+    size_t digits = 0;
+    while (std::isxdigit(static_cast<unsigned char>(name[digits]))) digits++;
+    if (digits == 8 && name[8] == '.' && std::isdigit(static_cast<unsigned char>(name[9]))) {
+      found = true;
+      break;
+    }
+  }
+  closedir(dir);
+  return found;
+}
+
+// runs when the library is loaded, before a connection makes a TLS context. See find_ca_paths() for why. Windows needs none, since
+// epee reads the root store of the system there
+__attribute__((unused)) const bool g_ca_paths_set = [] {
+  monero_c::ca_paths paths = monero_c::find_ca_paths(getenv("SSL_CERT_FILE"), getenv("SSL_CERT_DIR"), X509_get_default_cert_file(), X509_get_default_cert_dir(),
+                                                     is_file_with_content, has_hashed_certificates);
+  if (!paths.file.empty()) setenv("SSL_CERT_FILE", paths.file.c_str(), 1);
+  if (!paths.dir.empty()) setenv("SSL_CERT_DIR", paths.dir.c_str(), 1);
+  return true;
+}();
+
+} // namespace
+
+#endif

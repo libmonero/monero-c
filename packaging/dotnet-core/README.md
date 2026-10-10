@@ -29,6 +29,7 @@ Not supported: Linux distributions with an older glibc (Ubuntu 22.04 and RHEL 9 
 * An optional parameter is a pointer, and NULL means none. For a `ref ulong` parameter, pass `ref Unsafe.NullRef<ulong>()`.
 * Don't use one handle from two threads at once. A finalizer can call `monero_wallet_free()` on a wallet that still syncs. To save a wallet, call `monero_wallet_close(wallet, true)` before freeing it.
 * A JSON argument can't nest deeper than 64 levels, a mnemonic can't be longer than 4096 bytes, and `monero_daemon_get_blocks_by_range()` takes at most 100000 blocks.
+* On Linux and macOS the library sets `SSL_CERT_FILE` and `SSL_CERT_DIR` in your process when it is loaded, to the CA certificates of the system, if neither is set and OpenSSL doesn't find them by itself. A connection to an `https` daemon with `sslVerify` on needs them.
 
 ## Licenses
 
