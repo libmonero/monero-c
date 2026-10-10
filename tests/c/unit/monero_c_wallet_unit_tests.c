@@ -180,6 +180,8 @@ static void test_restore_and_open(void) {
 static void test_invalid_arguments(void) {
   monero_wallet* wallet = NULL;
   EXPECT_ERR_MSG(monero_wallet_create_random(NULL, PASSWORD, NETWORK, NULL, &wallet), "path must not be null");
+  EXPECT_ERR_MSG(monero_wallet_create(NULL, &wallet), "config_json must not be null");
+  EXPECT_ERR_MSG(monero_wallet_create("{}", NULL), "out_wallet must not be null");
   EXPECT_ERR_MSG(monero_wallet_create_random("monero_c_wallet_unit_bad", PASSWORD, 9, NULL, &wallet), "unknown network type");
   EXPECT_ERR_MSG(monero_wallet_create_random("monero_c_wallet_unit_bad", PASSWORD, -1, NULL, &wallet), "unknown network type");
   EXPECT_ERR_MSG(monero_wallet_open("monero_c_wallet_unit_bad", PASSWORD, 4, &wallet), "unknown network type");
@@ -229,6 +231,9 @@ static void test_null_arguments_reset_outputs(void) {
   char* json = POISON_PTR;
 
   EXPECT_ERR(monero_wallet_create_random(NULL, PASSWORD, NETWORK, NULL, &wallet));
+  CHECK(wallet == NULL);
+  wallet = POISON_PTR;
+  EXPECT_ERR(monero_wallet_create(NULL, &wallet));
   CHECK(wallet == NULL);
   wallet = POISON_PTR;
   EXPECT_ERR(monero_wallet_create_from_seed("monero_c_wallet_unit_bad", PASSWORD, NETWORK, NULL, NULL, 0, NULL, &wallet));

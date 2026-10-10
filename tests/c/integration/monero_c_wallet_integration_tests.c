@@ -191,6 +191,57 @@ static void test_daemon(const char* daemon_uri) {
   monero_utils_free(json);
   json = NULL;
 
+  // wallets that a config connects to the daemon when it creates them: the seed of a with the first block, and a new one on regtest
+  {
+    const char* path_d = "monero_c_wallet_integration_d";
+    char seed[512];
+    char config[1536];
+    uint64_t balance_a = 0;
+    uint64_t balance_d = 1;
+    monero_wallet* d = NULL;
+    remove_files(path_d);
+    EXPECT_OK(monero_wallet_get_seed(a, &json));
+    CHECK(json != NULL && snprintf(seed, sizeof(seed), "%s", json) > 0);
+    monero_utils_free(json);
+    json = NULL;
+    snprintf(config, sizeof(config), "{\"path\":\"%s\",\"password\":\"" PASSWORD "\",\"networkType\":3,\"seed\":\"%s\",\"restoreHeight\":0,\"server\":{\"uri\":\"%s\"}}", path_d, seed, daemon_uri);
+    EXPECT_OK(monero_wallet_create(config, &d));
+    CHECK(d != NULL);
+    if (d != NULL) {
+      EXPECT_OK(monero_wallet_is_connected_to_daemon(d, &flag));
+      CHECK(flag);
+      EXPECT_OK(monero_wallet_is_daemon_trusted(d, &flag));
+      CHECK(flag);
+      EXPECT_OK(monero_wallet_sync(d, NULL, NULL, &json));
+      monero_utils_free(json);
+      json = NULL;
+      EXPECT_OK(monero_wallet_get_balance(a, &balance_a));
+      EXPECT_OK(monero_wallet_get_balance(d, &balance_d));
+      CHECK(balance_a > 0 && balance_d == balance_a);
+      monero_wallet_free(d);
+      d = NULL;
+    }
+    remove_files(path_d);
+
+    snprintf(config, sizeof(config), "{\"networkType\":3,\"server\":{\"uri\":\"%s\"},\"isTrustedDaemon\":true}", daemon_uri);
+    EXPECT_OK(monero_wallet_create(config, &d));
+    CHECK(d != NULL);
+    if (d != NULL) {
+      EXPECT_OK(monero_wallet_is_connected_to_daemon(d, &flag));
+      CHECK(flag);
+      EXPECT_OK(monero_wallet_get_restore_height(d, &value));
+      CHECK(value == 0);
+      EXPECT_OK(monero_wallet_sync(d, NULL, NULL, &json));
+      monero_utils_free(json);
+      json = NULL;
+      EXPECT_OK(monero_wallet_get_height(d, &value));
+      CHECK(value >= 70);
+      EXPECT_OK(monero_wallet_get_balance(d, &balance_d));
+      CHECK(balance_d == 0);
+      monero_wallet_free(d);
+    }
+  }
+
   // wallet c, with the keys of a, receives the outputs, and the listener is told about them
   EXPECT_OK(monero_wallet_get_private_view_key(a, &json));
   CHECK(json != NULL && snprintf(view_key, sizeof(view_key), "%s", json) > 0);

@@ -119,6 +119,30 @@ static void test_two_of_three(void) {
     CHECK(multisig);
   }
 
+  // the seed of a multisig wallet is its multisig data in hex, which a config restores
+  char* seed = NULL;
+  EXPECT_OK(monero_wallet_get_seed(wallets[0], &seed));
+  CHECK(seed != NULL && seed[0] != '\0');
+  if (seed != NULL) {
+    char config[4096];
+    char* restored_address = NULL;
+    monero_wallet* restored = NULL;
+    snprintf(config, sizeof(config), "{\"path\":\"monero_c_wallet_multisig_restored\",\"password\":\"" PASSWORD "\",\"networkType\":%d,\"seed\":\"%s\",\"isMultisig\":true}", NETWORK, seed);
+    EXPECT_OK(monero_wallet_create(config, &restored));
+    CHECK(restored != NULL);
+    if (restored != NULL) {
+      multisig = false;
+      EXPECT_OK(monero_wallet_is_multisig(restored, &multisig));
+      CHECK(multisig);
+      EXPECT_OK(monero_wallet_get_primary_address(restored, &restored_address));
+      CHECK(restored_address != NULL && strcmp(restored_address, address[0]) == 0);
+      monero_utils_free(restored_address);
+      monero_wallet_free(restored);
+    }
+    remove_files("monero_c_wallet_multisig_restored");
+    monero_utils_free(seed);
+  }
+
   // the multisig info and the export are available once the wallet is multisig
   char* json = NULL;
   EXPECT_OK(monero_wallet_get_multisig_info(wallets[0], &json));

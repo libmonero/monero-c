@@ -150,6 +150,7 @@ monero_wallet_check_spend_proof
 monero_wallet_check_tx_key
 monero_wallet_check_tx_proof
 monero_wallet_close
+monero_wallet_create
 monero_wallet_create_account
 monero_wallet_create_from_keys
 monero_wallet_create_from_seed
