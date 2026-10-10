@@ -77,8 +77,8 @@ typedef void (*monero_daemon_on_block_header_fn)(void* user_data, const char* he
  * Callbacks of a daemon listener. The struct is copied by monero_daemon_listener_create().
  */
 typedef struct monero_daemon_listener_callbacks {
-  void* user_data;
-  monero_daemon_on_block_header_fn on_block_header;
+  void* user_data;  /**< is passed to the callback, and monero_c doesn't read it */
+  monero_daemon_on_block_header_fn on_block_header;  /**< is called with each new block header, or NULL to skip */
 } monero_daemon_listener_callbacks;
 
 /**

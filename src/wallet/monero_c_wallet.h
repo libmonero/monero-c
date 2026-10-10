@@ -115,12 +115,12 @@ typedef void (*monero_wallet_on_output_spent_fn)(void* user_data, const char* ou
  * A NULL callback is skipped.
  */
 typedef struct monero_wallet_listener_callbacks {
-  void* user_data;
-  monero_wallet_on_sync_progress_fn on_sync_progress;
-  monero_wallet_on_new_block_fn on_new_block;
-  monero_wallet_on_balances_changed_fn on_balances_changed;
-  monero_wallet_on_output_received_fn on_output_received;
-  monero_wallet_on_output_spent_fn on_output_spent;
+  void* user_data;  /**< is passed to every callback, and monero_c doesn't read it */
+  monero_wallet_on_sync_progress_fn on_sync_progress;  /**< is called with the progress of a sync, or NULL to skip */
+  monero_wallet_on_new_block_fn on_new_block;  /**< is called with each new block, or NULL to skip */
+  monero_wallet_on_balances_changed_fn on_balances_changed;  /**< is called when the balances change, or NULL to skip */
+  monero_wallet_on_output_received_fn on_output_received;  /**< is called when the wallet receives an output, or NULL to skip */
+  monero_wallet_on_output_spent_fn on_output_spent;  /**< is called when the wallet spends an output, or NULL to skip */
 } monero_wallet_listener_callbacks;
 
 /**
@@ -1611,7 +1611,7 @@ MONERO_EXPORT monero_result monero_wallet_rpc_set_poll_period(monero_wallet* wal
  * @param wallet is the wallet handle of an RPC wallet
  * @param account_idx is the account index. NULL for none
  * @param subaddress_idx is the subaddress index within the account. NULL for none
- * @param out_json receives the JSON-serialized monero_subaddress with the balances. Free with monero_utils_free()
+ * @param out_json receives the JSON-serialized monero_subaddress with the balances, or the string null if the server has none. Free with monero_utils_free()
  * @return MONERO_OK or MONERO_ERROR
  */
 MONERO_EXPORT monero_result monero_wallet_rpc_get_balances(monero_wallet* wallet, const uint32_t* account_idx, const uint32_t* subaddress_idx, char** out_json);
