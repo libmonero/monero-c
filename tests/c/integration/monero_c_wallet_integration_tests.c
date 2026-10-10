@@ -337,6 +337,15 @@ static void test_daemon(const char* daemon_uri) {
     json = NULL;
     EXPECT_OK(monero_wallet_create_txs(v, config, &json));
     CHECK(json != NULL && has(json, "\"unsignedTxHex\""));
+
+    // the full wallet describes the set as it came, with its txs, and the view-only wallet can't
+    char* described = NULL;
+    EXPECT_OK(monero_wallet_describe_tx_set(a, json, &described));
+    CHECK(has(described, "\"txs\":[") && has(described, "\"fee\":"));
+    monero_utils_free(described);
+    described = NULL;
+    EXPECT_ERR_MSG(monero_wallet_describe_tx_set(v, json, &described), "command not supported by view-only wallet");
+    CHECK(described == NULL);
     monero_utils_free(json);
     json = NULL;
     EXPECT_ERR(monero_wallet_sign_txs(a, "00", &json));

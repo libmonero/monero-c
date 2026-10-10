@@ -466,11 +466,17 @@ static void test_daemon_surface(void) {
   EXPECT_ERR_MSG(monero_wallet_get_transfers(wallet, NULL, &json), "no connection to daemon");
   CHECK(json == NULL);
 
-  // a query with a transfer, an input and an output query points to them and they point back, and a tx set with an output
-  // does too, so the calls free them when they fail. LeakSanitizer fails the run if one doesn't
+  // a query with a transfer, an input and an output query points to them and they point back, so the call frees it when it
+  // fails. LeakSanitizer fails the run if it doesn't
   EXPECT_ERR_MSG(monero_wallet_get_txs(wallet, "{\"transferQuery\":{\"isIncoming\":true},\"inputQuery\":{\"isSpent\":true},\"outputQuery\":{\"isSpent\":false}}", &json), "no connection to daemon");
   CHECK(json == NULL);
-  EXPECT_ERR(monero_wallet_describe_tx_set(wallet, "{\"txs\":[{\"hash\":\"00\",\"outputs\":[{\"amount\":1}]}]}", &json));
+
+  // describing a tx set reads its hex and ignores its txs, which monero-cpp can't parse when they have an outgoing transfer
+  EXPECT_ERR_MSG(monero_wallet_describe_tx_set(wallet, "{\"txs\":[{\"hash\":\"00\",\"outgoingTransfer\":{}}]}", &json), "no txset provided");
+  CHECK(json == NULL);
+  EXPECT_ERR_MSG(monero_wallet_describe_tx_set(wallet, "{\"unsignedTxHex\":5}", &json), "unsignedTxHex must be a string");
+  EXPECT_ERR_MSG(monero_wallet_describe_tx_set(wallet, "[]", &json), "tx_set must be a JSON object");
+  EXPECT_ERR_MSG(monero_wallet_describe_tx_set(wallet, "{\"unsignedTxHex\":\"00\"}", &json), "failed to parse unsigned transfers: cannot load unsigned_txset");
   CHECK(json == NULL);
 
   // a fresh wallet has no outputs, so the list is empty
