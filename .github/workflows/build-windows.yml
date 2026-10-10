@@ -118,21 +118,6 @@ jobs:
           cmake --build .
           cd ..
 
-      - name: Verify native runtime dependencies
-        shell: msys2 {0}
-        run: |
-          objdump -f build/libmonero_c.dll | grep -q "x86-64" || { echo "wrong native library architecture"; exit 1; }
-          ntldd_out=$(ntldd build/libmonero_c.dll)
-          echo "$ntldd_out"
-          if echo "$ntldd_out" | grep -qiE 'libusb-1\.0\.dll.*(not found|not_found)'; then
-            echo "libusb runtime DLL was not resolved"
-            exit 1
-          fi
-          if echo "$ntldd_out" | grep -ivE 'ntdll|kernel32|kernelbase|msvcrt|ws2_32|advapi32|user32|shell32|ole32|oleaut32|rpcrt4|crypt32|bcrypt|secur32|dnsapi|iphlpapi|setupapi|cfgmgr32|gdi32|winmm|userenv|version\.dll|api-ms-win|libusb-1\.0\.dll' | grep -iE '\.dll'; then
-            echo "native library depends on non-system runtime DLLs above"
-            exit 1
-          fi
-
       - name: Stage monero-c build
         shell: msys2 {0}
         run: |

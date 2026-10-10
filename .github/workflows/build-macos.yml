@@ -23,12 +23,10 @@ jobs:
             arch: mac-arm64
             cpu: arm64
             march: armv8-a
-            filearch: arm64
           - os: macos-15-intel
             arch: mac-x86_64
             cpu: x86_64
             march: x86-64
-            filearch: x86_64
 
     steps:
       - name: Checkout repository
@@ -107,20 +105,6 @@ jobs:
           dependency=$(otool -L build/libmonero_c.dylib | awk '/libusb-1.0/ {print $1; exit}')
           test -n "$dependency" || { echo "libusb is not dynamically linked"; exit 1; }
           install_name_tool -change "$dependency" "@loader_path/libusb-1.0.0.dylib" build/libmonero_c.dylib
-
-      - name: Verify native runtime dependencies
-        run: |
-          lipo -archs build/libmonero_c.dylib | grep -qx '${{ matrix.filearch }}' || { echo "wrong native library architecture: $(lipo -archs build/libmonero_c.dylib)"; exit 1; }
-          otool -l build/libmonero_c.dylib | grep -q 'minos 11.0' || { echo "unexpected macOS deployment target"; exit 1; }
-          dependencies=$(otool -L build/libmonero_c.dylib | tail -n +2 | awk '{print $1}')
-          echo "$dependencies"
-          unexpected=$(echo "$dependencies" | grep -vE '^(/usr/lib/|/System/Library/|@rpath/libmonero_c\.dylib$|@loader_path/libusb-1\.0\.0\.dylib$)' || true)
-          if [ -n "$unexpected" ]; then
-            echo "unexpected non-system runtime dependencies:"
-            echo "$unexpected"
-            exit 1
-          fi
-          printf '%s\n' "$dependencies" | grep -Fxq '@loader_path/libusb-1.0.0.dylib' || { echo "libusb is not bundled dynamically"; exit 1; }
 
       - name: Stage monero-c build
         run: |

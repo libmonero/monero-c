@@ -1,0 +1,149 @@
+# What the built library links against and exports, on the artifacts of the Build run. Called by test.yml
+name: Library checks
+
+on:
+  workflow_call:
+    inputs:
+      run-id:
+        description: the Build run whose artifacts are checked
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  library-linux:
+    name: ${{ matrix.platform }}
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: Linux x86_64
+            os: ubuntu-24.04
+            artifact: linux-x86_64
+            filearch: x86-64
+            glibc_floor: GLIBC_2.36
+          - platform: Linux arm64
+            os: ubuntu-24.04-arm
+            artifact: linux-arm64
+            filearch: aarch64
+            glibc_floor: GLIBC_2.36
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Download monero-c build
+        uses: actions/download-artifact@v8
+        with:
+          name: monero-c-${{ matrix.artifact }}
+          path: artifact
+          run-id: ${{ inputs.run-id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      # the glibc floor is the one of the debian:12 container of the build
+      - name: Check runtime dependencies
+        env:
+          LD_LIBRARY_PATH: ${{ github.workspace }}/artifact
+        run: |
+          file artifact/libmonero_c.so | grep -q '${{ matrix.filearch }}' || { echo "wrong architecture: $(file artifact/libmonero_c.so)"; exit 1; }
+          floor=$(objdump -T artifact/libmonero_c.so | grep -o 'GLIBC_[0-9.]*' | sort -uV | tail -1)
+          echo "glibc floor: $floor"
+          test -n "$floor" || { echo "could not determine glibc floor"; exit 1; }
+          test "$(printf '%s\n${{ matrix.glibc_floor }}\n' "$floor" | sort -V | tail -1)" = "${{ matrix.glibc_floor }}" || { echo "glibc floor $floor exceeds ${{ matrix.glibc_floor }}"; exit 1; }
+          ldd_out=$(ldd artifact/libmonero_c.so)
+          echo "$ldd_out"
+          unexpected=$(echo "$ldd_out" | awk '/=>/ {print $1} /^\// {name=$1; sub(".*/", "", name); print name}' | grep -Ev '^(linux-vdso\.so\.[0-9]+|libc\.so(\.[0-9]+)*|libm\.so(\.[0-9]+)*|libstdc\+\+\.so(\.[0-9]+)*|libgcc_s\.so(\.[0-9]+)*|libpthread\.so(\.[0-9]+)*|librt\.so(\.[0-9]+)*|libdl\.so(\.[0-9]+)*|ld-linux[^ ]*|libusb-1\.0\.so\.0|libudev\.so\.1)$' || true)
+          if [ -n "$unexpected" ]; then
+            echo "unexpected non-system runtime dependencies:"
+            echo "$unexpected"
+            exit 1
+          fi
+          printf '%s\n' "$ldd_out" | grep -q 'libusb-1.0.so.0 =>' || { echo "libusb is not dynamically linked"; exit 1; }
+
+      - name: Check exported symbols
+        run: cmake -DLIBRARY=artifact/libmonero_c.so -DEXPECTED=tests/c/abi/monero_c.symbols -P tests/c/abi/check_symbols.cmake
+
+  library-macos:
+    name: ${{ matrix.platform }}
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: macOS arm64
+            os: macos-15
+            artifact: mac-arm64
+            filearch: arm64
+          - platform: macOS x86_64
+            os: macos-15-intel
+            artifact: mac-x86_64
+            filearch: x86_64
+
+    steps:
+      - name: Download monero-c build
+        uses: actions/download-artifact@v8
+        with:
+          name: monero-c-${{ matrix.artifact }}
+          path: artifact
+          run-id: ${{ inputs.run-id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Check runtime dependencies
+        run: |
+          lipo -archs artifact/libmonero_c.dylib | grep -qx '${{ matrix.filearch }}' || { echo "wrong native library architecture: $(lipo -archs artifact/libmonero_c.dylib)"; exit 1; }
+          otool -l artifact/libmonero_c.dylib | grep -q 'minos 11.0' || { echo "unexpected macOS deployment target"; exit 1; }
+          dependencies=$(otool -L artifact/libmonero_c.dylib | tail -n +2 | awk '{print $1}')
+          echo "$dependencies"
+          unexpected=$(echo "$dependencies" | grep -vE '^(/usr/lib/|/System/Library/|@rpath/libmonero_c\.dylib$|@loader_path/libusb-1\.0\.0\.dylib$)' || true)
+          if [ -n "$unexpected" ]; then
+            echo "unexpected non-system runtime dependencies:"
+            echo "$unexpected"
+            exit 1
+          fi
+          printf '%s\n' "$dependencies" | grep -Fxq '@loader_path/libusb-1.0.0.dylib' || { echo "libusb is not bundled dynamically"; exit 1; }
+
+  library-windows:
+    name: Windows x86_64
+    runs-on: windows-latest
+
+    defaults:
+      run:
+        shell: msys2 {0}
+
+    steps:
+      - name: Download monero-c build
+        uses: actions/download-artifact@v8
+        with:
+          name: monero-c-windows
+          path: artifact
+          run-id: ${{ inputs.run-id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup MSYS2 MINGW64
+        uses: msys2/setup-msys2@ec48f7c5447b3140e2b088413ae3a55687bccb6e # v2.33.0
+        with:
+          msystem: MINGW64
+          install: >-
+            mingw-w64-x86_64-binutils
+            mingw-w64-x86_64-ntldd
+
+      # ntldd looks for the libusb DLL next to the library, as the build job finds it in MINGW_PREFIX
+      - name: Check runtime dependencies
+        run: |
+          objdump -f artifact/libmonero_c.dll | grep -q "x86-64" || { echo "wrong native library architecture"; exit 1; }
+          ntldd_out=$(ntldd artifact/libmonero_c.dll)
+          echo "$ntldd_out"
+          if echo "$ntldd_out" | grep -qiE 'libusb-1\.0\.dll.*(not found|not_found)'; then
+            echo "libusb runtime DLL was not resolved"
+            exit 1
+          fi
+          if echo "$ntldd_out" | grep -ivE 'ntdll|kernel32|kernelbase|msvcrt|ws2_32|advapi32|user32|shell32|ole32|oleaut32|rpcrt4|crypt32|bcrypt|secur32|dnsapi|iphlpapi|setupapi|cfgmgr32|gdi32|winmm|userenv|version\.dll|api-ms-win|libusb-1\.0\.dll' | grep -iE '\.dll'; then
+            echo "native library depends on non-system runtime DLLs above"
+            exit 1
+          fi

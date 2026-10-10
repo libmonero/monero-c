@@ -76,3 +76,10 @@ jobs:
     uses: ./.github/workflows/dotnet-tests.yml
     with:
       run-id: ${{ needs.wait-build.outputs.run-id }}
+
+  library:
+    name: Library checks
+    needs: wait-build
+    uses: ./.github/workflows/library-checks.yml
+    with:
+      run-id: ${{ needs.wait-build.outputs.run-id }}

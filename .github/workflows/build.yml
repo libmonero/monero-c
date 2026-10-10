@@ -1,5 +1,5 @@
 # Builds the library for each platform in its own workflow, build-linux.yml, build-macos.yml and
-# build-windows.yml, and packages the result
+# build-windows.yml, and packages the result. The checks on the built library are in test.yml
 name: Build
 
 on:
