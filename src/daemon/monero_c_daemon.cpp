@@ -26,6 +26,7 @@
 #include "daemon/monero_daemon_rpc.h"
 #include "utils/gen_utils.h"
 
+#include "misc_language.h"
 #include "rapidjson/document.h"
 #include "rapidjson/stringbuffer.h"
 #include "rapidjson/writer.h"
@@ -110,6 +111,45 @@ char* dup_json(const std::shared_ptr<T>& item) {
 template <class T>
 char* dup_json_value(const T& item) {
   return dup_string(item.serialize());
+}
+
+// the models of monero-cpp point to their parents with shared_ptr (a tx to its block, an input or an output to its tx), so a block
+// or a tx that nobody releases is never freed. release_models() resets those pointers once the result is serialized. monero_utils::free()
+// does it for the wallet models, and it leaves the miner tx of a block and the inputs and outputs of a plain tx
+void release_models(const std::shared_ptr<monero::monero_tx>& tx) {
+  if (tx == nullptr) return;
+  tx->m_block.reset();
+  for (const std::shared_ptr<monero::monero_output>& input : tx->m_inputs) {
+    if (input != nullptr) input->m_tx.reset();
+  }
+  for (const std::shared_ptr<monero::monero_output>& output : tx->m_outputs) {
+    if (output != nullptr) output->m_tx.reset();
+  }
+}
+
+void release_models(const std::shared_ptr<monero::monero_block>& block) {
+  if (block == nullptr) return;
+  release_models(block->m_miner_tx);
+  for (const std::shared_ptr<monero::monero_tx>& tx : block->m_txs) release_models(tx);
+}
+
+template <class T>
+void release_models(const std::vector<std::shared_ptr<T>>& items) {
+  for (const std::shared_ptr<T>& item : items) release_models(item);
+}
+
+// serializes one block or tx and then releases it, with a scope handler so that it also runs when the call throws
+template <class T>
+char* dup_json_released(const std::shared_ptr<T>& item) {
+  auto release_item = epee::misc_utils::create_scope_leave_handler([&] { release_models(item); });
+  return dup_json(item);
+}
+
+// serializes a list of blocks or txs and then releases them
+template <class T>
+char* dup_json_list_released(const std::vector<std::shared_ptr<T>>& items) {
+  auto release_items = epee::misc_utils::create_scope_leave_handler([&] { release_models(items); });
+  return dup_string(json_of_list(items));
 }
 
 // converts monero-cpp's key image status to the C enum, which has the same values
@@ -406,27 +446,29 @@ monero_result monero_daemon_get_block_headers_by_range(monero_daemon* daemon, ui
 monero_result monero_daemon_get_block_by_hash(monero_daemon* daemon, const char* block_hash, char** out_json) {
   reset_out(out_json);
   if (!require(daemon, "daemon") || !require(out_json, "out_json")) return MONERO_ERROR;
-  return guard([&] { *out_json = dup_json(daemon->rpc->get_block_by_hash(safe_str(block_hash))); });
+  return guard([&] { *out_json = dup_json_released(daemon->rpc->get_block_by_hash(safe_str(block_hash))); });
 }
 
 monero_result monero_daemon_get_blocks_by_hash(monero_daemon* daemon, const char* const* block_hashes, size_t num_block_hashes, uint64_t start_height, bool prune, uint64_t max_block_count, char** out_json) {
   reset_out(out_json);
   if (!require(daemon, "daemon") || !require(out_json, "out_json")) return MONERO_ERROR;
   return guard([&] {
-    *out_json = dup_json(daemon->rpc->get_blocks_by_hash(string_array(block_hashes, num_block_hashes, "block_hashes"), start_height, prune, max_block_count));
+    auto result = daemon->rpc->get_blocks_by_hash(string_array(block_hashes, num_block_hashes, "block_hashes"), start_height, prune, max_block_count);
+    auto release_result = epee::misc_utils::create_scope_leave_handler([&] { if (result != nullptr) release_models(result->m_blocks); });
+    *out_json = dup_json(result);
   });
 }
 
 monero_result monero_daemon_get_block_by_height(monero_daemon* daemon, uint64_t height, char** out_json) {
   reset_out(out_json);
   if (!require(daemon, "daemon") || !require(out_json, "out_json")) return MONERO_ERROR;
-  return guard([&] { *out_json = dup_json(daemon->rpc->get_block_by_height(height)); });
+  return guard([&] { *out_json = dup_json_released(daemon->rpc->get_block_by_height(height)); });
 }
 
 monero_result monero_daemon_get_blocks_by_height(monero_daemon* daemon, const uint64_t* heights, size_t num_heights, char** out_json) {
   reset_out(out_json);
   if (!require(daemon, "daemon") || !require(out_json, "out_json")) return MONERO_ERROR;
-  return guard([&] { *out_json = dup_string(json_of_list(daemon->rpc->get_blocks_by_height(array_of(heights, num_heights, "heights")))); });
+  return guard([&] { *out_json = dup_json_list_released(daemon->rpc->get_blocks_by_height(array_of(heights, num_heights, "heights"))); });
 }
 
 monero_result monero_daemon_get_blocks_by_range(monero_daemon* daemon, const uint64_t* start_height, const uint64_t* end_height, char** out_json) {
@@ -437,7 +479,7 @@ monero_result monero_daemon_get_blocks_by_range(monero_daemon* daemon, const uin
     if (end_height != nullptr && *end_height >= start && *end_height - start >= MAX_BLOCKS_BY_RANGE) {
       throw std::invalid_argument("range is longer than " + std::to_string(MAX_BLOCKS_BY_RANGE) + " blocks, use monero_daemon_get_blocks_by_range_chunked()");
     }
-    *out_json = dup_string(json_of_list(daemon->rpc->get_blocks_by_range(optional_of(start_height), optional_of(end_height))));
+    *out_json = dup_json_list_released(daemon->rpc->get_blocks_by_range(optional_of(start_height), optional_of(end_height)));
   });
 }
 
@@ -445,7 +487,7 @@ monero_result monero_daemon_get_blocks_by_range_chunked(monero_daemon* daemon, c
   reset_out(out_json);
   if (!require(daemon, "daemon") || !require(out_json, "out_json")) return MONERO_ERROR;
   return guard([&] {
-    *out_json = dup_string(json_of_list(daemon->rpc->get_blocks_by_range_chunked(optional_of(start_height), optional_of(end_height), optional_of(max_chunk_size))));
+    *out_json = dup_json_list_released(daemon->rpc->get_blocks_by_range_chunked(optional_of(start_height), optional_of(end_height), optional_of(max_chunk_size)));
   });
 }
 
@@ -466,13 +508,13 @@ monero_result monero_daemon_wait_for_next_block_header(monero_daemon* daemon, ch
 monero_result monero_daemon_get_tx(monero_daemon* daemon, const char* tx_hash, bool prune, char** out_json) {
   reset_out(out_json);
   if (!require(daemon, "daemon") || !require(out_json, "out_json")) return MONERO_ERROR;
-  return guard([&] { *out_json = dup_json(daemon->rpc->get_tx(safe_str(tx_hash), prune)); });
+  return guard([&] { *out_json = dup_json_released(daemon->rpc->get_tx(safe_str(tx_hash), prune)); });
 }
 
 monero_result monero_daemon_get_txs(monero_daemon* daemon, const char* const* tx_hashes, size_t num_tx_hashes, bool prune, char** out_json) {
   reset_out(out_json);
   if (!require(daemon, "daemon") || !require(out_json, "out_json")) return MONERO_ERROR;
-  return guard([&] { *out_json = dup_string(json_of_list(daemon->rpc->get_txs(string_array(tx_hashes, num_tx_hashes, "tx_hashes"), prune))); });
+  return guard([&] { *out_json = dup_json_list_released(daemon->rpc->get_txs(string_array(tx_hashes, num_tx_hashes, "tx_hashes"), prune)); });
 }
 
 monero_result monero_daemon_get_tx_hex(monero_daemon* daemon, const char* tx_hash, bool prune, char** out_tx_hex) {
@@ -523,7 +565,7 @@ monero_result monero_daemon_relay_txs_by_hash(monero_daemon* daemon, const char*
 monero_result monero_daemon_get_tx_pool(monero_daemon* daemon, char** out_json) {
   reset_out(out_json);
   if (!require(daemon, "daemon") || !require(out_json, "out_json")) return MONERO_ERROR;
-  return guard([&] { *out_json = dup_string(json_of_list(daemon->rpc->get_tx_pool())); });
+  return guard([&] { *out_json = dup_json_list_released(daemon->rpc->get_tx_pool()); });
 }
 
 monero_result monero_daemon_get_tx_pool_hashes(monero_daemon* daemon, char** out_json) {

@@ -466,6 +466,13 @@ static void test_daemon_surface(void) {
   EXPECT_ERR_MSG(monero_wallet_get_transfers(wallet, NULL, &json), "no connection to daemon");
   CHECK(json == NULL);
 
+  // a query with a transfer, an input and an output query points to them and they point back, and a tx set with an output
+  // does too, so the calls free them when they fail. LeakSanitizer fails the run if one doesn't
+  EXPECT_ERR_MSG(monero_wallet_get_txs(wallet, "{\"transferQuery\":{\"isIncoming\":true},\"inputQuery\":{\"isSpent\":true},\"outputQuery\":{\"isSpent\":false}}", &json), "no connection to daemon");
+  CHECK(json == NULL);
+  EXPECT_ERR(monero_wallet_describe_tx_set(wallet, "{\"txs\":[{\"hash\":\"00\",\"outputs\":[{\"amount\":1}]}]}", &json));
+  CHECK(json == NULL);
+
   // a fresh wallet has no outputs, so the list is empty
   EXPECT_OK(monero_wallet_get_outputs(wallet, NULL, &json));
   CHECK(json != NULL && strcmp(json, "[]") == 0);
