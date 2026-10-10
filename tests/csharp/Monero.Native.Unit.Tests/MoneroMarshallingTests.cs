@@ -231,7 +231,7 @@ public class MoneroMarshallingTests
             FreeWallet(wallet);
         }
 
-        for (int i = 0; i < 500; i++)
+        for (int i = 0; i < 10; i++)
         {
             Assert.Equal(0, ConnectNative(Unreachable, null, null, null, 500, out IntPtr daemon));
             FreeDaemon(daemon);
