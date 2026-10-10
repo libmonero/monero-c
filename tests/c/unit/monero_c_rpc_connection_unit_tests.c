@@ -326,6 +326,10 @@ typedef struct fake_server {
   char request[4096];  // body of the last request, which may be binary
   size_t request_len;
   int requests;  // how many requests were read
+  int socks;  // set before the start: the server then takes a SOCKS4a or SOCKS5 CONNECT first, as a proxy does, and answers HTTP through it
+  int socks_version;  // the version of the last CONNECT, and the host and the port that it asked for
+  char socks_host[256];
+  int socks_port;
 } fake_server;
 
 // reads one request and keeps its body. Returns 0 when the client closed the connection
@@ -413,11 +417,72 @@ static int request_starts_with(fake_server* server, const unsigned char* prefix,
   return match;
 }
 
+// reads a string that ends with a NUL. Returns 0 if the client closed the connection or the string is longer than size
+static int recv_text(int client, char* out, size_t size) {
+  for (size_t i = 0; i < size; i++) {
+    if (recv(client, out + i, 1, MSG_WAITALL) != 1) return 0;
+    if (out[i] == '\0') return 1;
+  }
+  return 0;
+}
+
+// answers the CONNECT of a SOCKS4a or SOCKS5 client, as Tor does, and keeps the version and the host name that it asked for
+static int socks_handshake(fake_server* server, int client) {
+  unsigned char buffer[262];
+  char host[256] = "";
+  int version;
+  int port;
+  if (recv(client, buffer, 1, MSG_WAITALL) != 1) return 0;
+  version = buffer[0];
+  if (version == 4) {
+    // the command, the port, the address 0.0.0.x that asks the proxy to resolve the name, then the user id and the name
+    char user[256];
+    if (recv(client, buffer, 7, MSG_WAITALL) != 7 || !recv_text(client, user, sizeof(user)) || !recv_text(client, host, sizeof(host))) return 0;
+    port = buffer[1] << 8 | buffer[2];
+    unsigned char reply[8] = {0x00, 0x5a, buffer[1], buffer[2], buffer[3], buffer[4], buffer[5], buffer[6]};
+    if (send(client, reply, sizeof(reply), 0) < 0) return 0;
+  } else if (version == 5) {
+    // the methods, which get no authentication, then the command, a reserved byte, the type 3 for a name, its length, the name and the port
+    unsigned char accept_none[2] = {0x05, 0x00};
+    unsigned char granted[10] = {0x05, 0x00, 0x00, 0x01, 0, 0, 0, 0, 0, 0};
+    if (recv(client, buffer, 1, MSG_WAITALL) != 1) return 0;
+    size_t methods = buffer[0];
+    if (recv(client, buffer, methods, MSG_WAITALL) != (ssize_t) methods || send(client, accept_none, sizeof(accept_none), 0) < 0) return 0;
+    if (recv(client, buffer, 5, MSG_WAITALL) != 5 || buffer[3] != 3) return 0;
+    size_t length = buffer[4];
+    if (recv(client, host, length, MSG_WAITALL) != (ssize_t) length) return 0;
+    host[length] = '\0';
+    if (recv(client, buffer, 2, MSG_WAITALL) != 2) return 0;
+    port = buffer[0] << 8 | buffer[1];
+    if (send(client, granted, sizeof(granted), 0) < 0) return 0;
+  } else {
+    return 0;
+  }
+  pthread_mutex_lock(&server->lock);
+  server->socks_version = version;
+  snprintf(server->socks_host, sizeof(server->socks_host), "%s", host);
+  server->socks_port = port;
+  pthread_mutex_unlock(&server->lock);
+  return 1;
+}
+
+// true if the last CONNECT was of this SOCKS version, for this host name and port
+static int socks_target_is(fake_server* server, int version, const char* host, int port) {
+  pthread_mutex_lock(&server->lock);
+  int match = server->socks_version == version && strcmp(server->socks_host, host) == 0 && server->socks_port == port;
+  pthread_mutex_unlock(&server->lock);
+  return match;
+}
+
 static void* serve(void* arg) {
   fake_server* server = (fake_server*) arg;
   while (!is_stopped(server)) {
     int client = accept(server->fd, NULL, NULL);
     if (client < 0) break;
+    if (server->socks && !socks_handshake(server, client)) {
+      close(client);
+      continue;
+    }
     while (!is_stopped(server) && read_request(server, client)) {
       char header[256];
       const char* body = get_body(server);
@@ -621,6 +686,64 @@ static const char* const GET_TRANSACTION_POOL_RESPONSE =
 #define BLOCK_HASH "9ffadcf6a7fc4612f08910bdd7343933d46feb20f2277c58771cf97f6798f8e1"
 #define TX_HASH "52e698a070e263d91a808883c3407cd473bd8a3b36455be231cb3bf3c3336118"
 
+// the proxy of a connection, of a daemon and of a wallet receives the host name of an onion address, which it resolves itself.
+// The server answers the CONNECT of a SOCKS proxy before the HTTP request, as Tor does
+static void test_proxy(void) {
+  fake_server server;
+  pthread_t thread;
+  char config[256];
+  char proxy[64];
+  char* json = NULL;
+  uint64_t height = 0;
+  bool connected = true;
+  monero_rpc_connection* connection = NULL;
+  monero_daemon* daemon = NULL;
+  monero_wallet* wallet = NULL;
+  memset(&server, 0, sizeof(server));
+  server.socks = 1;
+  if (!start_server(&server, &thread)) {
+    CHECK(!"cannot start the fake server");
+    return;
+  }
+
+  // an address without a scheme is SOCKS4a, and the host name goes to the proxy
+  snprintf(config, sizeof(config), "{\"uri\":\"http://abcdefghij.onion:18081\",\"proxyUri\":\"127.0.0.1:%d\",\"timeoutMs\":10000}", server.port);
+  connection = create_connection(config);
+  if (connection != NULL) {
+    set_body(&server, "{\"height\":42,\"status\":\"OK\"}");
+    EXPECT_OK(monero_rpc_connection_send_path_request(connection, "get_height", NULL, NULL, &json));
+    CHECK(has(json, "{\"height\":42,\"status\":\"OK\"}"));
+    CHECK(socks_target_is(&server, 4, "abcdefghij.onion", 18081));
+    monero_utils_free(json);
+    json = NULL;
+    monero_rpc_connection_free(connection);
+  }
+
+  // a daemon with a socks5 proxy
+  snprintf(proxy, sizeof(proxy), "socks5://127.0.0.1:%d", server.port);
+  set_body(&server, "{\"jsonrpc\":\"2.0\",\"id\":\"0\",\"result\":{\"count\":42,\"status\":\"OK\"}}");
+  EXPECT_OK(monero_daemon_connect("http://klmnopqrst.onion:18089", "", "", proxy, 10000, &daemon));
+  if (daemon != NULL) {
+    EXPECT_OK(monero_daemon_get_height(daemon, &height));
+    CHECK(height == 42);
+    CHECK(socks_target_is(&server, 5, "klmnopqrst.onion", 18089));
+    monero_daemon_free(daemon);
+  }
+
+  // a wallet made with the proxy in its config, and one that gets the proxy later
+  snprintf(config, sizeof(config), "{\"networkType\":0,\"server\":{\"uri\":\"http://uvwxyzabcd.onion:18081\",\"proxyUri\":\"127.0.0.1:%d\"}}", server.port);
+  EXPECT_OK(monero_wallet_create(config, &wallet));
+  if (wallet != NULL) {
+    CHECK(socks_target_is(&server, 4, "uvwxyzabcd.onion", 18081));
+    EXPECT_OK(monero_wallet_set_daemon_connection(wallet, "http://efghijklmn.onion:18081", "", "", proxy, NULL, true));
+    EXPECT_OK(monero_wallet_is_connected_to_daemon(wallet, &connected));
+    CHECK(socks_target_is(&server, 5, "efghijklmn.onion", 18081));
+    monero_wallet_free(wallet);
+  }
+
+  stop_server(&server, thread);
+}
+
 // monero-cpp builds a block with its miner tx, and a tx with its inputs and outputs, and each of them points back to its parent.
 // The daemon calls release them once the JSON is built, and LeakSanitizer fails the run if one of them doesn't
 static void test_daemon_models_are_released(void) {
@@ -753,6 +876,7 @@ int main(void) {
   // a client that closes its socket while the server writes must not stop the program
   signal(SIGPIPE, SIG_IGN);
   test_response_types();
+  test_proxy();
   test_daemon_models_are_released();
   test_request_shutdown_aborts_a_sync();
 #endif
