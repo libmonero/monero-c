@@ -357,6 +357,19 @@ if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
   target_link_options(monero_c-static INTERFACE -Wl,-z,noexecstack)
 endif()
 
+# export only the C ABI on macOS too, from the list that the tests check. C symbols start with an underscore there
+if (APPLE)
+  set(MONERO_C_SYMBOLS ${CMAKE_CURRENT_SOURCE_DIR}/tests/c/abi/monero_c.symbols)
+  set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${MONERO_C_SYMBOLS})
+  file(STRINGS ${MONERO_C_SYMBOLS} monero_c_exports)
+  list(TRANSFORM monero_c_exports PREPEND "_")
+  list(JOIN monero_c_exports "\n" monero_c_exports)
+  set(MONERO_C_EXPORT_LIST ${CMAKE_CURRENT_BINARY_DIR}/exported_symbols.txt)
+  file(GENERATE OUTPUT ${MONERO_C_EXPORT_LIST} CONTENT "${monero_c_exports}\n")
+  set_property(TARGET monero_c APPEND PROPERTY LINK_DEPENDS ${MONERO_C_EXPORT_LIST})
+  target_link_options(monero_c PRIVATE "-Wl,-exported_symbols_list,${MONERO_C_EXPORT_LIST}")
+endif()
+
 ##############################################################################
 # tests
 ##############################################################################
