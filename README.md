@@ -48,7 +48,7 @@ monero_daemon_connect("http://localhost:38081", "superuser", "abctesting123", ""
 uint64_t height = 0;
 monero_daemon_get_height(daemon, &height);                      // 1523651
 char* txs_in_pool = NULL;
-monero_daemon_get_tx_pool(daemon, &txs_in_pool);                // JSON array of monero_tx
+monero_daemon_get_tx_pool(daemon, &txs_in_pool);                // JSON object with the monero_tx in a block
 monero_utils_free(txs_in_pool);
 
 // create wallet from mnemonic phrase using native bindings to monero-project

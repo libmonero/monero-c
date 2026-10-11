@@ -329,6 +329,16 @@ static void test_daemon(const char* daemon_uri) {
   CHECK(has(json, "{\"blocks\":[{\"txs\":[{") && has(json, tx_hash) && has(json, "\"outgoingTransfer\":{") && !has(json, "\"height\""));
   monero_utils_free(json);
   json = NULL;
+
+  // the daemon has it in the pool in the same way: in the block that has no height
+  EXPECT_OK(monero_daemon_get_tx_pool(g_daemon, &json));
+  CHECK(has(json, "{\"blocks\":[{\"txs\":[{") && has(json, tx_hash) && !has(json, "\"height\""));
+  monero_utils_free(json);
+  json = NULL;
+  EXPECT_OK(monero_daemon_get_tx(g_daemon, tx_hash, false, &json));
+  CHECK(has(json, "{\"blocks\":[{\"txs\":[{") && has(json, tx_hash) && !has(json, "\"height\""));
+  monero_utils_free(json);
+  json = NULL;
   mine(g_daemon, address_a, 1);
   EXPECT_OK(monero_wallet_sync(a, NULL, NULL, &json));
   monero_utils_free(json);
@@ -337,6 +347,19 @@ static void test_daemon(const char* daemon_uri) {
   CHECK(json != NULL);
   monero_utils_free(json);
   json = NULL;
+
+  // the daemon has the mined tx in its block, with the height of the chain at that time
+  EXPECT_OK(monero_daemon_get_tx(g_daemon, tx_hash, false, &json));
+  CHECK(has(json, "{\"blocks\":[{\"height\":") && has(json, "\"timestamp\":") && has(json, tx_hash));
+  monero_utils_free(json);
+  json = NULL;
+  {
+    const char* hashes[] = {tx_hash};
+    EXPECT_OK(monero_daemon_get_txs(g_daemon, hashes, 1, false, &json));
+    CHECK(has(json, "{\"blocks\":[{\"height\":") && count_text(json, "\"txs\":[{") == 1 && has(json, tx_hash));
+    monero_utils_free(json);
+    json = NULL;
+  }
 
   // wallet c sees the tx that a spent and mined, so its listener is told about the spent output and the change, in their tx
   if (c != NULL) {

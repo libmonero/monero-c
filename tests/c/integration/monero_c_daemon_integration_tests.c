@@ -274,7 +274,7 @@ static void test_transactions(monero_daemon* daemon) {
   CHECK(json == NULL);  // unknown transaction: no result, no error
 
   EXPECT_OK(monero_daemon_get_txs(daemon, ZERO_HASHES, 1, false, &json));
-  CHECK(is_array(json));
+  CHECK(json != NULL && strcmp(json, "{\"blocks\":[]}") == 0);
   monero_utils_free(json);
   json = NULL;
 
@@ -315,7 +315,7 @@ static void test_tx_pool(monero_daemon* daemon) {
   char* json = NULL;
 
   EXPECT_OK(monero_daemon_get_tx_pool(daemon, &json));
-  CHECK(is_array(json));
+  CHECK(json != NULL && strncmp(json, "{\"blocks\":[", 11) == 0);
   monero_utils_free(json);
   json = NULL;
 

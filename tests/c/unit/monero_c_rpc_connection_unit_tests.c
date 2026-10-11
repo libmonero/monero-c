@@ -755,6 +755,27 @@ static void test_proxy(void) {
   stop_server(&server, thread);
 }
 
+// how many times the text is in the JSON
+static int count_text(const char* json, const char* text) {
+  int count = 0;
+  size_t length = strlen(text);
+  for (const char* p = json; json != NULL && (p = strstr(p, text)) != NULL; p += length) count++;
+  return count;
+}
+
+// the answer of get_transactions with the tx of the fixture three times, twice in the block 101 and once in the block 102
+static void three_txs_response(char* out, size_t size) {
+  const char* start = strstr(GET_TRANSACTIONS_RESPONSE, "\"txs\":[") + 7;
+  const char* end = strstr(start, "],\"txs_as_hex\"");
+  size_t entry_size = (size_t) (end - start);
+  char entry[4096];
+  char other[4096];
+  const char* height = strstr(start, "\"block_height\":101");
+  snprintf(entry, sizeof(entry), "%.*s", (int) entry_size, start);
+  snprintf(other, sizeof(other), "%.*s102%.*s", (int) (height - start + 15), start, (int) (entry_size - (size_t) (height - start) - 18), height + 18);
+  snprintf(out, size, "%.*s%s,%s,%s%s", (int) (start - GET_TRANSACTIONS_RESPONSE), GET_TRANSACTIONS_RESPONSE, entry, entry, other, end);
+}
+
 // monero-cpp builds a block with its miner tx, and a tx with its inputs and outputs, and each of them points back to its parent.
 // The daemon calls release them once the JSON is built, and LeakSanitizer fails the run if one of them doesn't
 static void test_daemon_models_are_released(void) {
@@ -785,21 +806,43 @@ static void test_daemon_models_are_released(void) {
     monero_utils_free(json);
     json = NULL;
 
+    // a tx is in its block, which has the height and the timestamp that the daemon gave it
     set_body(&server, GET_TRANSACTIONS_RESPONSE);
     EXPECT_OK(monero_daemon_get_tx(daemon, TX_HASH, false, &json));
+    CHECK(json != NULL && strncmp(json, "{\"blocks\":[{\"height\":101,\"timestamp\":1791645000,\"txs\":[{", 56) == 0);
     CHECK(has(json, "\"hash\":\"" TX_HASH "\"") && has(json, "\"inputs\":[") && has(json, "\"outputs\":["));
     monero_utils_free(json);
     json = NULL;
     EXPECT_OK(monero_daemon_get_txs(daemon, tx_hashes, 1, false, &json));
-    CHECK(json != NULL && json[0] == '[' && has(json, "\"inputs\":["));
+    CHECK(json != NULL && strncmp(json, "{\"blocks\":[{\"height\":101,", 25) == 0 && has(json, "\"inputs\":["));
     monero_utils_free(json);
     json = NULL;
 
-    set_body(&server, GET_TRANSACTION_POOL_RESPONSE);
-    EXPECT_OK(monero_daemon_get_tx_pool(daemon, &json));
-    CHECK(json != NULL && json[0] == '[' && has(json, "\"hash\":\"" TX_HASH "\"") && has(json, "\"inputs\":["));
+    // the txs of one block are in one block, in the order that the blocks first appear
+    char three[16384];
+    const char* three_hashes[] = {TX_HASH, TX_HASH, TX_HASH};
+    three_txs_response(three, sizeof(three));
+    set_body(&server, three);
+    EXPECT_OK(monero_daemon_get_txs(daemon, three_hashes, 3, false, &json));
+    CHECK(count_text(json, "\"height\":") == 2 && count_text(json, "\"hash\":\"" TX_HASH "\"") == 3 && count_text(json, "\"txs\":[{") == 2);
+    CHECK(has(json, "\"height\":101,") && has(json, "\"height\":102,") && strstr(json, "\"height\":101,") < strstr(json, "\"height\":102,"));
     monero_utils_free(json);
     json = NULL;
+
+    // the pool has no height, and a pool with no txs has no block
+    set_body(&server, GET_TRANSACTION_POOL_RESPONSE);
+    EXPECT_OK(monero_daemon_get_tx_pool(daemon, &json));
+    CHECK(json != NULL && strncmp(json, "{\"blocks\":[{\"txs\":[{", 20) == 0 && has(json, "\"hash\":\"" TX_HASH "\"") && has(json, "\"inputs\":[") && !has(json, "\"height\""));
+    monero_utils_free(json);
+    json = NULL;
+    set_body(&server, "{\"status\":\"OK\",\"untrusted\":false}");
+    EXPECT_OK(monero_daemon_get_tx_pool(daemon, &json));
+    CHECK(json != NULL && strcmp(json, "{\"blocks\":[]}") == 0);
+    monero_utils_free(json);
+    json = NULL;
+    set_body(&server, "{\"status\":\"OK\",\"txs\":[],\"untrusted\":false}");
+    EXPECT_OK(monero_daemon_get_tx(daemon, TX_HASH, false, &json));
+    CHECK(json == NULL);
   }
 
   monero_daemon_free(daemon);

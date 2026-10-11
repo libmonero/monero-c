@@ -541,7 +541,8 @@ MONERO_EXPORT monero_result monero_daemon_wait_for_next_block_header(monero_daem
  * @param daemon is the handle returned by monero_daemon_connect()
  * @param tx_hash is the hash of the transaction
  * @param prune specifies if the returned transaction should be pruned
- * @param out_json receives a JSON-serialized monero_tx, or NULL if the daemon doesn't have it. Free with monero_utils_free()
+ * @param out_json receives a JSON object with the transaction in its block, {"blocks":[...]}. The block has the height and the timestamp
+ *        of the transaction, and neither if it is in the pool. It is NULL if the daemon doesn't have the transaction. Free with monero_utils_free()
  * @return MONERO_OK on success, or MONERO_ERROR (see monero_last_error())
  */
 MONERO_EXPORT monero_result monero_daemon_get_tx(monero_daemon* daemon, const char* tx_hash, bool prune, char** out_json);
@@ -553,7 +554,10 @@ MONERO_EXPORT monero_result monero_daemon_get_tx(monero_daemon* daemon, const ch
  * @param tx_hashes are the hashes of the transactions
  * @param num_tx_hashes is the number of elements in tx_hashes
  * @param prune specifies if the returned transactions should be pruned
- * @param out_json receives a JSON array of the transactions found, freed with monero_utils_free()
+ * @param out_json receives a JSON object with the transactions found in their blocks, {"blocks":[...]}. The transactions of one block are
+ *        in one block, which has its height and its timestamp, and the transactions of the pool are in one block that has neither. The
+ *        blocks come in the order that they first appear, so the transactions are not always in the order of the hashes, and the caller
+ *        sorts them. Freed with monero_utils_free()
  * @return MONERO_OK on success, or MONERO_ERROR (see monero_last_error())
  */
 MONERO_EXPORT monero_result monero_daemon_get_txs(monero_daemon* daemon, const char* const* tx_hashes, size_t num_tx_hashes, bool prune, char** out_json);
@@ -638,7 +642,8 @@ MONERO_EXPORT monero_result monero_daemon_relay_txs_by_hash(monero_daemon* daemo
  * Get the valid transactions seen by the node but not yet mined into a block.
  *
  * @param daemon is the handle returned by monero_daemon_connect()
- * @param out_json receives a JSON array of monero_tx, freed with monero_utils_free()
+ * @param out_json receives a JSON object with the transactions in one block that has no height, {"blocks":[...]}, and {"blocks":[]} if the
+ *        pool is empty. Freed with monero_utils_free()
  * @return MONERO_OK on success, or MONERO_ERROR (see monero_last_error())
  */
 MONERO_EXPORT monero_result monero_daemon_get_tx_pool(monero_daemon* daemon, char** out_json);

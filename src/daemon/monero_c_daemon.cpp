@@ -33,6 +33,7 @@
 
 #include <boost/optional.hpp>
 #include <cstdio>
+#include <map>
 #include <memory>
 #include <mutex>
 #include <stdexcept>
@@ -150,6 +151,42 @@ template <class T>
 char* dup_json_list_released(const std::vector<std::shared_ptr<T>>& items) {
   auto release_items = epee::misc_utils::create_scope_leave_handler([&] { release_models(items); });
   return dup_string(json_of_list(items));
+}
+
+// the blocks that hold txs of the daemon, so that each tx has its height and its timestamp. monero-cpp reads them into a block that each tx
+// has for itself, so the txs of one block are put in one block, in the order that the blocks first appear, and the txs that are in the
+// pool, which have no height, in one block that has none
+std::vector<std::shared_ptr<monero::monero_block>> blocks_of_txs(const std::vector<std::shared_ptr<monero::monero_tx>>& txs) {
+  std::vector<std::shared_ptr<monero::monero_block>> blocks;
+  std::map<uint64_t, std::shared_ptr<monero::monero_block>> confirmed;
+  std::shared_ptr<monero::monero_block> pool;
+  for (const std::shared_ptr<monero::monero_tx>& tx : txs) {
+    if (tx == nullptr) continue;
+    if (tx->m_block != nullptr && tx->m_block->m_height != boost::none) {
+      std::shared_ptr<monero::monero_block>& block = confirmed[*tx->m_block->m_height];
+      if (block == nullptr) {
+        block = std::make_shared<monero::monero_block>();
+        block->m_height = tx->m_block->m_height;
+        block->m_timestamp = tx->m_block->m_timestamp;
+        blocks.push_back(block);
+      }
+      block->m_txs.push_back(tx);
+    } else {
+      if (pool == nullptr) {
+        pool = std::make_shared<monero::monero_block>();
+        blocks.push_back(pool);
+      }
+      pool->m_txs.push_back(tx);
+    }
+  }
+  return blocks;
+}
+
+// serializes txs as the blocks that hold them, {"blocks":[...]}, and releases them. The new blocks point to no parent, and they go when the
+// call returns
+char* dup_json_blocks_released(const std::vector<std::shared_ptr<monero::monero_tx>>& txs) {
+  auto release_txs = epee::misc_utils::create_scope_leave_handler([&] { release_models(txs); });
+  return dup_string("{\"blocks\":" + json_of_list(blocks_of_txs(txs)) + "}");
 }
 
 // converts monero-cpp's key image status to the C enum, which has the same values
@@ -508,13 +545,16 @@ monero_result monero_daemon_wait_for_next_block_header(monero_daemon* daemon, ch
 monero_result monero_daemon_get_tx(monero_daemon* daemon, const char* tx_hash, bool prune, char** out_json) {
   reset_out(out_json);
   if (!require(daemon, "daemon") || !require(out_json, "out_json")) return MONERO_ERROR;
-  return guard([&] { *out_json = dup_json_released(daemon->rpc->get_tx(safe_str(tx_hash), prune)); });
+  return guard([&] {
+    std::shared_ptr<monero::monero_tx> tx = daemon->rpc->get_tx(safe_str(tx_hash), prune);
+    if (tx != nullptr) *out_json = dup_json_blocks_released({tx});
+  });
 }
 
 monero_result monero_daemon_get_txs(monero_daemon* daemon, const char* const* tx_hashes, size_t num_tx_hashes, bool prune, char** out_json) {
   reset_out(out_json);
   if (!require(daemon, "daemon") || !require(out_json, "out_json")) return MONERO_ERROR;
-  return guard([&] { *out_json = dup_json_list_released(daemon->rpc->get_txs(string_array(tx_hashes, num_tx_hashes, "tx_hashes"), prune)); });
+  return guard([&] { *out_json = dup_json_blocks_released(daemon->rpc->get_txs(string_array(tx_hashes, num_tx_hashes, "tx_hashes"), prune)); });
 }
 
 monero_result monero_daemon_get_tx_hex(monero_daemon* daemon, const char* tx_hash, bool prune, char** out_tx_hex) {
@@ -565,7 +605,7 @@ monero_result monero_daemon_relay_txs_by_hash(monero_daemon* daemon, const char*
 monero_result monero_daemon_get_tx_pool(monero_daemon* daemon, char** out_json) {
   reset_out(out_json);
   if (!require(daemon, "daemon") || !require(out_json, "out_json")) return MONERO_ERROR;
-  return guard([&] { *out_json = dup_json_list_released(daemon->rpc->get_tx_pool()); });
+  return guard([&] { *out_json = dup_json_blocks_released(daemon->rpc->get_tx_pool()); });
 }
 
 monero_result monero_daemon_get_tx_pool_hashes(monero_daemon* daemon, char** out_json) {
