@@ -398,6 +398,27 @@ static void test_daemon(const char* daemon_uri) {
     described = NULL;
     EXPECT_ERR_MSG(monero_wallet_describe_tx_set(v, json, &described), "command not supported by view-only wallet");
     CHECK(described == NULL);
+
+    // an offline wallet with the keys signs the unsigned hex of the set, which gives the set with its signed hex and its txs. A wallet
+    // that has synced with a node can't, since it can't import the outputs of the view-only wallet
+    const char* path_o = "monero_c_wallet_integration_o";
+    monero_wallet* cold = NULL;
+    size_t unsigned_size = strlen(json) + 1;
+    char* unsigned_hex = (char*) malloc(unsigned_size);
+    CHECK(unsigned_hex != NULL);
+    EXPECT_OK(monero_wallet_create_from_keys(path_o, PASSWORD, NETWORK, address_a, view_key, spend_key, 0, NULL, &cold));
+    CHECK(cold != NULL);
+    if (unsigned_hex != NULL && cold != NULL) {
+      CHECK(json_string(json, "unsignedTxHex", unsigned_hex, unsigned_size));
+      char* signed_set = NULL;
+      EXPECT_ERR_MSG(monero_wallet_sign_txs(a, unsigned_hex, &signed_set), "Failed to sign unsigned tx: Hot wallets cannot import outputs");
+      EXPECT_OK(monero_wallet_sign_txs(cold, unsigned_hex, &signed_set));
+      CHECK(has(signed_set, "\"signedTxHex\"") && has(signed_set, "\"txs\":[") && has(signed_set, "\"hash\""));
+      monero_utils_free(signed_set);
+    }
+    free(unsigned_hex);
+    if (cold != NULL) monero_wallet_free(cold);
+    remove_files(path_o);
     monero_utils_free(json);
     json = NULL;
     EXPECT_ERR(monero_wallet_sign_txs(a, "00", &json));
