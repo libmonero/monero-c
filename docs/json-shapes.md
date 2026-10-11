@@ -1,6 +1,6 @@
 # JSON shapes of the results
 
-Status: in progress. Steps 1 to 6 of [Steps](#steps) are done: `monero_wallet_get_txs()`, `monero_wallet_get_transfers()` and `monero_wallet_get_outputs()` return `{"blocks":[...]}`, the queries of transfers and outputs take a `txQuery`, the calls that make txs return `{"txSets":[...]}`, the listeners get the output in its tx and its block, and the daemon returns its txs in blocks. The rest is a proposal. Nothing has been released, so the JSON of the ABI can change before the first release. The open decisions are in [Decisions](#decisions). It is the item "keep the block and the tx in the JSON of the wallet and the daemon" of [`TODO.md`](../TODO.md).
+Status: implemented. The wallet returns its txs, transfers and outputs in `{"blocks":[...]}`, the calls that make txs return `{"txSets":[...]}`, the queries of transfers and outputs take a `txQuery`, the listeners get the output in its tx and its block, and the daemon returns its txs in blocks. This document stays as the reference of the shapes and of the reasons for them, and the item of [`TODO.md`](../TODO.md) that it came from is done. Nothing has been released, so the JSON of the ABI could change before the first release.
 
 ## The problem
 
@@ -27,11 +27,11 @@ The bridge of monero-java, which monero-ts shares, serializes the results with t
 
 The C# model `MoneroWalletData` in monero-csharp already has `blocks`, so a binding expects this.
 
-## Proposal
+## The shapes
 
 ### Results with a block: `{"blocks":[...]}`
 
-`monero_wallet_get_txs()`, `monero_wallet_get_transfers()` and `monero_wallet_get_outputs()` return `{"blocks":[...]}`, for the full wallet and the RPC wallet alike. Today they return a list of txs, of transfers and of outputs.
+`monero_wallet_get_txs()`, `monero_wallet_get_transfers()` and `monero_wallet_get_outputs()` return `{"blocks":[...]}`, for the full wallet and the RPC wallet alike. They returned a list of txs, of transfers and of outputs.
 
 ```json
 {"blocks":[
@@ -91,6 +91,8 @@ The lists of values that have no parent stay plain arrays: the accounts, the sub
 
 ## Decisions
 
+They were taken as recommended, in the order of the steps. The decision 7 stays 0.1.0, because nothing was released.
+
 | | Question | Options | Recommendation |
 | --- | --- | --- | --- |
 | 1 | The shape of the results with a context | A: `{"blocks":[...]}` as monero-java. B: keep the flat lists and add fields (`height`, `timestamp`, `txHash`) to each element | A. B duplicates the block or the tx in each transfer and output, and a binding that has the models of monero-java would need a second path |
@@ -103,7 +105,7 @@ The lists of values that have no parent stay plain arrays: the accounts, the sub
 
 ## Steps
 
-One commit each, with its tests. Each step runs the unit tests with and without the sanitizers, and the integration tests on a regtest node, also under the sanitizers.
+All done, one commit each, with its tests. Each step runs the unit tests with and without the sanitizers, and the integration tests on a regtest node, also under the sanitizers.
 
 1. Helpers for the blocks and the tx sets, with the unconfirmed placeholder and the free of the models after the JSON is built. Done for the wallet in `monero_c_wallet.cpp`, with the helpers of monero-cpp for the txs and the transfers and one of its own for the outputs, which finds them in their txs. The daemon and the tx sets are left for their steps.
 2. `get_txs`, `get_transfers` and `get_outputs` return blocks. Done. The integration test checks that the height and the tx hash are there, that a tx of the pool has no height, that an empty query gives `{"blocks":[]}`, and that a full wallet and an RPC wallet give the same shape.
@@ -111,9 +113,9 @@ One commit each, with its tests. Each step runs the unit tests with and without 
 4. The creations, the sweeps, `sign_txs` and `describe_tx_set` return tx sets. Done, with the decision 3 as recommended. The integration test makes a set with a view-only wallet, and `create_tx()` and `create_txs()` both give it its `unsignedTxHex`, which `create_tx()` didn't before. It signs the hex with an offline wallet and describes it with the full wallet.
 5. The payload of the listeners. Done, with the decision 4 as recommended. The integration test syncs a wallet with the keys of the one that sends, and checks the received output of a miner tx (height, hash, unlock time, locked flag, amount and indices) and the spent output of the tx that is mined (in `inputs`, with its hash).
 6. The daemon txs, with the fake server of `monero_c_rpc_connection_unit_tests` and the node. Done, with the decision 6 as recommended. monero-cpp reads the height and the timestamp into a block that each tx has for itself, so the txs of one block are put in one new block, and the txs of the pool in one block that has no height. The fake server serves three txs, two in the block 101 and one in the 102, and the test checks that there are two blocks, in the order that they appear, and that the pool has none.
-7. The ABI version, the docs of every changed function in the headers, the README, the package README and `TODO.md`. Then the item that compares the full wallet with the RPC wallet can be done, since both give the same JSON.
+7. The docs of every changed function in the headers, the README, the package README and `TODO.md`, and the test that compares the full wallet with the RPC wallet, since both give the same JSON. The ABI version stays 0.1.0, because nothing was released.
 
-## Things to check while implementing
+## What was checked while implementing
 
 - That the blocks of a query hold only the txs that matched. `get_txs_aux()` of monero-cpp erases the txs that don't meet a query, and they must not stay in `block->m_txs`. Checked: it erases them from the block too. A query on the type of the txs (`{"isOutgoing":true}`) still keeps the txs that it filters out in memory, about 190 KB per call for 100 txs, which is the item of `TODO.md` about the txs that `get_txs()` filters out, and the integration test asks for its tx by hash for that reason.
 - That the RPC wallet gives the same shapes. Checked: a full wallet and an RPC wallet with the same keys give the same blocks, txs, transfers and outputs, with the same heights and timestamps, and the same values for every key. The RPC wallet lacks the list `addresses` of an outgoing transfer and the `relay` and `isDoubleSpendSeen` flags of the txs of the outputs. `test_rpc_matches_full()` of the integration test compares them.

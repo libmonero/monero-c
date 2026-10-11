@@ -175,6 +175,28 @@ All the tests include only the public header and call only exported functions, t
 
 Any `out_*` parameter that receives a string or byte buffer (`char**`, `uint8_t**`) is heap-allocated by monero_c and must be freed by the caller with `monero_utils_free()`, as shown above -- the sample's `monero_utils_free(json)` call is not optional. Fixed-size out-params (e.g. `uint8_t out_payment_id[32]`) write into a buffer the caller already owns, so there's nothing to free. See [src/utils/monero_c_utils.h](src/utils/monero_c_utils.h) for the one exception (`monero_last_error()`). Handles are released with their matching `*_free()` function: `monero_daemon_free()`, `monero_wallet_free()`, `monero_rpc_connection_free()` and the listener functions. A daemon or RPC wallet created from a `monero_rpc_connection` keeps the connection, so the connection handle can be freed right after. To save a full wallet, close it with `monero_wallet_close(wallet, true)` before freeing it. After a failed call, the string, buffer, array and handle outputs are NULL and the counts are 0, even when the failure was a NULL argument, so there is nothing to free.
 
+## Results with context
+
+The results come with the parents that their models have, so a transfer is in its tx and a tx in its block, as in monero-java. The shapes are in [docs/json-shapes.md](docs/json-shapes.md), and the docs of each function in `src/wallet/monero_c_wallet.h` and `src/daemon/monero_c_daemon.h` say which one it returns.
+
+- `monero_wallet_get_txs()`, `monero_wallet_get_transfers()` and `monero_wallet_get_outputs()` return `{"blocks":[...]}`, for a full wallet and an RPC wallet alike. A block has its `height` and its `timestamp`, and its `txs`, and a tx has the `incomingTransfers`, the `outgoingTransfer` or the `outputs` of the result. The txs that no block holds yet, in the pool or not relayed, are in one block that has no `height`.
+- `monero_daemon_get_tx()`, `monero_daemon_get_txs()` and `monero_daemon_get_tx_pool()` return the same, with the txs of one block in one block.
+- `monero_wallet_create_tx()`, `monero_wallet_create_txs()`, `monero_wallet_sweep_output()`, `monero_wallet_sweep_unlocked()`, `monero_wallet_sweep_dust()`, `monero_wallet_sign_txs()` and `monero_wallet_describe_tx_set()` return `{"txSets":[...]}`. A tx set has its `txs` and the hex that signs or relays them: the `unsignedTxHex` of a view-only wallet, which a wallet that has the keys signs with `monero_wallet_sign_txs()`. What they return goes as it is into `monero_wallet_relay_tx_json()`, `monero_wallet_relay_txs_json()` and `monero_wallet_describe_tx_set()`.
+- `on_output_received` and `on_output_spent` get the output in its tx and its block, as `{"blocks":[...]}`, with the hash, the unlock time and the locked flag of the tx and the height of the block.
+- The query of the transfers or the outputs can hold the query of their txs in `txQuery`, such as `{"isIncoming":true,"txQuery":{"isConfirmed":true,"minHeight":50}}`.
+- The txs come in the order of the blocks, so a query by hashes doesn't get them back in the order of its hashes: sort them by the hashes that you asked for.
+
+```json
+{"blocks":[
+  {"height":2,"timestamp":1791675257,
+   "txs":[{"hash":"62ded941...","fee":0,"numConfirmations":99,"unlockTime":62,"isMinerTx":true,"isLocked":false,
+           "incomingTransfers":[{"amount":35184271425600,"accountIndex":0,"subaddressIndex":0}]}]},
+  {"txs":[{"hash":"ffa2a44c...","inTxPool":true,"outgoingTransfer":{"amount":1000000000,"accountIndex":0}}]}
+]}
+```
+
+The lists of values that have no parent, such as the accounts, the subaddresses, the address book and the key images, are plain JSON arrays.
+
 ## Limits
 
 A JSON argument can't nest deeper than 64 levels, and a mnemonic can't be longer than 4096 bytes. `monero_daemon_get_blocks_by_range()` takes at most 100000 blocks per call, and `monero_daemon_get_blocks_by_range_chunked()` has no limit. A call over a limit fails with `MONERO_ERROR` before any parser or request runs.
