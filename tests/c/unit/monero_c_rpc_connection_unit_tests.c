@@ -755,10 +755,18 @@ static void test_proxy(void) {
   stop_server(&server, thread);
 }
 
-// how many times the text is in the JSON
+// the length of s, up to max characters
+static size_t bounded_length(const char* s, size_t max) {
+  size_t n = 0;
+  while (n < max && s[n] != '\0') n++;
+  return n;
+}
+
+// how many times the text is in the JSON. An empty text is in it no times, and a text longer than 256 characters is not looked for
 static int count_text(const char* json, const char* text) {
   int count = 0;
-  size_t length = strlen(text);
+  size_t length = bounded_length(text, 256);
+  if (length == 0 || text[length] != '\0') return 0;
   for (const char* p = json; json != NULL && (p = strstr(p, text)) != NULL; p += length) count++;
   return count;
 }
