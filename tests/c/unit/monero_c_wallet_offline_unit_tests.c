@@ -523,6 +523,27 @@ static void test_daemon_surface(void) {
   EXPECT_ERR_MSG(monero_wallet_describe_tx_set(wallet, "{\"unsignedTxHex\":\"00\"}", &json), "failed to parse unsigned transfers: cannot load unsigned_txset");
   CHECK(json == NULL);
 
+  // what the calls that make txs return, {"txSets":[...]}, goes into the calls that relay and describe txs as it is: they find the
+  // txs in the sets, so they get as far as the metadata or the hex, which the wallet then refuses for being "00"
+  EXPECT_ERR_MSG(monero_wallet_relay_tx_json(wallet, "{\"metadata\":\"00\"}", &json), "Failed to parse tx metadata");
+  EXPECT_ERR_MSG(monero_wallet_relay_tx_json(wallet, "{\"txs\":[{\"metadata\":\"00\"}]}", &json), "Failed to parse tx metadata");
+  EXPECT_ERR_MSG(monero_wallet_relay_tx_json(wallet, "{\"txSets\":[{\"txs\":[{\"metadata\":\"00\"}]}]}", &json), "Failed to parse tx metadata");
+  EXPECT_ERR_MSG(monero_wallet_relay_tx_json(wallet, "{\"txSets\":[{\"txs\":[{\"metadata\":\"00\"},{\"metadata\":\"00\"}]}]}", &json), "the JSON holds 2 txs, and one can be relayed");
+  EXPECT_ERR_MSG(monero_wallet_relay_tx_json(wallet, "{\"txSets\":[]}", &json), "the JSON holds 0 txs, and one can be relayed");
+  EXPECT_ERR_MSG(monero_wallet_relay_tx_json(wallet, "[{\"metadata\":\"00\"}]", &json), "tx must be a JSON object");
+  EXPECT_ERR_MSG(monero_wallet_relay_txs_json(wallet, "{\"txSets\":[{\"txs\":[{\"metadata\":\"00\"}]}]}", &json), "Failed to parse tx metadata");
+  EXPECT_ERR_MSG(monero_wallet_relay_txs_json(wallet, "{\"metadata\":\"00\"}", &json), "txs must be a JSON array");
+  EXPECT_OK(monero_wallet_relay_txs_json(wallet, "{\"txSets\":[{\"txs\":[]}]}", &json));
+  CHECK(json != NULL && strcmp(json, "[]") == 0);
+  monero_utils_free(json);
+  json = NULL;
+  EXPECT_ERR_MSG(monero_wallet_describe_tx_set(wallet, "{\"txSets\":[{\"unsignedTxHex\":\"00\"}]}", &json), "failed to parse unsigned transfers: cannot load unsigned_txset");
+  EXPECT_ERR_MSG(monero_wallet_describe_tx_set(wallet, "{\"txSets\":[{\"unsignedTxHex\":5}]}", &json), "unsignedTxHex must be a string");
+  EXPECT_ERR_MSG(monero_wallet_describe_tx_set(wallet, "{\"txSets\":[]}", &json), "txSets must hold one tx set");
+  EXPECT_ERR_MSG(monero_wallet_describe_tx_set(wallet, "{\"txSets\":[{},{}]}", &json), "txSets must hold one tx set");
+  EXPECT_ERR_MSG(monero_wallet_describe_tx_set(wallet, "{\"txSets\":5}", &json), "txSets must hold one tx set");
+  CHECK(json == NULL);
+
   // a fresh wallet has no outputs, so there are no blocks
   EXPECT_OK(monero_wallet_get_outputs(wallet, NULL, &json));
   CHECK(json != NULL && strcmp(json, "{\"blocks\":[]}") == 0);

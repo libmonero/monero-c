@@ -173,19 +173,47 @@ std::string tx_metadata_of(const rapidjson::Value& tx) {
   return it->value.GetString();
 }
 
+// the txs in what a call that makes txs returns, {"txSets":[{"txs":[...]}]}, in one tx set, {"txs":[...]}, in a list of txs, or one
+// tx, so that the result of a creation can be relayed as it is
+std::vector<const rapidjson::Value*> txs_in(const rapidjson::Value& root) {
+  std::vector<const rapidjson::Value*> txs;
+  auto add_set = [&](const rapidjson::Value& set) {
+    auto it = set.FindMember("txs");
+    if (it == set.MemberEnd() || !it->value.IsArray()) return;
+    for (const auto& tx : it->value.GetArray()) txs.push_back(&tx);
+  };
+  if (root.IsArray()) {
+    for (const auto& tx : root.GetArray()) txs.push_back(&tx);
+  } else if (root.IsObject()) {
+    auto sets = root.FindMember("txSets");
+    if (sets != root.MemberEnd() && sets->value.IsArray()) {
+      for (const auto& set : sets->value.GetArray()) {
+        if (set.IsObject()) add_set(set);
+      }
+    } else if (root.HasMember("txs")) {
+      add_set(root);
+    } else {
+      txs.push_back(&root);
+    }
+  }
+  return txs;
+}
+
 std::string tx_metadata_of_json(const std::string& json) {
   check_json_depth(json);
   rapidjson::Document doc;
-  if (doc.Parse(json.c_str()).HasParseError()) throw std::runtime_error("tx must be a JSON object");
-  return tx_metadata_of(doc);
+  if (doc.Parse(json.c_str()).HasParseError() || !doc.IsObject()) throw std::runtime_error("tx must be a JSON object");
+  std::vector<const rapidjson::Value*> txs = txs_in(doc);
+  if (txs.size() != 1) throw std::runtime_error("the JSON holds " + std::to_string(txs.size()) + " txs, and one can be relayed");
+  return tx_metadata_of(*txs[0]);
 }
 
 std::vector<std::string> tx_metadatas_of_json(const std::string& json) {
   check_json_depth(json);
   rapidjson::Document doc;
-  if (doc.Parse(json.c_str()).HasParseError() || !doc.IsArray()) throw std::runtime_error("txs must be a JSON array");
+  if (doc.Parse(json.c_str()).HasParseError() || !(doc.IsArray() || (doc.IsObject() && (doc.HasMember("txSets") || doc.HasMember("txs"))))) throw std::runtime_error("txs must be a JSON array");
   std::vector<std::string> metadatas;
-  for (const auto& tx : doc.GetArray()) metadatas.push_back(tx_metadata_of(tx));
+  for (const rapidjson::Value* tx : txs_in(doc)) metadatas.push_back(tx_metadata_of(*tx));
   return metadatas;
 }
 
@@ -209,10 +237,17 @@ std::shared_ptr<monero::monero_tx_set> tx_set_of_hex(const char* json) {
   check_json_depth(text);
   rapidjson::Document doc;
   if (doc.Parse(text.c_str()).HasParseError() || !doc.IsObject()) throw std::runtime_error("tx_set must be a JSON object");
+  // what a call that makes txs returns holds the tx sets, and one of them is described
+  const rapidjson::Value* set = &doc;
+  auto sets = doc.FindMember("txSets");
+  if (sets != doc.MemberEnd()) {
+    if (!sets->value.IsArray() || sets->value.Size() != 1 || !sets->value[0].IsObject()) throw std::runtime_error("txSets must hold one tx set");
+    set = &sets->value[0];
+  }
   std::shared_ptr<monero::monero_tx_set> tx_set = std::make_shared<monero::monero_tx_set>();
   auto copy_hex = [&](const char* name, boost::optional<std::string>& hex) {
-    auto it = doc.FindMember(name);
-    if (it == doc.MemberEnd() || it->value.IsNull()) return;
+    auto it = set->FindMember(name);
+    if (it == set->MemberEnd() || it->value.IsNull()) return;
     if (!it->value.IsString()) throw std::runtime_error(std::string(name) + " must be a string");
     if (it->value.GetStringLength() > 0) hex = std::string(it->value.GetString(), it->value.GetStringLength());
   };
@@ -264,6 +299,21 @@ std::shared_ptr<monero::monero_wallet_config> wallet_config_of(const char* json)
 // that has no height. The helpers of monero-cpp build the blocks of txs and of transfers, and an output is found in its tx
 std::string json_of_blocks(const std::vector<std::shared_ptr<monero::monero_block>>& blocks) {
   return "{\"blocks\":" + json_of_list(blocks) + "}";
+}
+
+// the tx sets that the txs belong to, each once and in the order of the txs. The calls that make txs return their sets, because the
+// hex that signs or relays the txs is in the set
+std::vector<std::shared_ptr<monero::monero_tx_set>> tx_sets_of(const std::vector<std::shared_ptr<monero::monero_tx_wallet>>& txs) {
+  std::vector<std::shared_ptr<monero::monero_tx_set>> sets;
+  for (const std::shared_ptr<monero::monero_tx_wallet>& tx : txs) {
+    if (tx->m_tx_set == nullptr) throw std::runtime_error("tx has no tx set");
+    if (std::find(sets.begin(), sets.end(), tx->m_tx_set) == sets.end()) sets.push_back(tx->m_tx_set);
+  }
+  return sets;
+}
+
+std::string json_of_tx_sets(const std::vector<std::shared_ptr<monero::monero_tx_set>>& sets) {
+  return "{\"txSets\":" + json_of_list(sets) + "}";
 }
 
 std::vector<std::shared_ptr<monero::monero_block>> blocks_of_outputs(const std::vector<std::shared_ptr<monero::monero_output_wallet>>& outputs) {
@@ -1082,7 +1132,7 @@ monero_result monero_wallet_create_tx(::monero_wallet* wallet, const char* confi
   return guard([&] {
     auto tx = wallet->wallet->create_tx(*model_json<monero::monero_tx_config>(config_json, "config"));
     auto free_tx = epee::misc_utils::create_scope_leave_handler([&] { monero_utils::free(tx); });
-    *out_json = dup_string(tx->serialize());
+    *out_json = dup_string(json_of_tx_sets(tx_sets_of({tx})));
   });
 }
 
@@ -1093,8 +1143,8 @@ monero_result monero_wallet_create_txs(::monero_wallet* wallet, const char* conf
     // the transactions share one tx set, which holds the unsigned hex that sign_txs() takes
     auto txs = wallet->wallet->create_txs(*model_json<monero::monero_tx_config>(config_json, "config"));
     auto free_txs = epee::misc_utils::create_scope_leave_handler([&] { monero_utils::free(txs); });
-    if (txs.empty() || txs[0]->m_tx_set == nullptr) throw std::runtime_error("no transactions were created");
-    *out_json = dup_string(txs[0]->m_tx_set->serialize());
+    if (txs.empty()) throw std::runtime_error("no transactions were created");
+    *out_json = dup_string(json_of_tx_sets(tx_sets_of(txs)));
   });
 }
 
@@ -1134,7 +1184,7 @@ monero_result monero_wallet_sign_txs(::monero_wallet* wallet, const char* unsign
   return guard([&] {
     // the txs of a signed set have no block, set or transfers, so nothing points back at them and there is nothing to release
     monero::monero_tx_set tx_set = wallet->wallet->sign_txs(std::string(unsigned_tx_hex));
-    *out_json = dup_string(tx_set.serialize());
+    *out_json = dup_string("{\"txSets\":[" + tx_set.serialize() + "]}");
   });
 }
 
@@ -1144,7 +1194,7 @@ monero_result monero_wallet_describe_tx_set(::monero_wallet* wallet, const char*
   return guard([&] {
     monero::monero_tx_set described = wallet->wallet->describe_tx_set(*tx_set_of_hex(tx_set_json));
     auto free_described = epee::misc_utils::create_scope_leave_handler([&] { monero_utils::free(described.m_txs); });
-    *out_json = dup_string(described.serialize());
+    *out_json = dup_string("{\"txSets\":[" + described.serialize() + "]}");
   });
 }
 
@@ -1154,7 +1204,7 @@ monero_result monero_wallet_sweep_output(::monero_wallet* wallet, const char* co
   return guard([&] {
     auto tx = wallet->wallet->sweep_output(*model_json<monero::monero_tx_config>(config_json, "config"));
     auto free_tx = epee::misc_utils::create_scope_leave_handler([&] { monero_utils::free(tx); });
-    *out_json = dup_string(tx->serialize());
+    *out_json = dup_string(json_of_tx_sets(tx_sets_of({tx})));
   });
 }
 
@@ -1164,7 +1214,7 @@ monero_result monero_wallet_sweep_dust(::monero_wallet* wallet, bool relay, char
   return guard([&] {
     auto txs = wallet->wallet->sweep_dust(relay);
     auto free_txs = epee::misc_utils::create_scope_leave_handler([&] { monero_utils::free(txs); });
-    *out_json = dup_string(json_of_list(txs));
+    *out_json = dup_string(json_of_tx_sets(tx_sets_of(txs)));
   });
 }
 
@@ -1174,7 +1224,7 @@ monero_result monero_wallet_sweep_unlocked(::monero_wallet* wallet, const char* 
   return guard([&] {
     auto txs = wallet->wallet->sweep_unlocked(*model_json<monero::monero_tx_config>(config_json, "config"));
     auto free_txs = epee::misc_utils::create_scope_leave_handler([&] { monero_utils::free(txs); });
-    *out_json = dup_string(json_of_list(txs));
+    *out_json = dup_string(json_of_tx_sets(tx_sets_of(txs)));
   });
 }
 

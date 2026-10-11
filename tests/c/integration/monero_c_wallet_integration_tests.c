@@ -305,7 +305,7 @@ static void test_daemon(const char* daemon_uri) {
   const char* config = "{\"accountIndex\":0,\"destinations\":[{\"address\":\"" ADDRESS "\",\"amount\":1000000000}]}";
   char* tx_hash = NULL;
   EXPECT_OK(monero_wallet_create_tx(a, config, &json));
-  CHECK(json != NULL && has(json, "\"metadata\""));
+  CHECK(json != NULL && has(json, "{\"txSets\":[{\"txs\":[{") && has(json, "\"metadata\"") && !has(json, "\"unsignedTxHex\""));
   EXPECT_OK(monero_wallet_relay_tx_json(a, json, &tx_hash));
   CHECK(tx_hash != NULL);
   monero_utils_free(json);
@@ -398,13 +398,13 @@ static void test_daemon(const char* daemon_uri) {
   json = NULL;
   snprintf(sweep_config, sizeof(sweep_config), "{\"keyImage\":\"%s\",\"destinations\":[{\"address\":\"" ADDRESS "\"}],\"relay\":false}", key_image);
   EXPECT_OK(monero_wallet_sweep_output(a, sweep_config, &json));
-  CHECK(has(json, "\"fee\":"));
+  CHECK(has(json, "{\"txSets\":[{\"txs\":[{") && has(json, "\"fee\":"));
   monero_utils_free(json);
   json = NULL;
   EXPECT_ERR(monero_wallet_sweep_output(a, "{\"keyImage\":\"00\",\"destinations\":[{\"address\":\"" ADDRESS "\"}],\"relay\":false}", &json));
   CHECK(json == NULL);
   EXPECT_OK(monero_wallet_sweep_unlocked(a, "{\"accountIndex\":0,\"destinations\":[{\"address\":\"" ADDRESS "\"}],\"relay\":false}", &json));
-  CHECK(is_list(json) && has(json, "\"fee\":"));
+  CHECK(has(json, "{\"txSets\":[{\"txs\":[{") && has(json, "\"fee\":"));
   monero_utils_free(json);
   json = NULL;
 
@@ -465,12 +465,18 @@ static void test_daemon(const char* daemon_uri) {
     monero_utils_free(json);
     json = NULL;
     EXPECT_OK(monero_wallet_create_txs(v, config, &json));
-    CHECK(json != NULL && has(json, "\"unsignedTxHex\""));
+    CHECK(json != NULL && has(json, "{\"txSets\":[{\"unsignedTxHex\":\"") && has(json, "\"txs\":[{"));
+
+    // the tx of a view-only wallet has its unsigned hex too, in the set that it is in
+    char* single = NULL;
+    EXPECT_OK(monero_wallet_create_tx(v, config, &single));
+    CHECK(single != NULL && has(single, "{\"txSets\":[{\"unsignedTxHex\":\"") && has(single, "\"metadata\""));
+    monero_utils_free(single);
 
     // the full wallet describes the set as it came, with its txs, and the view-only wallet can't
     char* described = NULL;
     EXPECT_OK(monero_wallet_describe_tx_set(a, json, &described));
-    CHECK(has(described, "\"txs\":[") && has(described, "\"fee\":"));
+    CHECK(has(described, "{\"txSets\":[{") && has(described, "\"txs\":[") && has(described, "\"fee\":"));
     monero_utils_free(described);
     described = NULL;
     EXPECT_ERR_MSG(monero_wallet_describe_tx_set(v, json, &described), "command not supported by view-only wallet");
@@ -490,7 +496,7 @@ static void test_daemon(const char* daemon_uri) {
       char* signed_set = NULL;
       EXPECT_ERR_MSG(monero_wallet_sign_txs(a, unsigned_hex, &signed_set), "Failed to sign unsigned tx: Hot wallets cannot import outputs");
       EXPECT_OK(monero_wallet_sign_txs(cold, unsigned_hex, &signed_set));
-      CHECK(has(signed_set, "\"signedTxHex\"") && has(signed_set, "\"txs\":[") && has(signed_set, "\"hash\""));
+      CHECK(has(signed_set, "{\"txSets\":[{\"signedTxHex\":\"") && has(signed_set, "\"txs\":[") && has(signed_set, "\"hash\""));
       monero_utils_free(signed_set);
     }
     free(unsigned_hex);
@@ -510,7 +516,7 @@ static void test_daemon(const char* daemon_uri) {
 
   // the sweep takes unmixable outputs only, and miner outputs are RingCT, so the list is empty
   EXPECT_OK(monero_wallet_sweep_dust(a, false, &json));
-  CHECK(is_list(json));
+  CHECK(json != NULL && strcmp(json, "{\"txSets\":[]}") == 0);
   monero_utils_free(json);
   json = NULL;
 

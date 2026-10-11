@@ -1,6 +1,6 @@
 # JSON shapes of the results
 
-Status: in progress. Steps 1 to 3 of [Steps](#steps) are done: `monero_wallet_get_txs()`, `monero_wallet_get_transfers()` and `monero_wallet_get_outputs()` return `{"blocks":[...]}`, and the queries of transfers and outputs take a `txQuery`. The rest is a proposal. Nothing has been released, so the JSON of the ABI can change before the first release. The open decisions are in [Decisions](#decisions). It is the item "keep the block and the tx in the JSON of the wallet and the daemon" of [`TODO.md`](../TODO.md).
+Status: in progress. Steps 1 to 4 of [Steps](#steps) are done: `monero_wallet_get_txs()`, `monero_wallet_get_transfers()` and `monero_wallet_get_outputs()` return `{"blocks":[...]}`, the queries of transfers and outputs take a `txQuery`, and the calls that make txs return `{"txSets":[...]}`. The rest is a proposal. Nothing has been released, so the JSON of the ABI can change before the first release. The open decisions are in [Decisions](#decisions). It is the item "keep the block and the tx in the JSON of the wallet and the daemon" of [`TODO.md`](../TODO.md).
 
 ## The problem
 
@@ -58,7 +58,7 @@ Every call that returns txs that the wallet made returns `{"txSets":[...]}`: `mo
 ```
 
 - It is `txSets`, not a single set for `monero_wallet_create_txs()`, so that a binding has one parser for the calls that make txs. `monero_wallet_sweep_unlocked()` and `monero_wallet_sweep_dust()` can make several sets, and the others make one.
-- The inputs don't change. `monero_wallet_relay_tx_json()` takes a tx of a set (an object with `metadata`), `monero_wallet_relay_txs_json()` takes a list of them, and `monero_wallet_describe_tx_set()` takes a set. A binding passes `txSets[i]` and `txSets[i].txs[j]` as they are.
+- The inputs keep what they took: `monero_wallet_relay_tx_json()` a tx of a set (an object with `metadata`), `monero_wallet_relay_txs_json()` a list of them, and `monero_wallet_describe_tx_set()` a set. A binding passes `txSets[i]` and `txSets[i].txs[j]` as they are. They also take what the creations return, so that a caller of C needs no JSON parser to create and relay a tx: `relay_tx_json()` finds the tx in `{"txSets":[...]}` or in one set, if it holds exactly one, `relay_txs_json()` relays all the txs in it, and `describe_tx_set()` describes the set of `{"txSets":[...]}` if there is one.
 
 ### Queries: flat in, block-rooted inside
 
@@ -108,7 +108,7 @@ One commit each, with its tests. Each step runs the unit tests with and without 
 1. Helpers for the blocks and the tx sets, with the unconfirmed placeholder and the free of the models after the JSON is built. Done for the wallet in `monero_c_wallet.cpp`, with the helpers of monero-cpp for the txs and the transfers and one of its own for the outputs, which finds them in their txs. The daemon and the tx sets are left for their steps.
 2. `get_txs`, `get_transfers` and `get_outputs` return blocks. Done. The integration test checks that the height and the tx hash are there, that a tx of the pool has no height, that an empty query gives `{"blocks":[]}`, and that a full wallet and an RPC wallet give the same shape.
 3. The queries of transfers and outputs are translated, `txQuery` works, and the leak of the block-rooted query models is checked (`monero_utils::free()` has to reach them). Done, with the decision 2 as recommended. The integration test splits the outputs by `{"txQuery":{"isLocked":false}}` and `true` and checks that the halves add up to all of them, and that a range of heights in the `txQuery` of `get_transfers()` gives one transfer per block.
-4. The creations, the sweeps, `sign_txs` and `describe_tx_set` return tx sets. The integration test makes a set with a view-only wallet, checks `unsignedTxHex`, signs it with the full wallet and relays it.
+4. The creations, the sweeps, `sign_txs` and `describe_tx_set` return tx sets. Done, with the decision 3 as recommended. The integration test makes a set with a view-only wallet, and `create_tx()` and `create_txs()` both give it its `unsignedTxHex`, which `create_tx()` didn't before. It signs the hex with an offline wallet and describes it with the full wallet.
 5. The payload of the listeners.
 6. The daemon txs, with the fake server of `monero_c_rpc_connection_unit_tests` and the node.
 7. The ABI version, the docs of every changed function in the headers, the README, the package README and `TODO.md`. Then the item that compares the full wallet with the RPC wallet can be done, since both give the same JSON.
