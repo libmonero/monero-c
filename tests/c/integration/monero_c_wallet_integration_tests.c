@@ -403,7 +403,7 @@ static void test_daemon(const char* daemon_uri) {
     // that has synced with a node can't, since it can't import the outputs of the view-only wallet
     const char* path_o = "monero_c_wallet_integration_o";
     monero_wallet* cold = NULL;
-    size_t unsigned_size = strlen(json) + 1;
+    size_t unsigned_size = bounded_length(json, 1 << 20) + 1;  // the set is about 40 KB
     char* unsigned_hex = (char*) malloc(unsigned_size);
     CHECK(unsigned_hex != NULL);
     EXPECT_OK(monero_wallet_create_from_keys(path_o, PASSWORD, NETWORK, address_a, view_key, spend_key, 0, NULL, &cold));
