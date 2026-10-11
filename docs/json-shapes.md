@@ -116,6 +116,6 @@ One commit each, with its tests. Each step runs the unit tests with and without 
 ## Things to check while implementing
 
 - That the blocks of a query hold only the txs that matched. `get_txs_aux()` of monero-cpp erases the txs that don't meet a query, and they must not stay in `block->m_txs`. Checked: it erases them from the block too. A query on the type of the txs (`{"isOutgoing":true}`) still keeps the txs that it filters out in memory, about 190 KB per call for 100 txs, which is the item of `TODO.md` about the txs that `get_txs()` filters out, and the integration test asks for its tx by hash for that reason.
-- That the RPC wallet gives the same shapes. Its blocks may have the height and no timestamp.
+- That the RPC wallet gives the same shapes. Checked: a full wallet and an RPC wallet with the same keys give the same blocks, txs, transfers and outputs, with the same heights and timestamps, and the same values for every key. The RPC wallet lacks the list `addresses` of an outgoing transfer and the `relay` and `isDoubleSpendSeen` flags of the txs of the outputs. `test_rpc_matches_full()` of the integration test compares them.
 - That the unconfirmed placeholder block and the copy of the tx in the listener are freed. LeakSanitizer finds it in the unit tests.
 - The cost of the listener JSON, which is built while the sync holds the lock of the wallet.

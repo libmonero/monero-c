@@ -64,6 +64,11 @@ static volatile int g_spent = 0;
 static monero_daemon* g_daemon = NULL;
 static char g_mining_address[128];
 
+// the keys of the wallet that has the history on the chain, which the RPC part gives to a full wallet and to an RPC wallet to compare them
+static char g_keys_address[128];
+static char g_keys_view[128];
+static char g_keys_spend[128];
+
 // the JSON of the first output that a listener gets, which the test reads after the sync that calls it has returned
 static char g_first_received[4096];
 static char g_first_spent[4096];
@@ -291,6 +296,10 @@ static void test_daemon(const char* daemon_uri) {
   CHECK(json != NULL && snprintf(spend_key, sizeof(spend_key), "%s", json) > 0);
   monero_utils_free(json);
   json = NULL;
+
+  snprintf(g_keys_address, sizeof(g_keys_address), "%s", address_a);
+  snprintf(g_keys_view, sizeof(g_keys_view), "%s", view_key);
+  snprintf(g_keys_spend, sizeof(g_keys_spend), "%s", spend_key);
 
   monero_wallet* c = NULL;
   EXPECT_OK(monero_wallet_listener_create(&callbacks, &listener));
@@ -628,6 +637,8 @@ static void test_daemon(const char* daemon_uri) {
   g_daemon = NULL;
 }
 
+static void test_rpc_matches_full(const char* daemon_uri, const char* rpc_uri);
+
 static void test_rpc(const char* daemon_uri, const char* rpc_uri) {
   char* json = NULL;
   char address[128];
@@ -764,10 +775,132 @@ static void test_rpc(const char* daemon_uri, const char* rpc_uri) {
     monero_wallet_free(client);
   }
 
+  // the history of a wallet with funds is the same as the one of a full wallet with its keys, when the first part made one
+  if (g_keys_address[0] != '\0') test_rpc_matches_full(daemon_uri, rpc_uri);
+
   // the server stops with the last wallet, so this comes last
   EXPECT_OK(monero_wallet_rpc_stop(rpc));
   monero_wallet_free(rpc);
   monero_utils_free(json);
+}
+
+// appends the values that follow "key": in the JSON, each ended with a |, up to the next comma, brace or bracket. The values of the
+// results are numbers, flags and hashes, none of them has a comma, so the lists of two results can be compared without a parser
+static void append_values(char* out, size_t size, const char* json, const char* key) {
+  char pattern[80];
+  size_t used = bounded_length(out, size);
+  size_t length;
+  snprintf(pattern, sizeof(pattern), "\"%s\":", key);
+  length = bounded_length(pattern, sizeof(pattern));
+  for (const char* p = json; json != NULL && (p = strstr(p, pattern)) != NULL;) {
+    p += length;
+    while (*p != '\0' && *p != ',' && *p != '}' && *p != ']' && used + 2 < size) out[used++] = *p++;
+    if (used + 2 < size) out[used++] = '|';
+  }
+  out[used] = '\0';
+}
+
+// the full wallet and the RPC wallet say the same of a key in a result, in the same order. monero-wallet-rpc doesn't give the list of the
+// addresses of an outgoing transfer, nor the relay and double spend flags of a tx of an output, so those are not compared
+static void expect_same_values(const char* label, const char* full_json, const char* rpc_json, const char* const* keys, size_t count) {
+  const size_t size = 1 << 17;
+  char* full = (char*) calloc(1, size);
+  char* rpc = (char*) calloc(1, size);
+  CHECK(full != NULL && rpc != NULL);
+  for (size_t i = 0; full != NULL && rpc != NULL && i < count; i++) {
+    full[0] = '\0';
+    rpc[0] = '\0';
+    append_values(full, size, full_json, keys[i]);
+    append_values(rpc, size, rpc_json, keys[i]);
+    CHECK(full[0] != '\0');
+    g_checks++;
+    if (strcmp(full, rpc) != 0) {
+      g_failures++;
+      fprintf(stderr, "FAIL %s, \"%s\" differs:\n  full: %.300s\n  rpc:  %.300s\n", label, keys[i], full, rpc);
+    }
+  }
+  free(full);
+  free(rpc);
+}
+
+// a full wallet and an RPC wallet with the same keys have the same history, as in testWalletEqualityRpc of monero-java: the same txs
+// in the same blocks, the same transfers and outputs in them, and the same balances
+static void test_rpc_matches_full(const char* daemon_uri, const char* rpc_uri) {
+  const char* path = "monero_c_wallet_integration_same";
+  const char* tx_keys[] = {"height", "timestamp", "hash", "fee", "numConfirmations", "unlockTime", "isMinerTx", "isConfirmed", "isLocked", "amount", "accountIndex", "subaddressIndex"};
+  const char* output_keys[] = {"height", "hash", "amount", "index", "accountIndex", "subaddressIndex", "stealthPublicKey", "isSpent", "isFrozen"};
+  const char* queries[] = {NULL, "{\"minHeight\":95,\"maxHeight\":103}"};
+  const char* transfer_queries[] = {NULL, "{\"isIncoming\":true,\"txQuery\":{\"minHeight\":10,\"maxHeight\":20}}"};
+  const char* output_queries[] = {NULL, "{\"txQuery\":{\"minHeight\":10,\"maxHeight\":20}}"};
+  char connection[256];
+  char* json = NULL;
+  char* full_json = NULL;
+  char* rpc_json = NULL;
+  uint64_t full_value = 0;
+  uint64_t rpc_value = 1;
+  bool trusted = true;
+  monero_wallet* full = NULL;
+  monero_wallet* rpc = NULL;
+  remove_files(path);
+
+  EXPECT_OK(monero_wallet_create_from_keys(path, PASSWORD, NETWORK, g_keys_address, g_keys_view, g_keys_spend, 0, NULL, &full));
+  EXPECT_OK(monero_wallet_rpc_create_from_keys(rpc_uri, "", "", "rpc_same", PASSWORD, g_keys_address, g_keys_view, g_keys_spend, 0, NULL, &rpc));
+  CHECK(full != NULL && rpc != NULL);
+  if (full != NULL && rpc != NULL) {
+    snprintf(connection, sizeof(connection), "{\"uri\":\"%s\"}", daemon_uri);
+    EXPECT_OK(monero_wallet_set_daemon_connection(full, daemon_uri, "", "", "", &trusted, false));
+    EXPECT_OK(monero_wallet_rpc_set_daemon_connection(rpc, connection, true, NULL));
+    EXPECT_OK(monero_wallet_sync(full, NULL, NULL, &json));
+    monero_utils_free(json);
+    json = NULL;
+    EXPECT_OK(monero_wallet_sync(rpc, NULL, NULL, &json));
+    monero_utils_free(json);
+    json = NULL;
+
+    EXPECT_OK(monero_wallet_get_height(full, &full_value));
+    EXPECT_OK(monero_wallet_get_height(rpc, &rpc_value));
+    CHECK(full_value > 0 && full_value == rpc_value);
+    EXPECT_OK(monero_wallet_get_balance(full, &full_value));
+    EXPECT_OK(monero_wallet_get_balance(rpc, &rpc_value));
+    CHECK(full_value > 0 && full_value == rpc_value);
+    EXPECT_OK(monero_wallet_get_unlocked_balance(full, &full_value));
+    EXPECT_OK(monero_wallet_get_unlocked_balance(rpc, &rpc_value));
+    CHECK(full_value > 0 && full_value == rpc_value);
+
+    for (size_t i = 0; i < sizeof(queries) / sizeof(queries[0]); i++) {
+      EXPECT_OK(monero_wallet_get_txs(full, queries[i], &full_json));
+      EXPECT_OK(monero_wallet_get_txs(rpc, queries[i], &rpc_json));
+      CHECK(is_blocks(full_json) && is_blocks(rpc_json));
+      expect_same_values("get_txs", full_json, rpc_json, tx_keys, sizeof(tx_keys) / sizeof(tx_keys[0]));
+      monero_utils_free(full_json);
+      monero_utils_free(rpc_json);
+      full_json = NULL;
+      rpc_json = NULL;
+    }
+    for (size_t i = 0; i < sizeof(transfer_queries) / sizeof(transfer_queries[0]); i++) {
+      EXPECT_OK(monero_wallet_get_transfers(full, transfer_queries[i], &full_json));
+      EXPECT_OK(monero_wallet_get_transfers(rpc, transfer_queries[i], &rpc_json));
+      CHECK(is_blocks(full_json) && is_blocks(rpc_json));
+      expect_same_values("get_transfers", full_json, rpc_json, tx_keys, sizeof(tx_keys) / sizeof(tx_keys[0]));
+      monero_utils_free(full_json);
+      monero_utils_free(rpc_json);
+      full_json = NULL;
+      rpc_json = NULL;
+    }
+    for (size_t i = 0; i < sizeof(output_queries) / sizeof(output_queries[0]); i++) {
+      EXPECT_OK(monero_wallet_get_outputs(full, output_queries[i], &full_json));
+      EXPECT_OK(monero_wallet_get_outputs(rpc, output_queries[i], &rpc_json));
+      CHECK(is_blocks(full_json) && is_blocks(rpc_json));
+      expect_same_values("get_outputs", full_json, rpc_json, output_keys, sizeof(output_keys) / sizeof(output_keys[0]));
+      monero_utils_free(full_json);
+      monero_utils_free(rpc_json);
+      full_json = NULL;
+      rpc_json = NULL;
+    }
+  }
+  if (full != NULL) monero_wallet_free(full);
+  if (rpc != NULL) monero_wallet_free(rpc);
+  remove_files(path);
 }
 
 int main(void) {
