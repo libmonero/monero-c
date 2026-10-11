@@ -64,15 +64,19 @@ static volatile int g_spent = 0;
 static monero_daemon* g_daemon = NULL;
 static char g_mining_address[128];
 
+// the JSON of the first output that a listener gets, which the test reads after the sync that calls it has returned
+static char g_first_received[4096];
+static char g_first_spent[4096];
+
 static void on_output_received(void* user_data, const char* output_json) {
   (void)user_data;
-  (void)output_json;
+  if (g_received == 0) snprintf(g_first_received, sizeof(g_first_received), "%s", output_json);
   g_received++;
 }
 
 static void on_output_spent(void* user_data, const char* output_json) {
   (void)user_data;
-  (void)output_json;
+  if (g_spent == 0) snprintf(g_first_spent, sizeof(g_first_spent), "%s", output_json);
   g_spent++;
 }
 
@@ -299,6 +303,11 @@ static void test_daemon(const char* daemon_uri) {
     monero_utils_free(json);
     json = NULL;
     CHECK(g_received > 0);
+
+    // the listener gets the output in its tx and its block, with the height, the hash and the unlock time of a miner tx
+    CHECK(has(g_first_received, "{\"blocks\":[{\"height\":") && has(g_first_received, "\"txs\":[{") && has(g_first_received, "\"hash\":\"") &&
+          has(g_first_received, "\"unlockTime\":") && has(g_first_received, "\"isLocked\":") && has(g_first_received, "\"outputs\":[{\"amount\":") &&
+          has(g_first_received, "\"accountIndex\":0") && has(g_first_received, "\"subaddressIndex\":0"));
   }
 
   // create a tx without relaying, relay it from its JSON and mine it
@@ -328,6 +337,20 @@ static void test_daemon(const char* daemon_uri) {
   CHECK(json != NULL);
   monero_utils_free(json);
   json = NULL;
+
+  // wallet c sees the tx that a spent and mined, so its listener is told about the spent output and the change, in their tx
+  if (c != NULL) {
+    char* synced_c = NULL;
+    g_received = 0;
+    g_spent = 0;
+    g_first_received[0] = '\0';
+    g_first_spent[0] = '\0';
+    EXPECT_OK(monero_wallet_sync(c, NULL, listener, &synced_c));
+    monero_utils_free(synced_c);
+    CHECK(g_received > 0 && g_spent > 0);
+    CHECK(has(g_first_spent, "{\"blocks\":[{\"height\":") && has(g_first_spent, tx_hash) && has(g_first_spent, "\"inputs\":[{\"amount\":") && has(g_first_spent, "\"accountIndex\":0"));
+    CHECK(has(g_first_received, "{\"blocks\":[{\"height\":") && has(g_first_received, "\"outputs\":[{\"amount\":"));
+  }
 
   // once it is mined it is in a block with a height, and its transfer is in it. It is asked for by its hash, since a query on the
   // type of the txs leaks the txs that it filters out in monero-cpp, see TODO.md. One run in eight of the first version had the wallet

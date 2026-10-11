@@ -62,6 +62,41 @@ struct monero_wallet {
 
 namespace {
 
+// the JSON that a listener gets for an output, in the shape of the results of monero_wallet_get_outputs(): the output in its tx, and the
+// tx in its block, as {"blocks":[...]}. monero-cpp builds a tx for each notification, and the output points to it. The JSON has a copy
+// that keeps the fields that the notification knows, the hash, the version, the unlock time and the flags of the tx, the height of its
+// block when it has one, and the output with its amount and its indices, as a received output, or as an input if it is spent. The
+// copies have no parents, so there is nothing to release, and the models of monero-cpp stay as they are
+std::string json_of_notification(const monero::monero_output_wallet& output, bool spent) {
+  std::shared_ptr<monero::monero_block> block = std::make_shared<monero::monero_block>();
+  std::shared_ptr<monero::monero_tx_wallet> tx = std::make_shared<monero::monero_tx_wallet>();
+  std::shared_ptr<monero::monero_output_wallet> copy = std::make_shared<monero::monero_output_wallet>();
+  copy->m_amount = output.m_amount;
+  copy->m_account_index = output.m_account_index;
+  copy->m_subaddress_index = output.m_subaddress_index;
+  copy->m_index = output.m_index;
+  copy->m_stealth_public_key = output.m_stealth_public_key;
+  copy->m_key_image = output.m_key_image;
+  copy->m_is_spent = output.m_is_spent;
+  copy->m_is_frozen = output.m_is_frozen;
+  if (output.m_tx != nullptr) {
+    tx->m_hash = output.m_tx->m_hash;
+    tx->m_version = output.m_tx->m_version;
+    tx->m_unlock_time = output.m_tx->m_unlock_time;
+    tx->m_is_confirmed = output.m_tx->m_is_confirmed;
+    tx->m_in_tx_pool = output.m_tx->m_in_tx_pool;
+    std::shared_ptr<monero::monero_tx_wallet> source = std::dynamic_pointer_cast<monero::monero_tx_wallet>(output.m_tx);
+    if (source != nullptr) tx->m_is_locked = source->m_is_locked;
+    if (output.m_tx->m_block != nullptr) {
+      block->m_height = output.m_tx->m_block->m_height;
+      block->m_timestamp = output.m_tx->m_block->m_timestamp;
+    }
+  }
+  (spent ? tx->m_inputs : tx->m_outputs).push_back(copy);
+  block->m_txs.push_back(tx);
+  return "{\"blocks\":[" + block->serialize() + "]}";
+}
+
 // forwards the wallet's notifications to the C callbacks of a listener
 class wallet_listener_adapter : public monero::monero_wallet_listener {
 public:
@@ -85,13 +120,13 @@ public:
 
   void on_output_received(const monero::monero_output_wallet& output) override {
     if (callbacks.on_output_received == nullptr) return;
-    std::string json = output.serialize();
+    std::string json = json_of_notification(output, false);
     callbacks.on_output_received(callbacks.user_data, json.c_str());
   }
 
   void on_output_spent(const monero::monero_output_wallet& output) override {
     if (callbacks.on_output_spent == nullptr) return;
-    std::string json = output.serialize();
+    std::string json = json_of_notification(output, true);
     callbacks.on_output_spent(callbacks.user_data, json.c_str());
   }
 };

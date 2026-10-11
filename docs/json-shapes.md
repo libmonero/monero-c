@@ -1,6 +1,6 @@
 # JSON shapes of the results
 
-Status: in progress. Steps 1 to 4 of [Steps](#steps) are done: `monero_wallet_get_txs()`, `monero_wallet_get_transfers()` and `monero_wallet_get_outputs()` return `{"blocks":[...]}`, the queries of transfers and outputs take a `txQuery`, and the calls that make txs return `{"txSets":[...]}`. The rest is a proposal. Nothing has been released, so the JSON of the ABI can change before the first release. The open decisions are in [Decisions](#decisions). It is the item "keep the block and the tx in the JSON of the wallet and the daemon" of [`TODO.md`](../TODO.md).
+Status: in progress. Steps 1 to 5 of [Steps](#steps) are done: `monero_wallet_get_txs()`, `monero_wallet_get_transfers()` and `monero_wallet_get_outputs()` return `{"blocks":[...]}`, the queries of transfers and outputs take a `txQuery`, the calls that make txs return `{"txSets":[...]}`, and the listeners get the output in its tx and its block. The rest is a proposal. Nothing has been released, so the JSON of the ABI can change before the first release. The open decisions are in [Decisions](#decisions). It is the item "keep the block and the tx in the JSON of the wallet and the daemon" of [`TODO.md`](../TODO.md).
 
 ## The problem
 
@@ -72,14 +72,14 @@ That makes `txQuery` work for transfers and outputs. The caller doesn't have to 
 
 ### Listeners
 
-`on_output_received` and `on_output_spent` get the output inside its tx and its block, in the shape of `monero_wallet_get_outputs()`:
+`on_output_received` and `on_output_spent` get the output inside its tx and its block, in the shape of `monero_wallet_get_outputs()`. A received output is in the `outputs` of the tx, and a spent one in its `inputs`:
 
 ```json
-{"blocks":[{"height":2,"txs":[{"hash":"62ded941...","unlockTime":62,"isLocked":false,
-            "outputs":[{"amount":35184271425600,"accountIndex":0,"subaddressIndex":0}]}]}]}
+{"blocks":[{"height":1,"txs":[{"version":2,"unlockTime":61,"hash":"21717baf...","isConfirmed":true,"isLocked":true,
+            "outputs":[{"amount":35184338534400,"accountIndex":0,"subaddressIndex":0}]}]}]}
 ```
 
-A binding then reads it with the parser of the results, and gets the same `MoneroOutputWallet` that the listener of monero-java gets, with its tx and the height. An output of the pool has a block without `height`. The tx is copied for the JSON, so the callback doesn't change the models of monero-cpp.
+A binding then reads it with the parser of the results, and gets the same `MoneroOutputWallet` that the listener of monero-java gets, with its tx and the height. An output of the pool has a block without `height`. monero-cpp builds a tx for each notification, and the JSON has a copy of it with the hash, the version, the unlock time and the flags, and of the output with its amount and its indices. The copies point to no parent, so there is nothing to release, and the models of monero-cpp stay as they are.
 
 ### The daemon
 
@@ -109,7 +109,7 @@ One commit each, with its tests. Each step runs the unit tests with and without 
 2. `get_txs`, `get_transfers` and `get_outputs` return blocks. Done. The integration test checks that the height and the tx hash are there, that a tx of the pool has no height, that an empty query gives `{"blocks":[]}`, and that a full wallet and an RPC wallet give the same shape.
 3. The queries of transfers and outputs are translated, `txQuery` works, and the leak of the block-rooted query models is checked (`monero_utils::free()` has to reach them). Done, with the decision 2 as recommended. The integration test splits the outputs by `{"txQuery":{"isLocked":false}}` and `true` and checks that the halves add up to all of them, and that a range of heights in the `txQuery` of `get_transfers()` gives one transfer per block.
 4. The creations, the sweeps, `sign_txs` and `describe_tx_set` return tx sets. Done, with the decision 3 as recommended. The integration test makes a set with a view-only wallet, and `create_tx()` and `create_txs()` both give it its `unsignedTxHex`, which `create_tx()` didn't before. It signs the hex with an offline wallet and describes it with the full wallet.
-5. The payload of the listeners.
+5. The payload of the listeners. Done, with the decision 4 as recommended. The integration test syncs a wallet with the keys of the one that sends, and checks the received output of a miner tx (height, hash, unlock time, locked flag, amount and indices) and the spent output of the tx that is mined (in `inputs`, with its hash).
 6. The daemon txs, with the fake server of `monero_c_rpc_connection_unit_tests` and the node.
 7. The ABI version, the docs of every changed function in the headers, the README, the package README and `TODO.md`. Then the item that compares the full wallet with the RPC wallet can be done, since both give the same JSON.
 

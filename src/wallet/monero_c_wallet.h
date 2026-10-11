@@ -98,7 +98,10 @@ typedef void (*monero_wallet_on_balances_changed_fn)(void* user_data, uint64_t n
  * Called when the wallet receives an output. The JSON is valid only during the call.
  *
  * @param user_data is the user_data of the monero_wallet_listener_callbacks
- * @param output_json is the JSON-serialized monero_output_wallet
+ * @param output_json is a JSON object with the output in its transaction and its block, {"blocks":[...]}, as
+ *        monero_wallet_get_outputs() returns it. The block has the height of the transaction, and none if the transaction is in the pool.
+ *        The transaction has its hash, its unlock time and whether it is locked, and the output is in its "outputs" with its amount
+ *        and the indices of its account and subaddress
  */
 typedef void (*monero_wallet_on_output_received_fn)(void* user_data, const char* output_json);
 
@@ -106,7 +109,10 @@ typedef void (*monero_wallet_on_output_received_fn)(void* user_data, const char*
  * Called when the wallet spends an output. The JSON is valid only during the call.
  *
  * @param user_data is the user_data of the monero_wallet_listener_callbacks
- * @param output_json is the JSON-serialized monero_output_wallet
+ * @param output_json is a JSON object with the spent output in its transaction and its block, {"blocks":[...]}, as
+ *        monero_wallet_get_outputs() returns it. The block has the height of the transaction, and none if the transaction is in the pool.
+ *        The transaction has its hash, its unlock time and whether it is locked, and the output is in its "inputs" with its amount
+ *        and the indices of its account and subaddress
  */
 typedef void (*monero_wallet_on_output_spent_fn)(void* user_data, const char* output_json);
 
