@@ -194,6 +194,8 @@ jobs:
           mkdir -p "$RUNNER_TEMP/regtest"
           external/monero-cpp/external/monero-project/build/release/bin/monerod --regtest --offline --fixed-difficulty=1 --non-interactive --log-level=0 --hide-my-port --no-zmq --rpc-bind-ip=127.0.0.1 --rpc-bind-port=18081 --rpc-access-control-origins=* --rpc-ssl=disabled --disable-rpc-ban --p2p-bind-port=18080 --no-igd --data-dir "$RUNNER_TEMP/regtest" &
           node_pid=$!
+          # stop the node, and wait until it has gone so that the next step finds the ports free, also when a test fails and the step exits
+          trap 'kill "$node_pid" 2>/dev/null || true; wait "$node_pid" 2>/dev/null || true' EXIT
           for _ in $(seq 1 60); do
             if curl -fsS -m 5 -X POST http://127.0.0.1:18081/json_rpc -d '{"jsonrpc":"2.0","id":"0","method":"get_block_count"}' | grep -q '"count"'; then break; fi
             sleep 2
@@ -209,7 +211,6 @@ jobs:
           build-coverage/tests/c/unit/monero_c_cpp_unit_tests
           MONERO_C_TEST_DAEMON_URI=http://127.0.0.1:18081 build-coverage/tests/c/integration/monero_c_daemon_integration_tests
           MONERO_C_TEST_DAEMON_URI=http://127.0.0.1:18081 build-coverage/tests/c/integration/monero_c_wallet_integration_tests
-          kill "$node_pid"
 
       - name: Generate coverage report
         if: env.COVERAGE == 'true'
@@ -271,10 +272,11 @@ jobs:
           mkdir -p "$RUNNER_TEMP/regtest-sanitizers"
           external/monero-cpp/external/monero-project/build/release/bin/monerod --regtest --offline --fixed-difficulty=1 --non-interactive --log-level=0 --hide-my-port --no-zmq --rpc-bind-ip=127.0.0.1 --rpc-bind-port=18081 --rpc-access-control-origins=* --rpc-ssl=disabled --disable-rpc-ban --p2p-bind-port=18080 --no-igd --data-dir "$RUNNER_TEMP/regtest-sanitizers" &
           node_pid=$!
+          # stop the node, and wait until it has gone so that the next step finds the ports free, also when a test fails and the step exits
+          trap 'kill "$node_pid" 2>/dev/null || true; wait "$node_pid" 2>/dev/null || true' EXIT
           for _ in $(seq 1 60); do
             if curl -fsS -m 5 -X POST http://127.0.0.1:18081/json_rpc -d '{"jsonrpc":"2.0","id":"0","method":"get_block_count"}' | grep -q '"count"'; then break; fi
             sleep 2
           done
           MONERO_C_TEST_DAEMON_URI=http://127.0.0.1:18081 build-sanitizers/tests/c/integration/monero_c_daemon_integration_tests
           MONERO_C_TEST_DAEMON_URI=http://127.0.0.1:18081 build-sanitizers/tests/c/integration/monero_c_wallet_integration_tests
-          kill "$node_pid"
