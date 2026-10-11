@@ -95,6 +95,14 @@ static size_t bounded_length(const char* s, size_t max) {
   return n;
 }
 
+// how many times the text is in the JSON
+static int count_text(const char* json, const char* text) {
+  int count = 0;
+  size_t length = bounded_length(text, 64);
+  for (const char* p = json; json != NULL && (p = strstr(p, text)) != NULL; p += length) count++;
+  return count;
+}
+
 // mines count blocks to the address, on top of the chain of the daemon
 static void mine(monero_daemon* daemon, const char* address, uint64_t count) {
   char* json = NULL;
@@ -199,6 +207,26 @@ static void test_daemon(const char* daemon_uri) {
   monero_utils_free(json);
   json = NULL;
 
+  // the query of the tx of a transfer or of an output is in "txQuery". The outputs of the miner txs unlock after 60 blocks, so the
+  // two halves of the outputs are the unlocked ones and the locked ones, and a range of heights holds one transfer per block
+  EXPECT_OK(monero_wallet_get_outputs(a, NULL, &json));
+  int outputs_total = count_text(json, "\"stealthPublicKey\"");
+  monero_utils_free(json);
+  json = NULL;
+  EXPECT_OK(monero_wallet_get_outputs(a, "{\"txQuery\":{\"isLocked\":false}}", &json));
+  int outputs_unlocked = count_text(json, "\"stealthPublicKey\"");
+  monero_utils_free(json);
+  json = NULL;
+  EXPECT_OK(monero_wallet_get_outputs(a, "{\"txQuery\":{\"isLocked\":true}}", &json));
+  int outputs_locked = count_text(json, "\"stealthPublicKey\"");
+  monero_utils_free(json);
+  json = NULL;
+  CHECK(outputs_unlocked > 0 && outputs_locked > 0 && outputs_unlocked + outputs_locked == outputs_total);
+  EXPECT_OK(monero_wallet_get_transfers(a, "{\"isIncoming\":true,\"txQuery\":{\"isConfirmed\":true,\"minHeight\":50,\"maxHeight\":60}}", &json));
+  CHECK(is_blocks(json) && count_text(json, "\"incomingTransfers\":[{") == 11);
+  monero_utils_free(json);
+  json = NULL;
+
   // wallets that a config connects to the daemon when it creates them: the seed of a with the first block, and a new one on regtest
   {
     const char* path_d = "monero_c_wallet_integration_d";
@@ -288,6 +316,10 @@ static void test_daemon(const char* daemon_uri) {
   CHECK(has(json, "{\"blocks\":[{\"txs\":[{") && has(json, tx_hash) && !has(json, "\"height\""));
   monero_utils_free(json);
   json = NULL;
+  EXPECT_OK(monero_wallet_get_transfers(a, "{\"isIncoming\":false,\"txQuery\":{\"inTxPool\":true}}", &json));
+  CHECK(has(json, "{\"blocks\":[{\"txs\":[{") && has(json, tx_hash) && has(json, "\"outgoingTransfer\":{") && !has(json, "\"height\""));
+  monero_utils_free(json);
+  json = NULL;
   mine(g_daemon, address_a, 1);
   EXPECT_OK(monero_wallet_sync(a, NULL, NULL, &json));
   monero_utils_free(json);
@@ -312,7 +344,14 @@ static void test_daemon(const char* daemon_uri) {
     EXPECT_OK(monero_wallet_sync(a, NULL, NULL, &synced));
     monero_utils_free(synced);
   }
-  if (!has(json, "{\"blocks\":[{\"height\":")) fprintf(stderr, "the mined tx is not in a block: %s\n", json != NULL ? json : "(null)");
+  if (!has(json, "{\"blocks\":[{\"height\":")) {
+    char* seen_by_daemon = NULL;
+    uint64_t chain_height = 0;
+    monero_daemon_get_height(g_daemon, &chain_height);
+    if (monero_daemon_get_tx(g_daemon, tx_hash, false, &seen_by_daemon) != MONERO_OK) fprintf(stderr, "the daemon has no such tx: %s\n", monero_last_error());
+    fprintf(stderr, "the mined tx is not in a block. The chain is at %llu, and the daemon has it as %.600s\nthe wallet has it as %.600s\n", (unsigned long long) chain_height, seen_by_daemon != NULL ? seen_by_daemon : "(null)", json != NULL ? json : "(null)");
+    monero_utils_free(seen_by_daemon);
+  }
   CHECK(has(json, "{\"blocks\":[{\"height\":") && has(json, tx_hash) && has(json, "\"outgoingTransfer\":{"));
   monero_utils_free(json);
   json = NULL;

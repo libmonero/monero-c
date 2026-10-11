@@ -1151,7 +1151,7 @@ MONERO_EXPORT monero_result monero_wallet_get_txs(monero_wallet* wallet, const c
  * Get the incoming and outgoing transfers of the wallet.
  *
  * @param wallet is the wallet handle
- * @param query_json is the JSON-serialized monero_transfer_query. NULL for all transfers
+ * @param query_json is the JSON-serialized monero_transfer_query, which can hold the monero_tx_query of the transactions of the transfers in "txQuery". NULL for all transfers
  * @param out_json receives a JSON object with the blocks of the monero_tx_wallet that have the transfers, and each transfer is in its transaction as a monero_incoming_transfer or a monero_outgoing_transfer. Free with monero_utils_free()
  * @return MONERO_OK or MONERO_ERROR
  */
@@ -1161,7 +1161,7 @@ MONERO_EXPORT monero_result monero_wallet_get_transfers(monero_wallet* wallet, c
  * Get the outputs of the wallet that it can spend.
  *
  * @param wallet is the wallet handle
- * @param query_json is the JSON-serialized monero_output_query. NULL for all outputs
+ * @param query_json is the JSON-serialized monero_output_query, which can hold the monero_tx_query of the transactions of the outputs in "txQuery". NULL for all outputs
  * @param out_json receives a JSON object with the blocks of the monero_tx_wallet that have the outputs, and each monero_output_wallet is in its transaction. Free with monero_utils_free()
  * @return MONERO_OK or MONERO_ERROR
  */

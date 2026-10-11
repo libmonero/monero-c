@@ -496,6 +496,25 @@ static void test_daemon_surface(void) {
   EXPECT_ERR_MSG(monero_wallet_get_txs(wallet, "{\"transferQuery\":{\"isIncoming\":true},\"inputQuery\":{\"isSpent\":true},\"outputQuery\":{\"isSpent\":false}}", &json), "no connection to daemon");
   CHECK(json == NULL);
 
+  // the query of a transfer or of an output can hold the query of its tx in "txQuery", which monero-cpp reads from a tree rooted at a
+  // block. A query of confirmed txs needs no daemon, and one that includes the pool does, and both free the queries that point to
+  // each other
+  EXPECT_OK(monero_wallet_get_transfers(wallet, "{\"isIncoming\":true,\"txQuery\":{\"isConfirmed\":true,\"minHeight\":5}}", &json));
+  CHECK(json != NULL && strcmp(json, "{\"blocks\":[]}") == 0);
+  monero_utils_free(json);
+  json = NULL;
+  EXPECT_OK(monero_wallet_get_outputs(wallet, "{\"isSpent\":false,\"txQuery\":{\"isLocked\":false,\"isConfirmed\":true}}", &json));
+  CHECK(json != NULL && strcmp(json, "{\"blocks\":[]}") == 0);
+  monero_utils_free(json);
+  json = NULL;
+  EXPECT_ERR_MSG(monero_wallet_get_transfers(wallet, "{\"txQuery\":{}}", &json), "no connection to daemon");
+  CHECK(json == NULL);
+  EXPECT_ERR_MSG(monero_wallet_get_transfers(wallet, "{\"txQuery\":5}", &json), "txQuery must be a JSON object");
+  EXPECT_ERR_MSG(monero_wallet_get_outputs(wallet, "{\"txQuery\":\"x\"}", &json), "txQuery must be a JSON object");
+  EXPECT_ERR_MSG(monero_wallet_get_transfers(wallet, "[]", &json), "query must be a JSON object");
+  EXPECT_ERR_MSG(monero_wallet_get_outputs(wallet, "{", &json), "query must be a JSON object");
+  CHECK(json == NULL);
+
   // describing a tx set reads its hex and ignores its txs, which monero-cpp can't parse when they have an outgoing transfer
   EXPECT_ERR_MSG(monero_wallet_describe_tx_set(wallet, "{\"txs\":[{\"hash\":\"00\",\"outgoingTransfer\":{}}]}", &json), "no txset provided");
   CHECK(json == NULL);

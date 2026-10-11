@@ -1,6 +1,6 @@
 # JSON shapes of the results
 
-Status: in progress. Steps 1 and 2 of [Steps](#steps) are done: `monero_wallet_get_txs()`, `monero_wallet_get_transfers()` and `monero_wallet_get_outputs()` return `{"blocks":[...]}`. The rest is a proposal. Nothing has been released, so the JSON of the ABI can change before the first release. The open decisions are in [Decisions](#decisions). It is the item "keep the block and the tx in the JSON of the wallet and the daemon" of [`TODO.md`](../TODO.md).
+Status: in progress. Steps 1 to 3 of [Steps](#steps) are done: `monero_wallet_get_txs()`, `monero_wallet_get_transfers()` and `monero_wallet_get_outputs()` return `{"blocks":[...]}`, and the queries of transfers and outputs take a `txQuery`. The rest is a proposal. Nothing has been released, so the JSON of the ABI can change before the first release. The open decisions are in [Decisions](#decisions). It is the item "keep the block and the tx in the JSON of the wallet and the daemon" of [`TODO.md`](../TODO.md).
 
 ## The problem
 
@@ -107,7 +107,7 @@ One commit each, with its tests. Each step runs the unit tests with and without 
 
 1. Helpers for the blocks and the tx sets, with the unconfirmed placeholder and the free of the models after the JSON is built. Done for the wallet in `monero_c_wallet.cpp`, with the helpers of monero-cpp for the txs and the transfers and one of its own for the outputs, which finds them in their txs. The daemon and the tx sets are left for their steps.
 2. `get_txs`, `get_transfers` and `get_outputs` return blocks. Done. The integration test checks that the height and the tx hash are there, that a tx of the pool has no height, that an empty query gives `{"blocks":[]}`, and that a full wallet and an RPC wallet give the same shape.
-3. The queries of transfers and outputs are translated, `txQuery` works, and the leak of the block-rooted query models is checked (`monero_utils::free()` has to reach them).
+3. The queries of transfers and outputs are translated, `txQuery` works, and the leak of the block-rooted query models is checked (`monero_utils::free()` has to reach them). Done, with the decision 2 as recommended. The integration test splits the outputs by `{"txQuery":{"isLocked":false}}` and `true` and checks that the halves add up to all of them, and that a range of heights in the `txQuery` of `get_transfers()` gives one transfer per block.
 4. The creations, the sweeps, `sign_txs` and `describe_tx_set` return tx sets. The integration test makes a set with a view-only wallet, checks `unsignedTxHex`, signs it with the full wallet and relays it.
 5. The payload of the listeners.
 6. The daemon txs, with the fake server of `monero_c_rpc_connection_unit_tests` and the node.
