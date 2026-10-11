@@ -23,6 +23,7 @@
 #ifndef MONERO_C_TLS_H
 #define MONERO_C_TLS_H
 
+#include <cctype>
 #include <functional>
 #include <string>
 
@@ -51,6 +52,18 @@ static const char* const CA_DIRS[] = {
   "/etc/pki/tls/certs",
   "/system/etc/security/cacerts",
 };
+
+// true if the name is a certificate by its hashed name, which is 8 hex digits, a dot and a number, such as 5ad8a5d6.0
+inline bool is_hashed_certificate_name(const std::string& name) {
+  if (name.size() < 10 || name[8] != '.') return false;
+  for (size_t i = 0; i < 8; i++) {
+    if (!std::isxdigit(static_cast<unsigned char>(name[i]))) return false;
+  }
+  for (size_t i = 9; i < name.size(); i++) {
+    if (!std::isdigit(static_cast<unsigned char>(name[i]))) return false;
+  }
+  return true;
+}
 
 // chooses what to export so that OpenSSL finds the CA certificates. The OpenSSL in the library has the directory of the machine
 // that built it in its code, and it looks for the certificates there, so a connection with a certificate of a CA fails where that

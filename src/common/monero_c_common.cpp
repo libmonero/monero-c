@@ -27,7 +27,6 @@
 #include <dirent.h>
 #include <openssl/x509.h>
 #include <sys/stat.h>
-#include <cctype>
 #endif
 
 namespace monero_c {
@@ -85,10 +84,7 @@ bool has_hashed_certificates(const std::string& path) {
   if (dir == nullptr) return false;
   bool found = false;
   while (struct dirent* entry = readdir(dir)) {
-    const char* name = entry->d_name;
-    size_t digits = 0;
-    while (std::isxdigit(static_cast<unsigned char>(name[digits]))) digits++;
-    if (digits == 8 && name[8] == '.' && std::isdigit(static_cast<unsigned char>(name[9]))) {
+    if (monero_c::is_hashed_certificate_name(entry->d_name)) {
       found = true;
       break;
     }
