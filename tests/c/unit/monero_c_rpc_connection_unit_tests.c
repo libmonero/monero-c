@@ -309,11 +309,22 @@ static void test_json_depth_limit(void) {
 
 #if !defined(_WIN32)
 
+#include <errno.h>
 #include <netinet/in.h>
 #include <pthread.h>
 #include <signal.h>
 #include <sys/socket.h>
+#include <time.h>
 #include <unistd.h>
+
+// waits for the milliseconds, and goes on waiting when a signal wakes it up
+static void sleep_ms(long milliseconds) {
+  struct timespec remaining;
+  remaining.tv_sec = milliseconds / 1000;
+  remaining.tv_nsec = (milliseconds % 1000) * 1000000L;
+  while (nanosleep(&remaining, &remaining) != 0 && errno == EINTR) {
+  }
+}
 
 // an HTTP server on a local port that answers every request with the body set before the request.
 // It serves one client at a time and keeps its socket open, as the epee client expects
@@ -487,7 +498,7 @@ static void* serve(void* arg) {
       char header[256];
       const char* body = get_body(server);
       if (body == NULL) {
-        while (!is_stopped(server)) usleep(10000);
+        while (!is_stopped(server)) sleep_ms(10);
         break;
       }
       int body_len = snprintf(NULL, 0, "%s", body);
@@ -840,10 +851,10 @@ static void test_request_shutdown_aborts_a_sync(void) {
     CHECK(pthread_create(&sync_thread, NULL, run_sync, &call) == 0);
 
     // the sync is in flight once the server has read its request
-    for (int i = 0; i < 1000 && request_count(&server) == 0; i++) usleep(10000);
+    for (int i = 0; i < 1000 && request_count(&server) == 0; i++) sleep_ms(10);
     CHECK(request_count(&server) > 0);
     EXPECT_OK(monero_wallet_request_shutdown(wallet));
-    for (int i = 0; i < 2000 && !call.done; i++) usleep(10000);
+    for (int i = 0; i < 2000 && !call.done; i++) sleep_ms(10);
     CHECK(call.done);
     if (!call.done) {
       stop_server(&server, server_thread);

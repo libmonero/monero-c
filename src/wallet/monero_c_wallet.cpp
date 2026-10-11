@@ -210,15 +210,15 @@ std::shared_ptr<monero::monero_tx_set> tx_set_of_hex(const char* json) {
   rapidjson::Document doc;
   if (doc.Parse(text.c_str()).HasParseError() || !doc.IsObject()) throw std::runtime_error("tx_set must be a JSON object");
   std::shared_ptr<monero::monero_tx_set> tx_set = std::make_shared<monero::monero_tx_set>();
-  auto read = [&](const char* name, boost::optional<std::string>& hex) {
+  auto copy_hex = [&](const char* name, boost::optional<std::string>& hex) {
     auto it = doc.FindMember(name);
     if (it == doc.MemberEnd() || it->value.IsNull()) return;
     if (!it->value.IsString()) throw std::runtime_error(std::string(name) + " must be a string");
     if (it->value.GetStringLength() > 0) hex = std::string(it->value.GetString(), it->value.GetStringLength());
   };
-  read("unsignedTxHex", tx_set->m_unsigned_tx_hex);
-  read("signedTxHex", tx_set->m_signed_tx_hex);
-  read("multisigTxHex", tx_set->m_multisig_tx_hex);
+  copy_hex("unsignedTxHex", tx_set->m_unsigned_tx_hex);
+  copy_hex("signedTxHex", tx_set->m_signed_tx_hex);
+  copy_hex("multisigTxHex", tx_set->m_multisig_tx_hex);
   return tx_set;
 }
 

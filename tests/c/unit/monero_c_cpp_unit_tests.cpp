@@ -128,9 +128,29 @@ static void test_ca_paths() {
   CHECK(paths.file == "/etc/ssl/cert.pem");
 }
 
+// the certificates by hashed name that OpenSSL looks for in a directory, such as 5ad8a5d6.0. A name that is too short, or that
+// has no number after the dot, is not one, and the check doesn't read past the end of the name
+static void test_hashed_certificate_names() {
+  CHECK(monero_c::is_hashed_certificate_name("5ad8a5d6.0"));
+  CHECK(monero_c::is_hashed_certificate_name("5ad8a5d6.12"));
+  CHECK(monero_c::is_hashed_certificate_name("0A1b2C3d.3"));
+
+  CHECK(!monero_c::is_hashed_certificate_name(""));
+  CHECK(!monero_c::is_hashed_certificate_name("."));
+  CHECK(!monero_c::is_hashed_certificate_name("5ad8a5d"));
+  CHECK(!monero_c::is_hashed_certificate_name("5ad8a5d6"));
+  CHECK(!monero_c::is_hashed_certificate_name("5ad8a5d6."));
+  CHECK(!monero_c::is_hashed_certificate_name("5ad8a5d6.r0"));   // a CRL
+  CHECK(!monero_c::is_hashed_certificate_name("5ad8a5d6.0.crt"));
+  CHECK(!monero_c::is_hashed_certificate_name("5ad8a5dz.0"));
+  CHECK(!monero_c::is_hashed_certificate_name("5ad8a5d60.0"));   // nine digits
+  CHECK(!monero_c::is_hashed_certificate_name("ca-certificates.crt"));
+}
+
 int main() {
   test_calls_from_cpp();
   test_ca_paths();
+  test_hashed_certificate_names();
 
   printf("%d/%d checks passed\n", g_checks - g_failures, g_checks);
   return g_failures == 0 ? EXIT_SUCCESS : EXIT_FAILURE;
