@@ -1078,8 +1078,8 @@ monero_result monero_wallet_sign_txs(::monero_wallet* wallet, const char* unsign
   reset_out(out_json);
   if (!require(wallet, "wallet") || !require(unsigned_tx_hex, "unsigned_tx_hex") || !require(out_json, "out_json")) return MONERO_ERROR;
   return guard([&] {
+    // the txs of a signed set have no block, set or transfers, so nothing points back at them and there is nothing to release
     monero::monero_tx_set tx_set = wallet->wallet->sign_txs(std::string(unsigned_tx_hex));
-    auto free_txs = epee::misc_utils::create_scope_leave_handler([&] { monero_utils::free(tx_set.m_txs); });
     *out_json = dup_string(tx_set.serialize());
   });
 }
