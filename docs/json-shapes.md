@@ -1,6 +1,6 @@
 # JSON shapes of the results
 
-Status: a proposal. Nothing of it is implemented, and nothing has been released, so it can change the JSON of the ABI before the first release. The open decisions are in [Decisions](#decisions). It is the item "keep the block and the tx in the JSON of the wallet and the daemon" of [`TODO.md`](../TODO.md).
+Status: in progress. Steps 1 and 2 of [Steps](#steps) are done: `monero_wallet_get_txs()`, `monero_wallet_get_transfers()` and `monero_wallet_get_outputs()` return `{"blocks":[...]}`. The rest is a proposal. Nothing has been released, so the JSON of the ABI can change before the first release. The open decisions are in [Decisions](#decisions). It is the item "keep the block and the tx in the JSON of the wallet and the daemon" of [`TODO.md`](../TODO.md).
 
 ## The problem
 
@@ -105,8 +105,8 @@ The lists of values that have no parent stay plain arrays: the accounts, the sub
 
 One commit each, with its tests. Each step runs the unit tests with and without the sanitizers, and the integration tests on a regtest node, also under the sanitizers.
 
-1. Helpers in `src/wallet/` for the blocks and the tx sets, with the unconfirmed placeholder and the free of the models after the JSON is built, and for the daemon the same on `monero_tx`.
-2. `get_txs`, `get_transfers` and `get_outputs` return blocks. The integration test checks that the height and the tx hash are there, that a tx of the pool has no height, and that an empty query gives `{"blocks":[]}`.
+1. Helpers for the blocks and the tx sets, with the unconfirmed placeholder and the free of the models after the JSON is built. Done for the wallet in `monero_c_wallet.cpp`, with the helpers of monero-cpp for the txs and the transfers and one of its own for the outputs, which finds them in their txs. The daemon and the tx sets are left for their steps.
+2. `get_txs`, `get_transfers` and `get_outputs` return blocks. Done. The integration test checks that the height and the tx hash are there, that a tx of the pool has no height, that an empty query gives `{"blocks":[]}`, and that a full wallet and an RPC wallet give the same shape.
 3. The queries of transfers and outputs are translated, `txQuery` works, and the leak of the block-rooted query models is checked (`monero_utils::free()` has to reach them).
 4. The creations, the sweeps, `sign_txs` and `describe_tx_set` return tx sets. The integration test makes a set with a view-only wallet, checks `unsignedTxHex`, signs it with the full wallet and relays it.
 5. The payload of the listeners.
@@ -115,7 +115,7 @@ One commit each, with its tests. Each step runs the unit tests with and without 
 
 ## Things to check while implementing
 
-- That the blocks of a query hold only the txs that matched. `get_txs_aux()` of monero-cpp erases the txs that don't meet a query, and they must not stay in `block->m_txs`.
+- That the blocks of a query hold only the txs that matched. `get_txs_aux()` of monero-cpp erases the txs that don't meet a query, and they must not stay in `block->m_txs`. Checked: it erases them from the block too. A query on the type of the txs (`{"isOutgoing":true}`) still keeps the txs that it filters out in memory, about 190 KB per call for 100 txs, which is the item of `TODO.md` about the txs that `get_txs()` filters out, and the integration test asks for its tx by hash for that reason.
 - That the RPC wallet gives the same shapes. Its blocks may have the height and no timestamp.
 - That the unconfirmed placeholder block and the copy of the tx in the listener are freed. LeakSanitizer finds it in the unit tests.
 - The cost of the listener JSON, which is built while the sync holds the lock of the wallet.

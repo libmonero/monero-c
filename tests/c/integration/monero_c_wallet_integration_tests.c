@@ -84,6 +84,10 @@ static int is_list(const char* json) {
   return json != NULL && json[0] == '[';
 }
 
+static int is_blocks(const char* json) {
+  return json != NULL && strncmp(json, "{\"blocks\":[", 11) == 0;
+}
+
 // the length of s, up to max characters
 static size_t bounded_length(const char* s, size_t max) {
   size_t n = 0;
@@ -177,17 +181,21 @@ static void test_daemon(const char* daemon_uri) {
   EXPECT_OK(monero_wallet_get_subaddress_unlocked_balance(a, 0, 0, &value));
   CHECK(value > 0);
 
-  // the history of the wallet
+  // the history of the wallet comes in blocks, with each tx in its block and each transfer and output in its tx
   EXPECT_OK(monero_wallet_get_txs(a, NULL, &json));
-  CHECK(is_list(json));
+  CHECK(is_blocks(json) && has(json, "{\"blocks\":[{\"height\":") && has(json, "\"timestamp\":") && has(json, "\"txs\":[{") && has(json, "\"hash\":\""));
   monero_utils_free(json);
   json = NULL;
   EXPECT_OK(monero_wallet_get_transfers(a, NULL, &json));
-  CHECK(is_list(json));
+  CHECK(is_blocks(json) && has(json, "{\"blocks\":[{\"height\":") && has(json, "\"hash\":\"") && has(json, "\"incomingTransfers\":[{"));
   monero_utils_free(json);
   json = NULL;
   EXPECT_OK(monero_wallet_get_outputs(a, NULL, &json));
-  CHECK(is_list(json) && has(json, "\"amount\""));
+  CHECK(is_blocks(json) && has(json, "{\"blocks\":[{\"height\":") && has(json, "\"hash\":\"") && has(json, "\"outputs\":[{") && has(json, "\"amount\""));
+  monero_utils_free(json);
+  json = NULL;
+  EXPECT_OK(monero_wallet_get_txs(a, "{\"minHeight\":1000000}", &json));
+  CHECK(json != NULL && strcmp(json, "{\"blocks\":[]}") == 0);
   monero_utils_free(json);
   json = NULL;
 
@@ -274,12 +282,42 @@ static void test_daemon(const char* daemon_uri) {
   CHECK(tx_hash != NULL);
   monero_utils_free(json);
   json = NULL;
+
+  // a tx that is relayed and not mined is in the pool, in the block that has no height
+  EXPECT_OK(monero_wallet_get_txs(a, "{\"inTxPool\":true}", &json));
+  CHECK(has(json, "{\"blocks\":[{\"txs\":[{") && has(json, tx_hash) && !has(json, "\"height\""));
+  monero_utils_free(json);
+  json = NULL;
   mine(g_daemon, address_a, 1);
   EXPECT_OK(monero_wallet_sync(a, NULL, NULL, &json));
   monero_utils_free(json);
   json = NULL;
   EXPECT_OK(monero_wallet_get_tx_key(a, tx_hash, &json));
   CHECK(json != NULL);
+  monero_utils_free(json);
+  json = NULL;
+
+  // once it is mined it is in a block with a height, and its transfer is in it. It is asked for by its hash, since a query on the
+  // type of the txs leaks the txs that it filters out in monero-cpp, see TODO.md. One run in eight of the first version had the wallet
+  // still see it in the pool after the sync, so the wallet gets a few more syncs to see the block, and the JSON is kept if it doesn't
+  char hash_query[160];
+  snprintf(hash_query, sizeof(hash_query), "{\"hashes\":[\"%s\"]}", tx_hash);
+  for (int attempt = 0; attempt < 5; attempt++) {
+    monero_utils_free(json);
+    json = NULL;
+    EXPECT_OK(monero_wallet_get_txs(a, hash_query, &json));
+    if (has(json, "{\"blocks\":[{\"height\":")) break;
+    char* synced = NULL;
+    sleep(1);
+    EXPECT_OK(monero_wallet_sync(a, NULL, NULL, &synced));
+    monero_utils_free(synced);
+  }
+  if (!has(json, "{\"blocks\":[{\"height\":")) fprintf(stderr, "the mined tx is not in a block: %s\n", json != NULL ? json : "(null)");
+  CHECK(has(json, "{\"blocks\":[{\"height\":") && has(json, tx_hash) && has(json, "\"outgoingTransfer\":{"));
+  monero_utils_free(json);
+  json = NULL;
+  EXPECT_OK(monero_wallet_get_transfers(a, "{\"isIncoming\":false}", &json));
+  CHECK(has(json, "{\"blocks\":[{\"height\":") && has(json, tx_hash) && has(json, "\"outgoingTransfer\":{"));
   monero_utils_free(json);
   json = NULL;
 
@@ -559,6 +597,20 @@ static void test_rpc(const char* daemon_uri, const char* rpc_uri) {
   json = NULL;
   EXPECT_OK(monero_wallet_rpc_get_subaddresses(rpc, 0, NULL, 0, true, &json));
   CHECK(is_list(json) && has(json, "\"index\":0"));
+  monero_utils_free(json);
+  json = NULL;
+
+  // the history of a new wallet is in blocks too, and has none
+  EXPECT_OK(monero_wallet_get_txs(rpc, NULL, &json));
+  CHECK(json != NULL && strcmp(json, "{\"blocks\":[]}") == 0);
+  monero_utils_free(json);
+  json = NULL;
+  EXPECT_OK(monero_wallet_get_transfers(rpc, NULL, &json));
+  CHECK(json != NULL && strcmp(json, "{\"blocks\":[]}") == 0);
+  monero_utils_free(json);
+  json = NULL;
+  EXPECT_OK(monero_wallet_get_outputs(rpc, NULL, &json));
+  CHECK(json != NULL && strcmp(json, "{\"blocks\":[]}") == 0);
   monero_utils_free(json);
   json = NULL;
 

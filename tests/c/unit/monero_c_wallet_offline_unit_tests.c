@@ -504,9 +504,9 @@ static void test_daemon_surface(void) {
   EXPECT_ERR_MSG(monero_wallet_describe_tx_set(wallet, "{\"unsignedTxHex\":\"00\"}", &json), "failed to parse unsigned transfers: cannot load unsigned_txset");
   CHECK(json == NULL);
 
-  // a fresh wallet has no outputs, so the list is empty
+  // a fresh wallet has no outputs, so there are no blocks
   EXPECT_OK(monero_wallet_get_outputs(wallet, NULL, &json));
-  CHECK(json != NULL && strcmp(json, "[]") == 0);
+  CHECK(json != NULL && strcmp(json, "{\"blocks\":[]}") == 0);
   monero_utils_free(json);
   json = NULL;
   EXPECT_ERR(monero_wallet_get_txs(wallet, "[]", &json));

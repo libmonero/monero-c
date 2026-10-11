@@ -1129,13 +1129,20 @@ MONERO_EXPORT monero_result monero_wallet_stop_mining(monero_wallet* wallet);
 // ---------------------------- TRANSACTIONS ---------------------------------
 // the JSON of a query or a config has the same fields as the monero-cpp model it describes
 // NULL as a query means every item
+//
+// monero_wallet_get_txs(), monero_wallet_get_transfers() and monero_wallet_get_outputs() return their results in blocks, as
+// {"blocks":[...]}, so that each result has its context. A block has its height and its timestamp, or neither if it holds the
+// transactions that aren't in a block yet, in the pool or not relayed, which are all in one block. A block has the transactions
+// of the result in its "txs", and a transaction has the transfers or the outputs of the result in "incomingTransfers",
+// "outgoingTransfer" and "outputs". A query with no match gives {"blocks":[]}. The transactions come in the order of the blocks, so
+// a query by hashes doesn't get them back in the order of its hashes, and the caller sorts them
 
 /**
  * Get the transactions of the wallet.
  *
  * @param wallet is the wallet handle
  * @param query_json is the JSON-serialized monero_tx_query. NULL for all transactions
- * @param out_json receives a JSON array of monero_tx_wallet. Free with monero_utils_free()
+ * @param out_json receives a JSON object with the blocks of the monero_tx_wallet that match, with their transfers. Free with monero_utils_free()
  * @return MONERO_OK or MONERO_ERROR
  */
 MONERO_EXPORT monero_result monero_wallet_get_txs(monero_wallet* wallet, const char* query_json, char** out_json);
@@ -1145,7 +1152,7 @@ MONERO_EXPORT monero_result monero_wallet_get_txs(monero_wallet* wallet, const c
  *
  * @param wallet is the wallet handle
  * @param query_json is the JSON-serialized monero_transfer_query. NULL for all transfers
- * @param out_json receives a JSON array of monero_incoming_transfer and monero_outgoing_transfer. Free with monero_utils_free()
+ * @param out_json receives a JSON object with the blocks of the monero_tx_wallet that have the transfers, and each transfer is in its transaction as a monero_incoming_transfer or a monero_outgoing_transfer. Free with monero_utils_free()
  * @return MONERO_OK or MONERO_ERROR
  */
 MONERO_EXPORT monero_result monero_wallet_get_transfers(monero_wallet* wallet, const char* query_json, char** out_json);
@@ -1155,7 +1162,7 @@ MONERO_EXPORT monero_result monero_wallet_get_transfers(monero_wallet* wallet, c
  *
  * @param wallet is the wallet handle
  * @param query_json is the JSON-serialized monero_output_query. NULL for all outputs
- * @param out_json receives a JSON array of monero_output_wallet. Free with monero_utils_free()
+ * @param out_json receives a JSON object with the blocks of the monero_tx_wallet that have the outputs, and each monero_output_wallet is in its transaction. Free with monero_utils_free()
  * @return MONERO_OK or MONERO_ERROR
  */
 MONERO_EXPORT monero_result monero_wallet_get_outputs(monero_wallet* wallet, const char* query_json, char** out_json);

@@ -259,6 +259,23 @@ std::shared_ptr<monero::monero_wallet_config> wallet_config_of(const char* json)
   return monero::monero_wallet_config::deserialize(buffer.GetString());
 }
 
+// the JSON of the txs, transfers or outputs of a wallet, with the context that they have: every tx is in its block, which has its height
+// and its timestamp, and a transfer or an output is in its tx. A tx that no block holds yet, in the pool or not relayed, is in one block
+// that has no height. The helpers of monero-cpp build the blocks of txs and of transfers, and an output is found in its tx
+std::string json_of_blocks(const std::vector<std::shared_ptr<monero::monero_block>>& blocks) {
+  return "{\"blocks\":" + json_of_list(blocks) + "}";
+}
+
+std::vector<std::shared_ptr<monero::monero_block>> blocks_of_outputs(const std::vector<std::shared_ptr<monero::monero_output_wallet>>& outputs) {
+  std::vector<std::shared_ptr<monero::monero_tx_wallet>> txs;
+  for (const std::shared_ptr<monero::monero_output_wallet>& output : outputs) {
+    std::shared_ptr<monero::monero_tx_wallet> tx = std::static_pointer_cast<monero::monero_tx_wallet>(output->m_tx);
+    if (tx == nullptr) throw std::runtime_error("output has no tx");
+    if (std::find(txs.begin(), txs.end(), tx) == txs.end()) txs.push_back(tx);
+  }
+  return monero_utils::get_blocks_from_txs(txs);
+}
+
 // parses an optional query. NULL gives the default query, which matches everything
 template <class T>
 std::shared_ptr<T> query_of(const char* json) {
@@ -993,8 +1010,9 @@ monero_result monero_wallet_get_txs(::monero_wallet* wallet, const char* query_j
       monero_utils::free(query);
     });
     auto txs = query ? wallet->wallet->get_txs(*query) : wallet->wallet->get_txs();
-    auto free_txs = epee::misc_utils::create_scope_leave_handler([&] { monero_utils::free(txs); });
-    *out_json = dup_string(json_of_list(txs));
+    auto blocks = monero_utils::get_blocks_from_txs(txs);
+    auto free_blocks = epee::misc_utils::create_scope_leave_handler([&] { monero_utils::free(blocks); });
+    *out_json = dup_string(json_of_blocks(blocks));
   });
 }
 
@@ -1005,8 +1023,9 @@ monero_result monero_wallet_get_transfers(::monero_wallet* wallet, const char* q
     std::shared_ptr<monero::monero_transfer_query> query = query_of<monero::monero_transfer_query>(query_json);
     auto free_query = epee::misc_utils::create_scope_leave_handler([&] { monero_utils::free(query->m_tx_query); });
     auto transfers = wallet->wallet->get_transfers(*query);
-    auto free_transfers = epee::misc_utils::create_scope_leave_handler([&] { monero_utils::free(transfers); });
-    *out_json = dup_string(json_of_list(transfers));
+    auto blocks = monero_utils::get_blocks_from_transfers(transfers);
+    auto free_blocks = epee::misc_utils::create_scope_leave_handler([&] { monero_utils::free(blocks); });
+    *out_json = dup_string(json_of_blocks(blocks));
   });
 }
 
@@ -1017,8 +1036,9 @@ monero_result monero_wallet_get_outputs(::monero_wallet* wallet, const char* que
     std::shared_ptr<monero::monero_output_query> query = query_of<monero::monero_output_query>(query_json);
     auto free_query = epee::misc_utils::create_scope_leave_handler([&] { monero_utils::free(query->m_tx_query); });
     auto outputs = wallet->wallet->get_outputs(*query);
-    auto free_outputs = epee::misc_utils::create_scope_leave_handler([&] { monero_utils::free(outputs); });
-    *out_json = dup_string(json_of_list(outputs));
+    auto blocks = blocks_of_outputs(outputs);
+    auto free_blocks = epee::misc_utils::create_scope_leave_handler([&] { monero_utils::free(blocks); });
+    *out_json = dup_string(json_of_blocks(blocks));
   });
 }
 

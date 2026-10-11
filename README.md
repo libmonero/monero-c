@@ -82,7 +82,7 @@ monero_wallet_get_primary_address(wallet_rpc, &primary_address); // 555zgduFhmKd
 uint64_t balance = 0;
 monero_wallet_get_balance(wallet_rpc, &balance);                // 533648366742
 char* txs = NULL;
-monero_wallet_get_txs(wallet_rpc, NULL, &txs);                  // JSON array of monero_tx_wallet
+monero_wallet_get_txs(wallet_rpc, NULL, &txs);                  // JSON object with the blocks of the monero_tx_wallet
 monero_utils_free(txs);
 
 // send funds from RPC wallet to full wallet
