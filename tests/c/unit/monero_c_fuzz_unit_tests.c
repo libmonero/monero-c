@@ -369,7 +369,8 @@ static void daemon_hashes(const fixtures* fx, const char* input, size_t length) 
 #define OUTPUT_QUERY "{\"accountIndex\":0,\"subaddressIndex\":0,\"subaddressIndices\":[0],\"amount\":\"1\",\"minAmount\":\"0\",\"maxAmount\":\"100\",\"isSpent\":false,\"isFrozen\":false,\"keyImage\":{\"hex\":\"" HEX64 "\",\"signature\":\"" HEX64 "\"},\"index\":1,\"stealthPublicKey\":\"" HEX64 "\",\"txQuery\":{\"isConfirmed\":true,\"hashes\":[\"" HEX64 "\"],\"height\":1}}"
 #define TRANSFER_QUERY "{\"isIncoming\":true,\"address\":\"" ADDRESS "\",\"subaddressIndex\":0,\"subaddressIndices\":[0,1],\"hasDestinations\":false,\"amount\":\"1\",\"accountIndex\":0,\"txQuery\":{\"isConfirmed\":true,\"hashes\":[\"" HEX64 "\"],\"minHeight\":0,\"maxHeight\":5}}"
 #define TX_QUERY "{\"isConfirmed\":true,\"inTxPool\":false,\"isMinerTx\":false,\"isLocked\":false,\"isOutgoing\":true,\"isIncoming\":true,\"hashes\":[\"" HEX64 "\",\"" HEX64 "\"],\"hasPaymentId\":true,\"paymentIds\":[\"abababababababab\"],\"height\":3,\"minHeight\":0,\"maxHeight\":9,\"includeOutputs\":true,\"fee\":\"10\",\"numConfirmations\":2,\"transferQuery\":{\"isIncoming\":true,\"address\":\"" ADDRESS "\",\"subaddressIndex\":0,\"amount\":\"1\"},\"inputQuery\":{\"isSpent\":true,\"minAmount\":\"1\"},\"outputQuery\":{\"accountIndex\":0,\"isFrozen\":false}}"
-#define WALLET_CONFIG "{\"networkType\":0,\"password\":\"password\",\"seed\":\"" SEED "\",\"seedOffset\":\"\",\"restoreHeight\":0,\"language\":\"English\",\"isMultisig\":false,\"saveCurrent\":false,\"accountLookahead\":1,\"subaddressLookahead\":2,\"server\":{\"uri\":\"" CLOSED_PORT "\",\"username\":\"u\",\"password\":\"p\",\"sslVerify\":false,\"timeoutMs\":500,\"priority\":1,\"zmqUri\":\"\",\"proxyUri\":\"\"},\"isTrustedDaemon\":false}"
+// no server: a mutation of its uri can be a host name, and a wallet that is made with a server looks it up, which a runner with a network answers in seconds
+#define WALLET_CONFIG "{\"networkType\":0,\"password\":\"password\",\"seed\":\"" SEED "\",\"seedOffset\":\"\",\"restoreHeight\":0,\"language\":\"English\",\"isMultisig\":false,\"saveCurrent\":false,\"accountLookahead\":1,\"subaddressLookahead\":2,\"isTrustedDaemon\":false}"
 #define KEYS_CONFIG "{\"networkType\":0,\"primaryAddress\":\"" ADDRESS "\",\"privateViewKey\":\"" VIEW_KEY "\",\"restoreHeight\":0}"
 #define CONNECTION_JSON "{\"uri\":\"" CLOSED_PORT "\",\"username\":\"u\",\"password\":\"p\",\"proxyUri\":\"\",\"sslVerify\":true,\"zmqUri\":\"tcp://127.0.0.1:1\",\"priority\":1,\"timeoutMs\":1000}"
 #define KEY_IMAGES "[{\"hex\":\"" HEX64 "\",\"signature\":\"" HEX64 HEX64 "\"},{\"hex\":\"" HEX64 "\",\"signature\":\"" HEX64 HEX64 "\"}]"
@@ -534,6 +535,15 @@ int main(void) {
   size_t count = sizeof(g_targets) / sizeof(g_targets[0]);
 
   g_verbose = getenv("MONERO_C_FUZZ_VERBOSE") != NULL;
+
+  // an address that isn't one is looked up as an OpenAlias name by the calls that take a destination, an address book entry or the address of a
+  // message, and a mutation of one often looks like a name. The resolver of monero-project goes to the public servers, and on a runner with a
+  // network each name waits for their timeouts, minutes together. Pointing it to a port that refuses makes every lookup fail at once
+#if defined(_WIN32)
+  _putenv_s("DNS_PUBLIC", "tcp://127.0.0.1");
+#else
+  setenv("DNS_PUBLIC", "tcp://127.0.0.1", 1);
+#endif
   fuzz_seed(&g_rng, fuzz_seed_value());
   remove_files(path);
   EXPECT_OK(monero_wallet_create_from_seed(path, "password", MAINNET, SEED, NULL, 0, NULL, &full));
