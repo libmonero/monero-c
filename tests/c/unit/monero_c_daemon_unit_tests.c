@@ -537,9 +537,16 @@ static void test_listener_registered_with_one_daemon(void) {
   check_registered(first, 1, listener);
   check_registered(second, 0, NULL);
 
+  // remove_listeners() unregisters it too, and then another daemon takes it
+  EXPECT_OK(monero_daemon_remove_listeners(first));
+  check_registered(first, 0, NULL);
+  EXPECT_OK(monero_daemon_add_listener(second, listener));
+  check_registered(second, 1, listener);
+  EXPECT_ERR_MSG(monero_daemon_add_listener(first, listener), "listener is already registered with another daemon");
+
   // freeing the listener unregisters it from the daemon it is registered with
   monero_daemon_listener_free(listener);
-  check_registered(first, 0, NULL);
+  check_registered(second, 0, NULL);
 
   monero_daemon_free(second);
   monero_daemon_free(first);

@@ -31,6 +31,7 @@
 #include "rapidjson/stringbuffer.h"
 #include "rapidjson/writer.h"
 
+#include <algorithm>
 #include <boost/optional.hpp>
 #include <cstdio>
 #include <map>
@@ -40,9 +41,44 @@
 #include <string>
 #include <vector>
 
+struct monero_daemon_listener;
+
+namespace monero_c {
+
+// the handles of the listeners that are added to one daemon. get_listeners() reads this list, and not the set of monero-cpp, which holds the
+// adapters inside the handles: another thread can free a listener after the copy of that set, and the read of the adapter that follows would
+// be a read of freed memory. The handles are only compared and returned here, never read
+struct daemon_listener_registry {
+  std::mutex mutex;
+  std::vector<monero_daemon_listener*> handles;
+
+  void add(monero_daemon_listener* handle) {
+    std::lock_guard<std::mutex> lock(mutex);
+    if (std::find(handles.begin(), handles.end(), handle) == handles.end()) handles.push_back(handle);
+  }
+
+  void remove(monero_daemon_listener* handle) {
+    std::lock_guard<std::mutex> lock(mutex);
+    handles.erase(std::remove(handles.begin(), handles.end(), handle), handles.end());
+  }
+
+  void clear() {
+    std::lock_guard<std::mutex> lock(mutex);
+    handles.clear();
+  }
+
+  std::vector<monero_daemon_listener*> copy() {
+    std::lock_guard<std::mutex> lock(mutex);
+    return handles;
+  }
+};
+
+} // namespace monero_c
+
 // state behind a monero_daemon handle
 struct monero_daemon {
   std::shared_ptr<monero::monero_daemon_rpc> rpc;
+  std::shared_ptr<monero_c::daemon_listener_registry> registry = std::make_shared<monero_c::daemon_listener_registry>();
 };
 
 namespace {
@@ -198,7 +234,6 @@ monero_key_image_spent_status to_c_status(monero::monero_key_image_spent_status 
 // forwards the daemon's block header notifications to the C callbacks of a listener
 class listener_adapter : public monero::monero_daemon_listener {
 public:
-  ::monero_daemon_listener* owner = nullptr;  // the C handle, not the base class of the same name
   monero_daemon_listener_callbacks callbacks = {};
 
   void on_block_header(const std::shared_ptr<monero::monero_block_header>& header) override {
@@ -214,7 +249,8 @@ public:
 struct monero_daemon_listener {
   listener_adapter adapter;
   std::weak_ptr<monero::monero_daemon_rpc> registered_with;
-  std::mutex registration_mutex; // guards registered_with, so the check and the registration in add_listener are one step
+  std::weak_ptr<monero_c::daemon_listener_registry> registry;  // the list of the daemon that it is added to, set with registered_with
+  std::mutex registration_mutex; // guards registered_with and registry, so the check and the registration in add_listener are one step
 };
 
 extern "C" {
@@ -270,7 +306,6 @@ monero_result monero_daemon_listener_create(const monero_daemon_listener_callbac
   if (!require(callbacks, "callbacks") || !require(out_listener, "out_listener")) return MONERO_ERROR;
   return guard([&] {
     std::unique_ptr<monero_daemon_listener> listener(new monero_daemon_listener());
-    listener->adapter.owner = listener.get();
     listener->adapter.callbacks = *callbacks;
     *out_listener = listener.release();
   });
@@ -279,9 +314,11 @@ monero_result monero_daemon_listener_create(const monero_daemon_listener_callbac
 void monero_daemon_listener_free(monero_daemon_listener* listener) {
   if (listener == nullptr) return;
   std::shared_ptr<monero::monero_daemon_rpc> rpc;
+  std::shared_ptr<monero_c::daemon_listener_registry> registry;
   {
     std::lock_guard<std::mutex> lock(listener->registration_mutex);
     rpc = listener->registered_with.lock();
+    registry = listener->registry.lock();
   }
   if (rpc) {
     try {
@@ -290,6 +327,7 @@ void monero_daemon_listener_free(monero_daemon_listener* listener) {
       // release the listener either way, since the caller can't act on a failed removal
     }
   }
+  if (registry) registry->remove(listener);
   delete listener;
 }
 
@@ -299,9 +337,12 @@ monero_result monero_daemon_add_listener(monero_daemon* daemon, monero_daemon_li
     // free unregisters from one daemon only, so a listener can't be registered with two
     std::lock_guard<std::mutex> lock(listener->registration_mutex);
     std::shared_ptr<monero::monero_daemon_rpc> current = listener->registered_with.lock();
-    if (current && current != daemon->rpc) throw std::runtime_error("listener is already registered with another daemon");
+    // remove_listeners() of that daemon leaves the link of the listener as it was, so the set of the daemon says if it still holds it
+    if (current && current != daemon->rpc && current->get_listeners().count(&listener->adapter) != 0) throw std::runtime_error("listener is already registered with another daemon");
     daemon->rpc->add_listener(listener->adapter);
     listener->registered_with = daemon->rpc;
+    listener->registry = daemon->registry;
+    daemon->registry->add(listener);
   });
 }
 
@@ -310,8 +351,12 @@ monero_result monero_daemon_remove_listener(monero_daemon* daemon, monero_daemon
   return guard([&] {
     // remove_listener waits for callbacks, so the lock is taken after it returns
     daemon->rpc->remove_listener(listener->adapter);
+    daemon->registry->remove(listener);
     std::lock_guard<std::mutex> lock(listener->registration_mutex);
-    if (listener->registered_with.lock() == daemon->rpc) listener->registered_with.reset();
+    if (listener->registered_with.lock() == daemon->rpc) {
+      listener->registered_with.reset();
+      listener->registry.reset();
+    }
   });
 }
 
@@ -319,19 +364,15 @@ monero_result monero_daemon_get_listeners(monero_daemon* daemon, monero_daemon_l
   reset_out(out_listeners);
   reset_out(out_count);
   if (!require(daemon, "daemon") || !require(out_listeners, "out_listeners") || !require(out_count, "out_count")) return MONERO_ERROR;
-  return guard([&] {
-    std::vector<monero_daemon_listener*> handles;
-    for (monero::monero_daemon_listener* listener : daemon->rpc->get_listeners()) {
-      listener_adapter* adapter = dynamic_cast<listener_adapter*>(listener);
-      if (adapter != nullptr) handles.push_back(adapter->owner);
-    }
-    *out_listeners = dup_array(handles, out_count);
-  });
+  return guard([&] { *out_listeners = dup_array(daemon->registry->copy(), out_count); });
 }
 
 monero_result monero_daemon_remove_listeners(monero_daemon* daemon) {
   if (!require(daemon, "daemon")) return MONERO_ERROR;
-  return guard([&] { daemon->rpc->remove_listeners(); });
+  return guard([&] {
+    daemon->rpc->remove_listeners();
+    daemon->registry->clear();
+  });
 }
 
 // ---------------------------------- GENERAL ---------------------------------
