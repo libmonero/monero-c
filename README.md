@@ -116,6 +116,7 @@ Every call returns `MONERO_OK` or `MONERO_ERROR`, and `monero_last_error()` give
 * [API documentation](https://libmonero.github.io/monero-c/)
 * [Coverage report](https://libmonero.github.io/monero-c/coverage/)
 * [.NET bindings and NuGet package](docs/dotnet.md)
+* [Changelog](CHANGELOG.md)
 
 ## Building monero-c from source
 
