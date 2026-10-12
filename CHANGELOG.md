@@ -14,7 +14,9 @@ prerelease: the C API and the JSON can still change between versions, and `moner
 * `Monero.Native 0.1.0-alpha.1` for `linux-x64`, `linux-arm64`, `win-x64`, `osx-x64` and `osx-arm64`, with the third-party notices. The
   platforms and what each needs are in [the README of the package](packaging/dotnet-core/README.md).
 * Unit tests on every platform, integration tests on a regtest node and a `monero-wallet-rpc` server on Linux x64, the C# tests on
-  Ubuntu 22.04 and 24.04, Debian 12 (x86_64 and arm64), Windows and macOS (arm64 and x86_64), and the sanitizers on Linux.
+  Ubuntu 22.04 and 24.04, Debian 12 (x86_64 and arm64), Windows and macOS (arm64 and x86_64), and the sanitizers on Linux. Some of the
+  unit tests only look for crashes and leaks: every function is called with a NULL in each pointer, with the largest numbers and with long
+  texts, the functions that read JSON, hex or binary get mutations of valid inputs, and the functions run from several threads.
 
 ### Known limits
 

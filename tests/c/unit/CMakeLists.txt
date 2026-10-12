@@ -28,6 +28,9 @@ target_link_libraries(monero_c_arguments_unit_tests PRIVATE monero_c monero_c_te
 add_executable(monero_c_fuzz_unit_tests monero_c_fuzz_unit_tests.c)
 target_link_libraries(monero_c_fuzz_unit_tests PRIVATE monero_c monero_c_test_common)
 
+add_executable(monero_c_threads_unit_tests monero_c_threads_unit_tests.c)
+target_link_libraries(monero_c_threads_unit_tests PRIVATE monero_c monero_c_test_common)
+
 add_executable(monero_c_cpp_unit_tests monero_c_cpp_unit_tests.cpp)
 target_link_libraries(monero_c_cpp_unit_tests PRIVATE monero_c monero_c_test_common)
 
@@ -41,4 +44,5 @@ add_test(NAME monero_c_rpc_connection_unit_tests COMMAND monero_c_rpc_connection
 add_test(NAME monero_c_abi_unit_tests COMMAND monero_c_abi_unit_tests)
 add_test(NAME monero_c_arguments_unit_tests COMMAND monero_c_arguments_unit_tests)
 add_test(NAME monero_c_fuzz_unit_tests COMMAND monero_c_fuzz_unit_tests)
+add_test(NAME monero_c_threads_unit_tests COMMAND monero_c_threads_unit_tests)
 add_test(NAME monero_c_cpp_unit_tests COMMAND monero_c_cpp_unit_tests)

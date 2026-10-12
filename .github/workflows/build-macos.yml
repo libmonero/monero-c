@@ -112,7 +112,7 @@ jobs:
           cp build/libmonero_c.dylib dist/
           cp /usr/local/lib/libusb-1.0.0.dylib dist/
           cp build/tests/c/unit/monero_c_utils_unit_tests build/tests/c/unit/monero_c_daemon_unit_tests dist/
-          cp build/tests/c/unit/monero_c_wallet_unit_tests build/tests/c/unit/monero_c_wallet_keys_unit_tests build/tests/c/unit/monero_c_wallet_offline_unit_tests build/tests/c/unit/monero_c_wallet_multisig_unit_tests build/tests/c/unit/monero_c_rpc_connection_unit_tests build/tests/c/unit/monero_c_abi_unit_tests build/tests/c/unit/monero_c_arguments_unit_tests build/tests/c/unit/monero_c_fuzz_unit_tests build/tests/c/unit/monero_c_cpp_unit_tests dist/
+          cp build/tests/c/unit/monero_c_wallet_unit_tests build/tests/c/unit/monero_c_wallet_keys_unit_tests build/tests/c/unit/monero_c_wallet_offline_unit_tests build/tests/c/unit/monero_c_wallet_multisig_unit_tests build/tests/c/unit/monero_c_rpc_connection_unit_tests build/tests/c/unit/monero_c_abi_unit_tests build/tests/c/unit/monero_c_arguments_unit_tests build/tests/c/unit/monero_c_fuzz_unit_tests build/tests/c/unit/monero_c_threads_unit_tests build/tests/c/unit/monero_c_cpp_unit_tests dist/
 
       - name: Upload monero-c build
         uses: actions/upload-artifact@v7

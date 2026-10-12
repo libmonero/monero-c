@@ -871,7 +871,7 @@ static void test_daemon_models_are_released(void) {
 // a sync on a thread, and its result
 typedef struct sync_call {
   monero_wallet* wallet;
-  volatile int done;
+  int done;  // set with an atomic store after the result, and read with an atomic load
   monero_result result;
   char error[256];
 } sync_call;
@@ -883,7 +883,7 @@ static void* run_sync(void* arg) {
   snprintf(call->error, sizeof(call->error), "%s", result == MONERO_OK ? "" : monero_last_error());
   monero_utils_free(json);
   call->result = result;
-  call->done = 1;
+  __atomic_store_n(&call->done, 1, __ATOMIC_RELEASE);
   return NULL;
 }
 
@@ -915,9 +915,9 @@ static void test_request_shutdown_aborts_a_sync(void) {
     for (int i = 0; i < 1000 && request_count(&server) == 0; i++) sleep_ms(10);
     CHECK(request_count(&server) > 0);
     EXPECT_OK(monero_wallet_request_shutdown(wallet));
-    for (int i = 0; i < 2000 && !call.done; i++) sleep_ms(10);
-    CHECK(call.done);
-    if (!call.done) {
+    for (int i = 0; i < 2000 && !__atomic_load_n(&call.done, __ATOMIC_ACQUIRE); i++) sleep_ms(10);
+    CHECK(__atomic_load_n(&call.done, __ATOMIC_ACQUIRE));
+    if (!__atomic_load_n(&call.done, __ATOMIC_ACQUIRE)) {
       stop_server(&server, server_thread);
       server.fd = -1;
     }
