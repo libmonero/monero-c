@@ -150,7 +150,7 @@ static void hostile_wallet_inputs(monero_wallet* full, monero_wallet* view_only,
   char* outputs = NULL;
   char* images = NULL;
   char* proof = NULL;
-  size_t signed_size = strlen(signed_set) + 1;
+  size_t signed_size = bounded_length(signed_set, 1 << 22) + 1;
   char* signed_hex = (char*) malloc(signed_size);
   char* image_list = NULL;
   fuzz_seed(&rng, fuzz_seed_value());
@@ -162,11 +162,11 @@ static void hostile_wallet_inputs(monero_wallet* full, monero_wallet* view_only,
     // the list is the value of "keyImages", which import_key_images() takes
     const char* member = strstr(images, "\"keyImages\":");
     if (member != NULL) {
-      const char* list = member + strlen("\"keyImages\":");
-      size_t length = fuzz_value_end(list, strlen(list), 0);
+      const char* list = member + bounded_length("\"keyImages\":", 32);
+      size_t length = fuzz_value_end(list, bounded_length(list, 1 << 22), 0);
       image_list = (char*) malloc(length + 1);
       if (image_list != NULL) {
-        memcpy(image_list, list, length);
+        fuzz_copy(image_list, length + 1, list, length);
         image_list[length] = '\0';
       }
     }

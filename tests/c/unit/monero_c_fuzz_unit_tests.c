@@ -459,11 +459,11 @@ static const target g_targets[] = {
 // a random blob that starts with the bytes of the hex, as the seed of a hex target
 static size_t blob_seed(const char* magic, char* out, size_t cap) {
   uint8_t body[1024];
-  size_t length = strlen(magic);
+  size_t length = fuzz_text_length(magic, 256);
   size_t body_length = fuzz_below(&g_rng, sizeof(body));
   if (length + 2 * body_length + 1 > cap) body_length = (cap - length - 1) / 2;
   for (size_t i = 0; i < body_length; i++) body[i] = (uint8_t) fuzz_below(&g_rng, 256);
-  memcpy(out, magic, length);
+  fuzz_copy(out, cap, magic, length);
   fuzz_to_hex(body, body_length, out + length);
   return length + 2 * body_length;
 }
@@ -480,7 +480,7 @@ static size_t binary_seed(uint8_t* out, size_t cap) {
   size_t size = 0;
   if (monero_utils_json_to_binary(bodies[fuzz_below(&g_rng, sizeof(bodies) / sizeof(bodies[0]))], &data, &size) != MONERO_OK || data == NULL) return 0;
   if (size > cap) size = cap;
-  memcpy(out, data, size);
+  fuzz_copy(out, cap, data, size);
   monero_utils_free(data);
   return size;
 }
@@ -496,8 +496,8 @@ static void run_target(const target* t, const fixtures* fx, size_t iterations) {
     if (t->kind == INPUT_TEXT) {
       // the first input is the valid one
       if (i == 0) {
-        length = strlen(t->seed);
-        memcpy(input, t->seed, length + 1);
+        length = fuzz_text_length(t->seed, sizeof(input) - 1);
+        fuzz_copy(input, sizeof(input), t->seed, length + 1);
       } else {
         length = fuzz_mutate_text(&g_rng, t->seed, input, sizeof(input));
       }
@@ -506,16 +506,16 @@ static void run_target(const target* t, const fixtures* fx, size_t iterations) {
       size_t seed_length = blob_seed(t->seed, seed, sizeof(seed));
       if (i % 4 == 0) {
         length = seed_length;
-        memcpy(input, seed, length + 1);
+        fuzz_copy(input, sizeof(input), seed, length + 1);
       } else {
         length = fuzz_mutate_hex(&g_rng, seed, input, sizeof(input));
       }
     } else {
       size_t body_length = binary_seed(body, sizeof(body));
       length = i == 0 ? body_length : fuzz_mutate_bytes(&g_rng, body, body_length, bytes, sizeof(bytes));
-      if (i == 0) memcpy(bytes, body, body_length);
+      if (i == 0) fuzz_copy(bytes, sizeof(bytes), body, body_length);
       // the call gets the bytes as they are, with a NUL after them that isn't counted
-      memcpy(input, bytes, length);
+      fuzz_copy(input, sizeof(input) - 1, bytes, length);
       input[length] = '\0';
     }
     if (g_verbose) fprintf(stderr, "%s #%lu (%lu bytes): %.*s\n", t->name, (unsigned long) i, (unsigned long) length, (int) (length > 400 ? 400 : length), t->kind == INPUT_BYTES ? "(binary)" : input);

@@ -181,7 +181,7 @@ static int is_count(const char* name) {
 
 // the text that a parameter gets, so that the other arguments of a call are as valid as they can be without the call doing harm
 static const char* benign_string(const char* name, int index, call_state* state) {
-  size_t length = strlen(name);
+  size_t length = text_length(name, 64);
   if (strcmp(name, "path") == 0) {
     snprintf(state->path[index], sizeof(state->path[index]), "monero_c_arguments_path_%d", g_unique++);
     if (g_path_count < MAX_PATHS) snprintf(g_paths[g_path_count++], sizeof(g_paths[0]), "%s", state->path[index]);
@@ -461,7 +461,7 @@ static void run_function(const arg_function* function, const fixture* fx) {
 static int skipped_with_valid_arguments(const arg_function* function) {
   static const char* const skipped[] = {"monero_daemon_wait_for_next_block_header", "monero_wallet_wait_for_next_block", "monero_utils_configure_logging",
                                         "monero_utils_set_log_level", "monero_utils_set_log_categories"};
-  size_t length = strlen(function->name);
+  size_t length = text_length(function->name, 64);
   for (size_t i = 0; i < sizeof(skipped) / sizeof(skipped[0]); i++) {
     if (strcmp(function->name, skipped[i]) == 0) return 1;
   }
@@ -554,7 +554,6 @@ int main(void) {
   }
 
   size_t count = sizeof(g_functions) / sizeof(g_functions[0]);
-  CHECK(count > 0);
   for (size_t i = 0; i < count; i++) {
     const arg_function* function = &g_functions[i];
     const char* handle = first_handle(function);

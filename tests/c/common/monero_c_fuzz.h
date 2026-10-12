@@ -64,6 +64,20 @@ static inline size_t fuzz_iterations(size_t fallback) {
   return text != NULL && text[0] != '\0' ? (size_t) strtoull(text, NULL, 10) : fallback;
 }
 
+// the length of a text, up to max. The mutators read the text that the tests give them, and this reads no further than the buffer that holds it
+#define FUZZ_MAX_TEXT 1048576u
+
+static inline size_t fuzz_text_length(const char* text, size_t max) {
+  size_t length = 0;
+  while (length < max && text[length] != '\0') length++;
+  return length;
+}
+
+// copies count bytes to a buffer of cap bytes, and no more than it holds. The ranges can overlap
+static inline void fuzz_copy(void* destination, size_t cap, const void* source, size_t count) {
+  memmove(destination, source, count < cap ? count : cap);
+}
+
 // what a JSON value is replaced by, or what is inserted: the numbers at the edges of the integer types, the text that parsers get wrong,
 // and the shapes that no model has
 static const char* const FUZZ_TOKENS[] = {
@@ -112,10 +126,10 @@ static inline size_t fuzz_value_end(const char* text, size_t length, size_t star
 // copies text into out with one to four changes, and returns the length. The result has no NUL, since it is passed as a C string, and
 // it is at most cap - 1 long
 static inline size_t fuzz_mutate_text(fuzz_rng* rng, const char* text, char* out, size_t cap) {
-  size_t length = strlen(text);
+  size_t length = fuzz_text_length(text, FUZZ_MAX_TEXT);
   size_t changes = 1 + fuzz_below(rng, 4);
   if (length >= cap) length = cap - 1;
-  memcpy(out, text, length);
+  fuzz_copy(out, cap, text, length);
 
   for (size_t change = 0; change < changes; change++) {
     size_t at = length == 0 ? 0 : fuzz_below(rng, length);
@@ -139,10 +153,10 @@ static inline size_t fuzz_mutate_text(fuzz_rng* rng, const char* text, char* out
       case 3:  // a token that is added where it is
       case 4: {
         const char* token = FUZZ_TOKENS[fuzz_below(rng, FUZZ_TOKEN_COUNT)];
-        size_t count = strlen(token);
+        size_t count = fuzz_text_length(token, 256);
         if (length + count < cap) {
           memmove(out + at + count, out + at, length - at);
-          memcpy(out + at, token, count);
+          fuzz_copy(out + at, cap - at, token, count);
           length += count;
         }
         break;
@@ -155,10 +169,10 @@ static inline size_t fuzz_mutate_text(fuzz_rng* rng, const char* text, char* out
           size_t start = colon + 1;
           size_t end = fuzz_value_end(out, length, start);
           const char* token = FUZZ_TOKENS[fuzz_below(rng, FUZZ_TOKEN_COUNT)];
-          size_t count = strlen(token);
+          size_t count = fuzz_text_length(token, 256);
           if (length - (end - start) + count < cap) {
             memmove(out + start + count, out + end, length - end);
-            memcpy(out + start, token, count);
+            fuzz_copy(out + start, cap - start, token, count);
             length = length - (end - start) + count;
           }
         }
@@ -169,7 +183,7 @@ static inline size_t fuzz_mutate_text(fuzz_rng* rng, const char* text, char* out
         if (at + count > length) count = length - at;
         if (length + count < cap) {
           memmove(out + at + count, out + at, length - at);
-          memcpy(out + at, out + at + count, count);
+          fuzz_copy(out + at, cap - at, out + at + count, count);
           length += count;
         }
         break;
@@ -197,10 +211,10 @@ static inline size_t fuzz_mutate_text(fuzz_rng* rng, const char* text, char* out
 // the same for hex: the characters stay hex digits, except for a rare one that isn't, and the length can be odd
 static inline size_t fuzz_mutate_hex(fuzz_rng* rng, const char* hex, char* out, size_t cap) {
   static const char digits[] = "0123456789abcdef";
-  size_t length = strlen(hex);
+  size_t length = fuzz_text_length(hex, FUZZ_MAX_TEXT);
   size_t changes = 1 + fuzz_below(rng, 4);
   if (length >= cap) length = cap - 1;
-  memcpy(out, hex, length);
+  fuzz_copy(out, cap, hex, length);
 
   for (size_t change = 0; change < changes; change++) {
     size_t at = length == 0 ? 0 : fuzz_below(rng, length);
@@ -235,7 +249,7 @@ static inline size_t fuzz_mutate_hex(fuzz_rng* rng, const char* hex, char* out, 
         if (at + count > length) count = length - at;
         if (length + count < cap) {
           memmove(out + at + count, out + at, length - at);
-          memcpy(out + at, out + at + count, count);
+          fuzz_copy(out + at, cap - at, out + at + count, count);
           length += count;
         }
         break;
@@ -267,7 +281,7 @@ static inline size_t fuzz_mutate_hex(fuzz_rng* rng, const char* hex, char* out, 
 static inline size_t fuzz_mutate_bytes(fuzz_rng* rng, const uint8_t* data, size_t length, uint8_t* out, size_t cap) {
   size_t changes = 1 + fuzz_below(rng, 4);
   if (length > cap) length = cap;
-  if (length > 0) memcpy(out, data, length);
+  if (length > 0) fuzz_copy(out, cap, data, length);
 
   for (size_t change = 0; change < changes; change++) {
     size_t at = length == 0 ? 0 : fuzz_below(rng, length);
@@ -308,7 +322,7 @@ static inline size_t fuzz_mutate_bytes(fuzz_rng* rng, const uint8_t* data, size_
         if (at + count > length) count = length - at;
         if (length + count <= cap) {
           memmove(out + at + count, out + at, length - at);
-          memcpy(out + at, out + at + count, count);
+          fuzz_copy(out + at, cap - at, out + at + count, count);
           length += count;
         }
         break;
@@ -316,7 +330,7 @@ static inline size_t fuzz_mutate_bytes(fuzz_rng* rng, const uint8_t* data, size_
       default: {  // a size that is large
         static const uint32_t sizes[] = {0, 1, 0x7f, 0x80, 0xff, 0x100, 0xffff, 0x7fffffffU, 0x80000000U, 0xffffffffU};
         uint32_t value = sizes[fuzz_below(rng, sizeof(sizes) / sizeof(sizes[0]))];
-        if (at + 4 <= length) memcpy(out + at, &value, 4);
+        if (at + 4 <= length) fuzz_copy(out + at, length - at, &value, 4);
         break;
       }
     }

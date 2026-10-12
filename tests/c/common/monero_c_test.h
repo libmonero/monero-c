@@ -150,6 +150,13 @@ static inline char* repeated_text(char ch, size_t length) {
   return text;
 }
 
+// the length of a text, up to max, so that it reads no further than the buffer that holds it
+static inline size_t text_length(const char* text, size_t max) {
+  size_t length = 0;
+  while (length < max && text[length] != '\0') length++;
+  return length;
+}
+
 // counts the words of a seed, which are separated by spaces. Returns 0 for an empty seed
 static inline size_t count_words(const char* seed) {
   size_t words = 0;

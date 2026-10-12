@@ -233,7 +233,6 @@ def main():
     check = '--check' in sys.argv[1:]
     text, names = generate()
     table_path = os.path.join(ROOT, TABLE)
-    symbols = '\n'.join(names) + '\n'
     problems = []
     if check:
         current = open(table_path, encoding='utf-8').read() if os.path.exists(table_path) else ''
