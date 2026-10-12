@@ -29,13 +29,25 @@
 #include <sys/stat.h>
 #endif
 
+// monero-project's own, from crypto/slow-hash.c: it frees the scratchpad of the calling thread
+extern "C" void slow_hash_free_state(void);
+
 namespace monero_c {
 
 namespace {
 
 thread_local std::string g_last_error;
 
+struct slow_hash_state_owner {
+  ~slow_hash_state_owner() { slow_hash_free_state(); }
+};
+
 } // namespace
+
+void free_slow_hash_state_at_thread_exit() noexcept {
+  thread_local slow_hash_state_owner owner;
+  (void) owner;
+}
 
 void set_last_error(const char* msg) noexcept {
   try { g_last_error = msg; } catch (...) { g_last_error.clear(); }

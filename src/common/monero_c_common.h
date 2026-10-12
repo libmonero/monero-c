@@ -52,6 +52,12 @@ namespace monero_c {
 // the monero-cpp connection behind a handle, shared with the daemons and wallets created from it
 std::shared_ptr<monero::monero_rpc_connection> connection_of(::monero_rpc_connection* connection);
 
+// makes the calling thread free, when it ends, what monero-project keeps for it. The first password hash of a thread, which is the one of a
+// wallet that is made, opened or given a new password, allocates a scratchpad of 2 MB for the thread, and only slow_hash_free_state() frees
+// it. monero-project calls that on its own threads, so a thread of the caller that has used a wallet and ends would keep the 2 MB until the
+// process ends. guard() calls it, so every thread that calls the library is covered
+void free_slow_hash_state_at_thread_exit() noexcept;
+
 // records msg as the calling thread's last error. It never throws: if the message can't be
 // stored because memory ran out, the last error is empty
 void set_last_error(const char* msg) noexcept;
@@ -121,6 +127,7 @@ NetworkType network_of(int32_t network_type) {
 // runs fn, converting any thrown exception into MONERO_ERROR + last_error
 template <class F>
 monero_result guard(F&& fn) {
+  free_slow_hash_state_at_thread_exit();
   try {
     fn();
     return MONERO_OK;
