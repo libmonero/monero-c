@@ -27,8 +27,8 @@ prerelease: the C API and the JSON can still change between versions, and `moner
 * **Secrets.** The seed and the keys that the library copies are not wiped from its memory when they are released.
 * **Nodes.** A node that answers with JSON nested thousands of levels deep can crash the client, because monero-cpp parses the answers with a
   recursive parser. Connect to nodes that you trust.
-* **Memory.** `monero_wallet_open()` with a wrong password leaks about 200 KB, and a query of txs that filters some out leaks about 190 KB
-  for 100 txs. Both are in monero-cpp.
+* **Memory.** `monero_wallet_open()` with a wrong password leaks about 200 KB, a query of txs that filters some out leaks about 190 KB
+  for 100 txs, and `monero_wallet_get_outputs()` with an `inputQuery` in its `txQuery` leaks about 1.5 KB. All three are in monero-cpp.
 * **Transactions.** The ring size of the config is ignored, and the ring is always 16. The multisig test goes as far as the exchange of keys,
   and doesn't sign a multisig tx.
 * **Wallets.** A wallet that `monero_wallet_create()` connected to a daemon doesn't see, for tens of seconds, the blocks that the daemon

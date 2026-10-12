@@ -329,6 +329,63 @@ static void test_json_depth_limit(void) {
   remove_files(path);
 }
 
+// a query that fails to read after its transfer, input or output query was read has them point at the query, and nothing frees them
+// unless the binding does. LeakSanitizer fails the run if they stay
+static void test_malformed_queries_free_what_they_built(void) {
+  const char* path = "monero_c_wallet_offline_queries";
+  monero_wallet* wallet = create_test_wallet(path);
+  if (wallet == NULL) {
+    remove_files(path);
+    return;
+  }
+
+  const char* tx_queries[] = {
+    "{\"transferQuery\":{\"isIncoming\":true},\"isConfirmed\":\"x\"}",
+    "{\"inputQuery\":{\"isSpent\":true},\"outputQuery\":{\"isFrozen\":\"x\"}}",
+    "{\"outputQuery\":{\"isSpent\":true},\"height\":\"x\"}",
+    "{\"transferQuery\":{\"isIncoming\":true},\"inputQuery\":{\"isSpent\":true},\"outputQuery\":{\"isSpent\":true},\"minHeight\":\"x\"}",
+    "{\"inputQuery\":{\"isSpent\":true},\"block\":{\"height\":\"x\"}}",
+  };
+  const char* nested_queries[] = {
+    "{\"txQuery\":{\"inputQuery\":{\"isSpent\":true},\"isConfirmed\":\"x\"},\"isIncoming\":true}",
+    "{\"txQuery\":{\"outputQuery\":{\"isSpent\":true},\"outputQuery2\":1,\"height\":\"x\"}}",
+    "{\"txQuery\":{\"transferQuery\":{\"isIncoming\":true},\"maxHeight\":\"x\"}}",
+  };
+  char* json = POISON_PTR;
+  for (int round = 0; round < 10; round++) {
+    for (size_t i = 0; i < sizeof(tx_queries) / sizeof(tx_queries[0]); i++) {
+      json = POISON_PTR;
+      EXPECT_ERR(monero_wallet_get_txs(wallet, tx_queries[i], &json));
+      CHECK(json == NULL);
+    }
+    for (size_t i = 0; i < sizeof(nested_queries) / sizeof(nested_queries[0]); i++) {
+      json = POISON_PTR;
+      EXPECT_ERR(monero_wallet_get_transfers(wallet, nested_queries[i], &json));
+      CHECK(json == NULL);
+      json = POISON_PTR;
+      EXPECT_ERR(monero_wallet_get_outputs(wallet, nested_queries[i], &json));
+      CHECK(json == NULL);
+    }
+  }
+
+  // the same queries without the mistake are read, and what they build is freed
+  json = NULL;
+  EXPECT_OK(monero_wallet_get_txs(wallet, "{\"transferQuery\":{\"isIncoming\":true},\"inputQuery\":{\"isSpent\":true},\"outputQuery\":{\"isSpent\":false},\"isConfirmed\":true}", &json));
+  CHECK(contains(json, "{\"blocks\":[]}"));
+  monero_utils_free(json);
+  json = NULL;
+  EXPECT_OK(monero_wallet_get_transfers(wallet, "{\"txQuery\":{\"inputQuery\":{\"isSpent\":true},\"isConfirmed\":true},\"isIncoming\":true}", &json));
+  CHECK(contains(json, "{\"blocks\":[]}"));
+  monero_utils_free(json);
+  json = NULL;
+  EXPECT_OK(monero_wallet_get_outputs(wallet, "{\"txQuery\":{\"isConfirmed\":true},\"isSpent\":false}", &json));
+  CHECK(contains(json, "{\"blocks\":[]}"));
+  monero_utils_free(json);
+
+  monero_wallet_free(wallet);
+  remove_files(path);
+}
+
 // an array that is NULL with a nonzero count, or has a NULL element, fails with the name of the argument
 static void test_null_arrays(void) {
   const char* path = "monero_c_wallet_offline_arrays";
@@ -839,6 +896,7 @@ int main(void) {
   test_keys_and_version();
   test_key_images_and_outputs();
   test_json_depth_limit();
+  test_malformed_queries_free_what_they_built();
   test_null_arrays();
   test_tx_notes();
   test_daemon_connection();

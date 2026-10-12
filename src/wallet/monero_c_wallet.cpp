@@ -25,6 +25,7 @@
 #include "wallet/monero_wallet_full.h"
 #include "wallet/monero_wallet_keys.h"
 #include "wallet/monero_wallet_rpc.h"
+#include "utils/gen_utils.h"
 #include "utils/monero_utils.h"
 
 #include "misc_language.h"
@@ -361,10 +362,45 @@ std::vector<std::shared_ptr<monero::monero_block>> blocks_of_outputs(const std::
   return monero_utils::get_blocks_from_txs(txs);
 }
 
+// releases a tx query that nothing else holds. A query that has a transfer, an input or an output query points to each one, and each one
+// points back, so the queries keep each other alive. monero_utils::free() resets the links of the transfer and the output query, and the
+// input query is reset here
+void release_tx_query(const std::shared_ptr<monero::monero_tx_query>& query) {
+  if (query == nullptr) return;
+  if (query->m_input_query != nullptr) query->m_input_query->m_tx_query.reset();
+  monero_utils::free(query);
+}
+
+// reads the query of a tx from its JSON, as monero_tx_query::deserialize() does. When the JSON fails after a transfer, an input or an
+// output query was read, monero-cpp leaves them pointing at the query that it drops, so none is ever freed. The query is made here, and it
+// is released if its parser throws
+std::shared_ptr<monero::monero_tx_query> parse_tx_query(const std::string& json) {
+  boost::property_tree::ptree node;
+  gen_utils::deserialize(json, node);
+  std::shared_ptr<monero::monero_tx_query> query = std::make_shared<monero::monero_tx_query>();
+  try {
+    monero::monero_tx_query::from_property_tree(node, query);
+  } catch (...) {
+    release_tx_query(query);
+    throw;
+  }
+  return query;
+}
+
+// parses the query of the txs of get_txs()
+std::shared_ptr<monero::monero_tx_query> tx_query_of(const char* json) {
+  const char* p = json;
+  while (*p == ' ' || *p == '\t' || *p == '\r' || *p == '\n') p++;
+  if (*p != '{') throw std::runtime_error("query must be a JSON object");
+  std::string text(json);
+  check_json_depth(text);
+  return parse_tx_query(text);
+}
+
 // the query of a transfer or of an output holds the query of its tx in "txQuery". monero-cpp reads the two as one tree that is rooted at
 // a block, {"txs":[the query of the tx, with the query as its transferQuery or its outputQuery]}, and without it the query of the tx is
-// lost, so the JSON is rebuilt that way
-std::string block_rooted_query(const char* json, const char* member) {
+// lost, so the JSON of the tx is rebuilt that way
+std::string tx_rooted_query(const char* json, const char* member) {
   std::string text(json);
   check_json_depth(text);
   rapidjson::Document doc;
@@ -380,25 +416,38 @@ std::string block_rooted_query(const char* json, const char* member) {
   rapidjson::Value query;
   query.Swap(doc);
   tx_query.AddMember(rapidjson::StringRef(member), query, allocator);
-  rapidjson::Value txs(rapidjson::kArrayType);
-  txs.PushBack(tx_query, allocator);
-  doc.SetObject();
-  doc.AddMember("txs", txs, allocator);
   rapidjson::StringBuffer buffer;
   rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-  doc.Accept(writer);
+  tx_query.Accept(writer);
   return buffer.GetString();
+}
+
+// reads the query of a tx that is in a block, as deserialize_from_block() of monero-cpp does
+std::shared_ptr<monero::monero_tx_query> tx_query_in_block(const char* json, const char* member) {
+  std::shared_ptr<monero::monero_tx_query> tx_query = parse_tx_query(tx_rooted_query(json, member));
+  std::shared_ptr<monero::monero_block> block = std::make_shared<monero::monero_block>();
+  block->m_txs.push_back(tx_query);
+  tx_query->m_block = block;
+  return tx_query;
 }
 
 // parses an optional query of transfers or of outputs. NULL gives the default query, which matches everything
 std::shared_ptr<monero::monero_transfer_query> transfer_query_of(const char* json) {
   if (json == nullptr) return std::make_shared<monero::monero_transfer_query>();
-  return monero::monero_transfer_query::deserialize_from_block(block_rooted_query(json, "transferQuery"));
+  std::shared_ptr<monero::monero_tx_query> tx_query = tx_query_in_block(json, "transferQuery");
+  std::shared_ptr<monero::monero_transfer_query> transfer_query = tx_query->m_transfer_query == nullptr ? std::make_shared<monero::monero_transfer_query>() : tx_query->m_transfer_query;
+  transfer_query->m_tx_query = tx_query;
+  return transfer_query;
 }
 
 std::shared_ptr<monero::monero_output_query> output_query_of(const char* json) {
   if (json == nullptr) return std::make_shared<monero::monero_output_query>();
-  return monero::monero_output_query::deserialize_from_block(block_rooted_query(json, "outputQuery"));
+  std::shared_ptr<monero::monero_tx_query> tx_query = tx_query_in_block(json, "outputQuery");
+  std::shared_ptr<monero::monero_output_query> input_query = tx_query->m_input_query == nullptr ? std::make_shared<monero::monero_output_query>() : tx_query->m_input_query;
+  input_query->m_tx_query = tx_query;
+  std::shared_ptr<monero::monero_output_query> output_query = tx_query->m_output_query == nullptr ? std::make_shared<monero::monero_output_query>() : tx_query->m_output_query;
+  output_query->m_tx_query = tx_query;
+  return output_query;
 }
 
 // shares a wallet with a new handle, for a wallet that is also owned by another handle
@@ -1123,11 +1172,8 @@ monero_result monero_wallet_get_txs(::monero_wallet* wallet, const char* query_j
     // a query with a transfer, input or output query points to them and they point back. monero_utils::free() resets the
     // transfer and the output query, so the input query is reset here
     std::shared_ptr<monero::monero_tx_query> query;
-    if (query_json) query = model_json<monero::monero_tx_query>(query_json, "query");
-    auto free_query = epee::misc_utils::create_scope_leave_handler([&] {
-      if (query != nullptr && query->m_input_query != nullptr) query->m_input_query->m_tx_query.reset();
-      monero_utils::free(query);
-    });
+    if (query_json) query = tx_query_of(query_json);
+    auto free_query = epee::misc_utils::create_scope_leave_handler([&] { release_tx_query(query); });
     auto txs = query ? wallet->wallet->get_txs(*query) : wallet->wallet->get_txs();
     auto blocks = monero_utils::get_blocks_from_txs(txs);
     auto free_blocks = epee::misc_utils::create_scope_leave_handler([&] { monero_utils::free(blocks); });
@@ -1140,7 +1186,7 @@ monero_result monero_wallet_get_transfers(::monero_wallet* wallet, const char* q
   if (!require(wallet, "wallet") || !require(out_json, "out_json")) return MONERO_ERROR;
   return guard([&] {
     std::shared_ptr<monero::monero_transfer_query> query = transfer_query_of(query_json);
-    auto free_query = epee::misc_utils::create_scope_leave_handler([&] { monero_utils::free(query->m_tx_query); });
+    auto free_query = epee::misc_utils::create_scope_leave_handler([&] { release_tx_query(query->m_tx_query); });
     auto transfers = wallet->wallet->get_transfers(*query);
     auto blocks = monero_utils::get_blocks_from_transfers(transfers);
     auto free_blocks = epee::misc_utils::create_scope_leave_handler([&] { monero_utils::free(blocks); });
@@ -1153,7 +1199,7 @@ monero_result monero_wallet_get_outputs(::monero_wallet* wallet, const char* que
   if (!require(wallet, "wallet") || !require(out_json, "out_json")) return MONERO_ERROR;
   return guard([&] {
     std::shared_ptr<monero::monero_output_query> query = output_query_of(query_json);
-    auto free_query = epee::misc_utils::create_scope_leave_handler([&] { monero_utils::free(query->m_tx_query); });
+    auto free_query = epee::misc_utils::create_scope_leave_handler([&] { release_tx_query(query->m_tx_query); });
     auto outputs = wallet->wallet->get_outputs(*query);
     auto blocks = blocks_of_outputs(outputs);
     auto free_blocks = epee::misc_utils::create_scope_leave_handler([&] { monero_utils::free(blocks); });
