@@ -386,6 +386,23 @@ static void test_malformed_queries_free_what_they_built(void) {
   remove_files(path);
 }
 
+// the background sync waits for its period between two syncs, and with a period of 0, or one that monero-cpp can't wait for, it would
+// sync again at once, over and over
+static void test_sync_period(void) {
+  const char* path = "monero_c_wallet_offline_period";
+  monero_wallet* wallet = create_test_wallet(path);
+  if (wallet == NULL) {
+    remove_files(path);
+    return;
+  }
+  const char* message = "period_ms must be between 1 and 2147483647";
+  EXPECT_ERR_MSG(monero_wallet_start_syncing(wallet, 0), message);
+  EXPECT_ERR_MSG(monero_wallet_start_syncing(wallet, 2147483648ULL), message);
+  EXPECT_ERR_MSG(monero_wallet_start_syncing(wallet, UINT64_MAX), message);
+  monero_wallet_free(wallet);
+  remove_files(path);
+}
+
 // an array that is NULL with a nonzero count, or has a NULL element, fails with the name of the argument
 static void test_null_arrays(void) {
   const char* path = "monero_c_wallet_offline_arrays";
@@ -897,6 +914,7 @@ int main(void) {
   test_key_images_and_outputs();
   test_json_depth_limit();
   test_malformed_queries_free_what_they_built();
+  test_sync_period();
   test_null_arrays();
   test_tx_notes();
   test_daemon_connection();

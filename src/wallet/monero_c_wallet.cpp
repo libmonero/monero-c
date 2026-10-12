@@ -43,6 +43,7 @@
 using monero_c::array_of;
 using monero_c::check_json_depth;
 using monero_c::check_mnemonic_length;
+using monero_c::check_period_ms;
 using monero_c::dup_string;
 using monero_c::guard;
 using monero_c::json_of_list;
@@ -1092,7 +1093,10 @@ monero_result monero_wallet_sync(::monero_wallet* wallet, const uint64_t* start_
 
 monero_result monero_wallet_start_syncing(::monero_wallet* wallet, uint64_t sync_period_ms) {
   if (!require(wallet, "wallet")) return MONERO_ERROR;
-  return guard([&] { wallet->wallet->start_syncing(sync_period_ms); });
+  return guard([&] {
+    check_period_ms(sync_period_ms);
+    wallet->wallet->start_syncing(sync_period_ms);
+  });
 }
 
 monero_result monero_wallet_stop_syncing(::monero_wallet* wallet) {
@@ -1511,7 +1515,10 @@ monero_result monero_wallet_rpc_get_connection(::monero_wallet* wallet, char** o
 
 monero_result monero_wallet_rpc_set_poll_period(::monero_wallet* wallet, uint64_t period_ms) {
   if (!require(wallet, "wallet")) return MONERO_ERROR;
-  return guard([&] { as_rpc(wallet).set_poll_period_in_ms(period_ms); });
+  return guard([&] {
+    check_period_ms(period_ms);
+    as_rpc(wallet).set_poll_period_in_ms(period_ms);
+  });
 }
 
 monero_result monero_wallet_rpc_get_balances(::monero_wallet* wallet, const uint32_t* account_idx, const uint32_t* subaddress_idx, char** out_json) {

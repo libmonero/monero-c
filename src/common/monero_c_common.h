@@ -82,6 +82,16 @@ inline void check_mnemonic_length(const std::string& mnemonic) {
   if (mnemonic.size() > MAX_MNEMONIC_LENGTH) throw std::invalid_argument("mnemonic is longer than " + std::to_string(MAX_MNEMONIC_LENGTH) + " bytes");
 }
 
+// the longest period of a poll or a sync that is accepted, in milliseconds, 24.8 days. monero-cpp waits for a period with a signed long,
+// which is 32 bits on Windows, so a period of 0 or one that doesn't fit makes the thread poll again at once, over and over, and with a
+// remote daemon that is a flood of requests
+const uint64_t MAX_PERIOD_MS = 2147483647;
+
+// throws std::invalid_argument if the period is 0 or longer than MAX_PERIOD_MS
+inline void check_period_ms(uint64_t period_ms) {
+  if (period_ms == 0 || period_ms > MAX_PERIOD_MS) throw std::invalid_argument("period_ms must be between 1 and " + std::to_string(MAX_PERIOD_MS));
+}
+
 // mallocs at least 1 byte so a successful zero-length allocation is never
 // mistaken for malloc() failure (which is the only case this throws)
 inline char* dup_string(const std::string& s) {

@@ -1004,7 +1004,7 @@ MONERO_EXPORT monero_result monero_wallet_sync(monero_wallet* wallet, const uint
  * Start a background thread that syncs the wallet with the daemon. Stop it with monero_wallet_stop_syncing().
  *
  * @param wallet is the wallet handle
- * @param sync_period_ms is the maximum time between two syncs in milliseconds
+ * @param sync_period_ms is the maximum time between two syncs in milliseconds, from 1 to 2147483647. A period of 0 would sync again at once, over and over
  * @return MONERO_OK or MONERO_ERROR
  */
 MONERO_EXPORT monero_result monero_wallet_start_syncing(monero_wallet* wallet, uint64_t sync_period_ms);
@@ -1665,7 +1665,7 @@ MONERO_EXPORT monero_result monero_wallet_rpc_get_connection(monero_wallet* wall
  * Set how often the RPC wallet polls the server for changes. Polling starts with the first call.
  *
  * @param wallet is the wallet handle of an RPC wallet
- * @param period_ms is the poll period in milliseconds
+ * @param period_ms is the poll period in milliseconds, from 1 to 2147483647. A period of 0 would poll again at once, over and over
  * @return MONERO_OK or MONERO_ERROR
  */
 MONERO_EXPORT monero_result monero_wallet_rpc_set_poll_period(monero_wallet* wallet, uint64_t period_ms);

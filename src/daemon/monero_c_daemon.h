@@ -138,7 +138,7 @@ MONERO_EXPORT monero_result monero_daemon_get_rpc_connection(monero_daemon* daem
  * Set how often the listeners poll the daemon for new blocks.
  *
  * @param daemon is the handle returned by monero_daemon_connect()
- * @param period_ms is the poll period in milliseconds
+ * @param period_ms is the poll period in milliseconds, from 1 to 2147483647. A period of 0 would poll again at once, over and over
  * @return MONERO_OK or MONERO_ERROR
  */
 MONERO_EXPORT monero_result monero_daemon_set_poll_period(monero_daemon* daemon, uint64_t period_ms);

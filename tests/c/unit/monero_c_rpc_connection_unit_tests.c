@@ -177,9 +177,16 @@ static void test_daemon_from_connection(void) {
   CHECK(has(json, "\"isOnline\":false"));
   monero_utils_free(json);
   EXPECT_OK(monero_daemon_set_poll_period(daemon, 1000));
+  EXPECT_OK(monero_daemon_set_poll_period(daemon, 1));
+  EXPECT_OK(monero_daemon_set_poll_period(daemon, 2147483647));
   EXPECT_ERR(monero_daemon_get_height(daemon, &height));
   EXPECT_ERR_MSG(monero_daemon_get_rpc_connection(NULL, &json), "daemon must not be null");
   EXPECT_ERR_MSG(monero_daemon_set_poll_period(NULL, 1000), "daemon must not be null");
+
+  // a period that is 0, or that monero-cpp can't wait for, makes the poll thread run again at once, over and over, so it is refused
+  EXPECT_ERR_MSG(monero_daemon_set_poll_period(daemon, 0), "period_ms must be between 1 and 2147483647");
+  EXPECT_ERR_MSG(monero_daemon_set_poll_period(daemon, 2147483648ULL), "period_ms must be between 1 and 2147483647");
+  EXPECT_ERR_MSG(monero_daemon_set_poll_period(daemon, UINT64_MAX), "period_ms must be between 1 and 2147483647");
   monero_daemon_free(daemon);
 }
 
@@ -202,6 +209,9 @@ static void test_rpc_wallet_from_connection(void) {
   EXPECT_ERR_MSG(monero_wallet_rpc_create_wallet(wallet, "[]"), "config must be a JSON object");
   EXPECT_ERR_MSG(monero_wallet_rpc_open_wallet(wallet, NULL, NULL), "name must not be null");
   EXPECT_ERR_MSG(monero_wallet_request_shutdown(wallet), "request_shutdown() not supported");
+  EXPECT_OK(monero_wallet_rpc_set_poll_period(wallet, 1000));
+  EXPECT_ERR_MSG(monero_wallet_rpc_set_poll_period(wallet, 0), "period_ms must be between 1 and 2147483647");
+  EXPECT_ERR_MSG(monero_wallet_rpc_set_poll_period(wallet, UINT64_MAX), "period_ms must be between 1 and 2147483647");
 
   // the array is checked before any request, and a config that nests too deeply before the parser
   json = POISON_PTR;

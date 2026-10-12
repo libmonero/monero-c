@@ -49,6 +49,7 @@ namespace {
 
 using monero_c::array_of;
 using monero_c::check_json_depth;
+using monero_c::check_period_ms;
 using monero_c::dup_array;
 using monero_c::dup_string;
 using monero_c::guard;
@@ -256,7 +257,10 @@ monero_result monero_daemon_get_rpc_connection(monero_daemon* daemon, char** out
 
 monero_result monero_daemon_set_poll_period(monero_daemon* daemon, uint64_t period_ms) {
   if (!require(daemon, "daemon")) return MONERO_ERROR;
-  return guard([&] { daemon->rpc->set_poll_period_in_ms(period_ms); });
+  return guard([&] {
+    check_period_ms(period_ms);
+    daemon->rpc->set_poll_period_in_ms(period_ms);
+  });
 }
 
 // -------------------------------- LISTENERS ---------------------------------
