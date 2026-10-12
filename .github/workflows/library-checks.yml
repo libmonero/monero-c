@@ -70,6 +70,10 @@ jobs:
       - name: Check exported symbols
         run: cmake -DLIBRARY=artifact/libmonero_c.so -DEXPECTED=tests/c/abi/monero_c.symbols -P tests/c/abi/check_symbols.cmake
 
+      # the symbols file and the table of the argument tests are written from the headers, so a function that is added or changed is in both
+      - name: Check the argument table
+        run: python3 tests/c/generator/generate_argument_tests.py --check
+
   library-macos:
     name: ${{ matrix.platform }}
     runs-on: ${{ matrix.os }}
