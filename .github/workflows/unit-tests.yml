@@ -13,7 +13,7 @@ permissions:
   actions: read
 
 env:
-  UNIT_TESTS: utils daemon wallet wallet_keys wallet_offline wallet_multisig rpc_connection abi arguments cpp
+  UNIT_TESTS: utils daemon wallet wallet_keys wallet_offline wallet_multisig rpc_connection abi arguments fuzz cpp
 
 jobs:
   unit-linux:

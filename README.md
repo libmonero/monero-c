@@ -175,6 +175,7 @@ All the tests include only the public header and call only exported functions, t
 Some of the unit tests look for crashes and leaks instead of checking a feature, and CI runs all of them under AddressSanitizer, UndefinedBehaviorSanitizer and LeakSanitizer:
 
 - `monero_c_arguments_unit_tests` calls every exported function with a NULL in each pointer, one at a time, and then once with plausible arguments, once with the largest numbers and once with long texts, on a full wallet, a keys wallet, a closed wallet, an RPC wallet, a daemon and a connection. It checks that the NULL of a required pointer is refused with `<name> must not be null` and that a failed call resets its outputs. Its list of functions, `tests/c/unit/monero_c_arguments_table.h`, comes from the headers: `python3 tests/c/generator/generate_argument_tests.py` writes it, and CI fails when it is out of date, so a new function can't miss the test.
+- `monero_c_fuzz_unit_tests` gives each function that reads JSON, hex or binary a few hundred mutations of a valid input: a number at the edge of its type, a value of the wrong type, text that stops in the middle, a size that is too large. The generator has a fixed seed, so a failure happens again. `MONERO_C_FUZZ_SEED` and `MONERO_C_FUZZ_ITERATIONS` change the run, and `MONERO_C_FUZZ_VERBOSE` prints each input before its call, so the last line is the input of a crash.
 
 ## Memory Ownership
 

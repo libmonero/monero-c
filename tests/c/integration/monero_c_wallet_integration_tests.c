@@ -20,6 +20,7 @@
  * SOFTWARE.
  */
 
+#include "monero_c_fuzz.h"
 #include "monero_c_test.h"
 
 #include <stdlib.h>
@@ -125,6 +126,103 @@ static void* mine_later(void* arg) {
   sleep(1);
   mine(g_daemon, g_mining_address, 1);
   return NULL;
+}
+
+// frees what a call returned, if it did return something: a failed call resets its output, and one that didn't would show here
+static void release_output(monero_result result, char* output) {
+  g_checks++;
+  if (result != MONERO_OK && output != NULL) {
+    g_failures++;
+    fprintf(stderr, "FAIL a failed call didn't reset its output\n");
+  }
+  if (output != NULL && output != POISON_PTR) monero_utils_free(output);
+}
+
+// what a wallet reads from a file or from a peer, with a few changes in it, from real data: the unsigned and the signed set of a tx, the
+// outputs and the key images that a view-only wallet and a wallet with the keys exchange, and a proof. The calls have to return, and a failed
+// one has to reset its output. The wallet with the keys is offline, so it takes the txs that would go to the node: a change that leaves a tx valid
+// must not spend anything
+static void hostile_wallet_inputs(monero_wallet* full, monero_wallet* view_only, monero_wallet* cold, const char* address, const char* unsigned_hex, const char* signed_set) {
+  static char mutated[2][1 << 18];
+  static char document[(1 << 18) + 64];
+  fuzz_rng rng;
+  size_t iterations = fuzz_iterations(60);
+  char* outputs = NULL;
+  char* images = NULL;
+  char* proof = NULL;
+  size_t signed_size = strlen(signed_set) + 1;
+  char* signed_hex = (char*) malloc(signed_size);
+  char* image_list = NULL;
+  fuzz_seed(&rng, fuzz_seed_value());
+
+  EXPECT_OK(monero_wallet_export_outputs(view_only, true, &outputs));
+  EXPECT_OK(monero_wallet_export_key_images(cold, true, &images));
+  EXPECT_OK(monero_wallet_get_reserve_proof_wallet(full, "message", &proof));
+  if (images != NULL) {
+    // the list is the value of "keyImages", which import_key_images() takes
+    const char* member = strstr(images, "\"keyImages\":");
+    if (member != NULL) {
+      const char* list = member + strlen("\"keyImages\":");
+      size_t length = fuzz_value_end(list, strlen(list), 0);
+      image_list = (char*) malloc(length + 1);
+      if (image_list != NULL) {
+        memcpy(image_list, list, length);
+        image_list[length] = '\0';
+      }
+    }
+  }
+  CHECK(outputs != NULL && image_list != NULL && proof != NULL && signed_hex != NULL && json_string(signed_set, "signedTxHex", signed_hex, signed_size));
+  if (outputs == NULL || image_list == NULL || proof == NULL || signed_hex == NULL) goto done;
+
+  for (size_t i = 0; i < iterations; i++) {
+    char* out = POISON_PTR;
+    int32_t imported = 7;
+    monero_result result;
+
+    fuzz_mutate_hex(&rng, unsigned_hex, mutated[0], sizeof(mutated[0]));
+    result = monero_wallet_sign_txs(cold, mutated[0], &out);
+    release_output(result, out);
+    out = POISON_PTR;
+    snprintf(document, sizeof(document), "{\"unsignedTxHex\":\"%s\"}", mutated[0]);
+    result = monero_wallet_describe_tx_set(full, document, &out);
+    release_output(result, out);
+
+    fuzz_mutate_hex(&rng, signed_hex, mutated[1], sizeof(mutated[1]));
+    out = POISON_PTR;
+    result = monero_wallet_submit_txs(cold, mutated[1], &out);
+    release_output(result, out);
+    out = POISON_PTR;
+    result = monero_wallet_relay_tx(cold, mutated[1], &out);
+    release_output(result, out);
+
+    fuzz_mutate_hex(&rng, outputs, mutated[0], sizeof(mutated[0]));
+    result = monero_wallet_import_outputs(cold, mutated[0], &imported);
+    g_checks++;
+    if (result != MONERO_OK && imported != 7) {
+      g_failures++;
+      fprintf(stderr, "FAIL the count of a failed import changed\n");
+    }
+
+    fuzz_mutate_text(&rng, image_list, mutated[1], sizeof(mutated[1]));
+    out = POISON_PTR;
+    result = monero_wallet_import_key_images(cold, mutated[1], 0, &out);
+    release_output(result, out);
+
+    fuzz_mutate_text(&rng, proof, mutated[0], sizeof(mutated[0]));
+    out = POISON_PTR;
+    result = monero_wallet_check_reserve_proof(full, address, "message", mutated[0], &out);
+    release_output(result, out);
+    out = POISON_PTR;
+    result = monero_wallet_get_tx_key(full, mutated[0], &out);
+    release_output(result, out);
+  }
+
+done:
+  monero_utils_free(outputs);
+  monero_utils_free(images);
+  monero_utils_free(proof);
+  free(image_list);
+  free(signed_hex);
 }
 
 static void test_daemon(const char* daemon_uri) {
@@ -552,6 +650,7 @@ static void test_daemon(const char* daemon_uri) {
       EXPECT_ERR_MSG(monero_wallet_sign_txs(a, unsigned_hex, &signed_set), "Failed to sign unsigned tx: Hot wallets cannot import outputs");
       EXPECT_OK(monero_wallet_sign_txs(cold, unsigned_hex, &signed_set));
       CHECK(has(signed_set, "{\"txSets\":[{\"signedTxHex\":\"") && has(signed_set, "\"txs\":[") && has(signed_set, "\"hash\""));
+      if (signed_set != NULL) hostile_wallet_inputs(a, v, cold, address_a, unsigned_hex, signed_set);
       monero_utils_free(signed_set);
     }
     free(unsigned_hex);

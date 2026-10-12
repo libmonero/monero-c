@@ -20,6 +20,7 @@
  * SOFTWARE.
  */
 
+#include "monero_c_fuzz.h"
 #include "monero_c_test.h"
 
 #include <stdlib.h>
@@ -54,6 +55,76 @@ static void free_strings(char** values) {
     if (values[i] != NULL) monero_utils_free(values[i]);
     values[i] = NULL;
   }
+}
+
+// what a co-signer sends can't be trusted. The infos and the exports of the other participants, with a few changes in them, are refused or
+// read, and the wallets go on. A fresh wallet gets the infos of the first round, and the multisig wallet gets the exports. The calls
+// have to return, and a failed call has to reset its output
+static void test_hostile_infos(monero_wallet* multisig, char** prepared, char** made, char** init, char** exported) {
+  static char mutated[2][65536];
+  const char* path = "monero_c_wallet_multisig_hostile";
+  monero_wallet* fresh = create_random_wallet(path);
+  fuzz_rng rng;
+  size_t iterations = fuzz_iterations(60);
+  int accepted = 0;
+  fuzz_seed(&rng, fuzz_seed_value());
+  if (fresh == NULL) {
+    remove_files(path);
+    return;
+  }
+
+  for (size_t i = 0; i < iterations; i++) {
+    char* out = POISON_PTR;
+    char* json = POISON_PTR;
+    int32_t imported = 7;
+    const char* two[2];
+    monero_result result;
+
+    // the infos of the first round, one of them changed
+    fuzz_mutate_text(&rng, prepared[1], mutated[0], sizeof(mutated[0]));
+    two[0] = mutated[0];
+    two[1] = prepared[2];
+    result = monero_wallet_make_multisig(fresh, two, 2, 2, PASSWORD, &out);
+    CHECK(result == MONERO_OK || out == NULL);
+    if (result == MONERO_OK) accepted++;
+    if (out != POISON_PTR) monero_utils_free(out);
+
+    // the multisig hex of an exchange, which the wallet that has not made its multisig refuses
+    fuzz_mutate_text(&rng, made[1], mutated[1], sizeof(mutated[1]));
+    two[0] = mutated[1];
+    two[1] = made[2];
+    result = monero_wallet_exchange_multisig_keys(fresh, two, 2, PASSWORD, &json);
+    CHECK(result == MONERO_OK || json == NULL);
+    if (json != POISON_PTR) monero_utils_free(json);
+
+    // the exports of the other two, to the wallet that is multisig
+    fuzz_mutate_hex(&rng, exported[1], mutated[0], sizeof(mutated[0]));
+    two[0] = mutated[0];
+    two[1] = exported[2];
+    result = monero_wallet_import_multisig_hex(multisig, two, 2, false, &imported);
+    CHECK(result == MONERO_OK || imported == 7);
+
+    // a signature that stops in the middle, or is garbage, of a transaction that was never made
+    fuzz_mutate_hex(&rng, exported[1], mutated[1], sizeof(mutated[1]));
+    json = POISON_PTR;
+    result = monero_wallet_sign_multisig_tx_hex(multisig, mutated[1], &json);
+    CHECK(result == MONERO_OK || json == NULL);
+    if (json != POISON_PTR) monero_utils_free(json);
+    json = POISON_PTR;
+    result = monero_wallet_submit_multisig_tx_hex(multisig, mutated[1], &json);
+    CHECK(result == MONERO_OK || json == NULL);
+    if (json != POISON_PTR) monero_utils_free(json);
+  }
+
+  // the init that each participant got from the exchange is JSON, and the wallet still works after all this
+  CHECK(init[0] != NULL);
+  char* address = NULL;
+  EXPECT_OK(monero_wallet_get_primary_address(multisig, &address));
+  CHECK(address != NULL);
+  monero_utils_free(address);
+  (void) accepted;
+  monero_wallet_free(fresh);
+  remove_files(path);
 }
 
 static void test_two_of_three(void) {
@@ -163,6 +234,8 @@ static void test_two_of_three(void) {
   // a signature needs a transaction, which these tests don't create
   EXPECT_ERR(monero_wallet_sign_multisig_tx_hex(wallets[0], "00", &json));
   CHECK(json == NULL);
+
+  test_hostile_infos(wallets[0], prepared, made, init, exported);
 
   free_strings(prepared);
   free_strings(made);
