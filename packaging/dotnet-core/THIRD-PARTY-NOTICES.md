@@ -25,8 +25,10 @@ configuration.
 | Protocol Buffers | BSD-3-Clause | `licenses/protobuf-BSD-3-Clause.txt` |
 | HIDAPI (BSD-style license selected) | BSD-3-Clause | `licenses/hidapi-BSD-3-Clause.txt` |
 | libusb | LGPL-2.1-or-later | `licenses/libusb-LGPL-2.1.txt` |
-| libevent, if linked | BSD-3-Clause | `licenses/libevent-BSD-3-Clause.txt` |
+| libevent, macOS only | BSD-3-Clause | `licenses/libevent-BSD-3-Clause.txt` |
+| nghttp2, macOS only | MIT | `licenses/nghttp2-MIT.txt` |
 | winpthreads (mingw-w64), Windows only | MIT and BSD-3-Clause (Lockless Inc.) | `licenses/winpthreads-COPYING.txt` |
+| mingw-w64 C runtime, Windows only, linked statically | Several permissive licenses, and LGPL-2.1-or-later for headers imported from Wine. The file lists them | `licenses/mingw-w64-runtime-COPYING.txt` |
 | GCC runtime libraries (libgcc, libstdc++), Windows only, linked statically | GPL-3.0-or-later with the GCC Runtime Library Exception 3.1 | `licenses/gcc-runtime-GPL-3.0.txt` and `licenses/gcc-runtime-COPYING.RUNTIME.txt` |
 
 The build disables Trezor support (`USE_DEVICE_TREZOR=OFF`), so the LGPL-3.0
@@ -44,6 +46,10 @@ modified build.
 
 This inventory is based on the checked-in CMake link configuration and CI
 dependency sources. The package workflow stages these license texts from the
-Linux x64 build and verifies the libusb runtime assets for every RID. Review
-the complete dependency closure and distribution obligations before
-publication; this file is not legal advice.
+Linux x64 build, verifies the libusb runtime assets for every RID, and runs
+`check-notices.sh`, which looks in the libraries of every RID for the function
+names of each component and fails when a component that is linked has no
+license text, or has no notice at all, like ZeroMQ. Unbound uses its own
+event loop on Windows, so libevent is linked on macOS only, and ZeroMQ is not
+linked on any RID. Review the complete dependency closure and distribution
+obligations before publication; this file is not legal advice.

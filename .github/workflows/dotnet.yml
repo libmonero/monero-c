@@ -94,6 +94,12 @@ jobs:
           cp artifacts/osx-arm64/libmonero_c.dylib "$package_runtimes/osx-arm64/native/"
           cp artifacts/osx-arm64/libusb-1.0.0.dylib "$package_runtimes/osx-arm64/native/"
 
+      # on the libraries as they are built: the strip below removes the names that it looks for
+      - name: Check the notices cover the components that the libraries link
+        run: |
+          package_runtimes=packaging/dotnet-core/runtimes
+          bash packaging/dotnet-core/check-notices.sh packaging/dotnet-core/licenses "$package_runtimes"/*/native/*monero_c*
+
       - name: Strip the Linux libraries
         run: |
           sudo apt-get update
@@ -141,6 +147,8 @@ jobs:
             protobuf-BSD-3-Clause.txt \
             libevent-BSD-3-Clause.txt \
             winpthreads-COPYING.txt \
+            mingw-w64-runtime-COPYING.txt \
+            nghttp2-MIT.txt \
             gcc-runtime-GPL-3.0.txt \
             gcc-runtime-COPYING.RUNTIME.txt \
             easyloggingpp-MIT.txt \
