@@ -6,35 +6,16 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Monero.Native.Unit.Tests", 
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Monero.Native.Integration.Tests", "tests/csharp/Monero.Native.Integration.Tests/Monero.Native.Integration.Tests.csproj", "{F9E3A318-75B8-4B36-A19F-EB4B4CA6BD72}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{B933590A-034B-42B5-9B71-5973E230A1CF}"
-	ProjectSection(SolutionItems) = preProject
-		src/monero_c.h = src/monero_c.h
-	EndProjectSection
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Monero.Native", "native/Monero.Native.csproj", "{7C0E5B3A-4D1F-4E8B-9A62-3F5D8C1B2A90}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "common", "common", "{871147B3-5EB1-4E10-84E8-C4C5EA170EAD}"
-	ProjectSection(SolutionItems) = preProject
-		src/common/monero_c_common.cpp = src/common/monero_c_common.cpp
-		src/common/monero_c_common.h = src/common/monero_c_common.h
-		src/common/monero_c_rpc_connection.cpp = src/common/monero_c_rpc_connection.cpp
-		src/common/monero_c_rpc_connection.h = src/common/monero_c_rpc_connection.h
-	EndProjectSection
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Monero.Native.CTests", "tests/c/Monero.Native.CTests/Monero.Native.CTests.csproj", "{3B6A9F10-8C2D-4E57-B1A4-6D0E7F5C9A21}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "daemon", "daemon", "{F5133DF3-5E54-4325-A281-7B6649A1865C}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{91A2B4B5-302F-5F92-B87B-0DF0D684ACE3}"
 	ProjectSection(SolutionItems) = preProject
-		src/daemon/monero_c_daemon.cpp = src/daemon/monero_c_daemon.cpp
-		src/daemon/monero_c_daemon.h = src/daemon/monero_c_daemon.h
-	EndProjectSection
-EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "utils", "utils", "{BBDE150C-C288-450B-8BC6-742118EDE6BD}"
-	ProjectSection(SolutionItems) = preProject
-		src/utils/monero_c_utils.cpp = src/utils/monero_c_utils.cpp
-		src/utils/monero_c_utils.h = src/utils/monero_c_utils.h
-	EndProjectSection
-EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "wallet", "wallet", "{4A6A3337-25E0-432F-8BC4-B1181793AD40}"
-	ProjectSection(SolutionItems) = preProject
-		src/wallet/monero_c_wallet.cpp = src/wallet/monero_c_wallet.cpp
-		src/wallet/monero_c_wallet.h = src/wallet/monero_c_wallet.h
+		CMakeLists.txt = CMakeLists.txt
+		README.md = README.md
+		CHANGELOG.md = CHANGELOG.md
+		TODO.md = TODO.md
 	EndProjectSection
 EndProject
 Global
@@ -47,15 +28,17 @@ Global
 		{AAC81A2C-4968-4EC7-9083-8445CE93A11D}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{AAC81A2C-4968-4EC7-9083-8445CE93A11D}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{AAC81A2C-4968-4EC7-9083-8445CE93A11D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7C0E5B3A-4D1F-4E8B-9A62-3F5D8C1B2A90}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7C0E5B3A-4D1F-4E8B-9A62-3F5D8C1B2A90}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7C0E5B3A-4D1F-4E8B-9A62-3F5D8C1B2A90}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7C0E5B3A-4D1F-4E8B-9A62-3F5D8C1B2A90}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3B6A9F10-8C2D-4E57-B1A4-6D0E7F5C9A21}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3B6A9F10-8C2D-4E57-B1A4-6D0E7F5C9A21}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3B6A9F10-8C2D-4E57-B1A4-6D0E7F5C9A21}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3B6A9F10-8C2D-4E57-B1A4-6D0E7F5C9A21}.Release|Any CPU.Build.0 = Release|Any CPU
 		{F9E3A318-75B8-4B36-A19F-EB4B4CA6BD72}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{F9E3A318-75B8-4B36-A19F-EB4B4CA6BD72}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{F9E3A318-75B8-4B36-A19F-EB4B4CA6BD72}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{F9E3A318-75B8-4B36-A19F-EB4B4CA6BD72}.Release|Any CPU.Build.0 = Release|Any CPU
-	EndGlobalSection
-	GlobalSection(NestedProjects) = preSolution
-		{871147B3-5EB1-4E10-84E8-C4C5EA170EAD} = {B933590A-034B-42B5-9B71-5973E230A1CF}
-		{F5133DF3-5E54-4325-A281-7B6649A1865C} = {B933590A-034B-42B5-9B71-5973E230A1CF}
-		{BBDE150C-C288-450B-8BC6-742118EDE6BD} = {B933590A-034B-42B5-9B71-5973E230A1CF}
-		{4A6A3337-25E0-432F-8BC4-B1181793AD40} = {B933590A-034B-42B5-9B71-5973E230A1CF}
 	EndGlobalSection
 EndGlobal

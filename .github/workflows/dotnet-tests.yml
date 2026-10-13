@@ -79,6 +79,8 @@ jobs:
         run: |
           docker run --rm \
             --env ARCH \
+            --env CI \
+            --env GITHUB_ACTIONS \
             --volume "$GITHUB_WORKSPACE:/workspace" \
             --workdir /workspace \
             mcr.microsoft.com/dotnet/sdk:8.0-bookworm-slim \

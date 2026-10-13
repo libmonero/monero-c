@@ -509,6 +509,13 @@ static monero_wallet* create_wallet(const char* path) {
 }
 
 int main(void) {
+  // a long text or a name that is no address is looked up as an OpenAlias name, and the public servers make each lookup wait for its timeout.
+  // Pointing the resolver at a port that refuses makes them fail
+#if defined(_WIN32)
+  _putenv_s("DNS_PUBLIC", "tcp://127.0.0.1");
+#else
+  setenv("DNS_PUBLIC", "tcp://127.0.0.1", 1);
+#endif
   const char* full_path = "monero_c_arguments_full";
   const char* closed_path = "monero_c_arguments_closed";
   monero_wallet* full = create_wallet(full_path);

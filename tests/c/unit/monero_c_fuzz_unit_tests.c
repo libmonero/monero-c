@@ -531,7 +531,12 @@ int main(void) {
   monero_wallet* rpc = NULL;
   monero_daemon* daemon = NULL;
   monero_rpc_connection* connection = NULL;
+  // a lookup that fails takes 2 s on Windows, where each name that the mutations make costs it, so there are fewer inputs there
+#if defined(_WIN32)
+  size_t iterations = fuzz_iterations(10);
+#else
   size_t iterations = fuzz_iterations(150);
+#endif
   size_t count = sizeof(g_targets) / sizeof(g_targets[0]);
 
   g_verbose = getenv("MONERO_C_FUZZ_VERBOSE") != NULL;

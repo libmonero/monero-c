@@ -132,6 +132,10 @@ Every call returns `MONERO_OK` or `MONERO_ERROR`, and `monero_last_error()` give
    ./bin/build_libmonero_c.sh -DBUILD_TESTS=ON
    ```
 
+From Rider or Visual Studio, open `monero-c.sln`, right-click the project `Monero.Native` and choose Build: it runs the same script (see [native/Monero.Native.csproj](native/Monero.Native.csproj) for the arguments and the MSYS2 path on Windows). Building the solution builds it too, except where `CI` or `GITHUB_ACTIONS` is `true` (pass `-p:MoneroCSkipNative=true` to skip it elsewhere), so the C# tests of CI don't start a native build. The next builds are incremental: `make` only rebuilds what changed.
+
+The project `Monero.Native.CTests` lists the tests of CTest in the test runner of the IDE, one test for each, and runs them from the build directory (`MONERO_C_BUILD_DIR` changes it), so build `Monero.Native` first (Build Solution does, in this order). The tests are skipped where CI or `GITHUB_ACTIONS` is true, because the CI jobs run the C tests on their own.
+
 Flags are cached in `./build/CMakeCache.txt`, so pass them on every build to change them. To sync submodules after pulling new changes, run `./bin/update_submodules.sh`.
 
 ### Windows

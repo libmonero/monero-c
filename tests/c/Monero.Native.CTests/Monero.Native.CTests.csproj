@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Shows the C tests of tests/c in the test runner of Rider and Visual Studio: one test for each test that CTest lists, which runs it with
+    `ctest -R` and passes when it passes. The tests have to be built first, with the project Monero.Native (BUILD_TESTS is on by default there).
+    The build directory is ../../build, or the one in the variable MONERO_C_BUILD_DIR. The solution builds it, and its tests are skipped where the variable CI or
+    GITHUB_ACTIONS is true.
+  -->
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <IsPackable>false</IsPackable>
+    <TestsC>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..'))</TestsC>
+    <IsTestProject>true</IsTestProject>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <OutputPath>$(MSBuildThisFileDirectory)../../../build/msbuild-tests/out/</OutputPath>
+  </PropertyGroup>
+
+  <!-- the files of tests/c are items of the project, so that the IDE shows them under it: MSBuild compiles none of them -->
+  <ItemGroup>
+    <None Include="$(TestsC)/**/*" Exclude="$(TestsC)/Monero.Native.CTests/**" Link="%(RecursiveDir)%(Filename)%(Extension)" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
+    <PackageReference Include="xunit" Version="2.9.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="3.0.1" />
+  </ItemGroup>
+
+</Project>

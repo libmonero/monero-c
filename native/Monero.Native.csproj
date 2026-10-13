@@ -1,0 +1,70 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Builds the native part from an IDE: monero-project (wallet2, cryptonote_protocol, ...), monero-cpp and monero-c, as ./bin/build_libmonero_c.sh does.
+    It builds nothing in .NET. The solution builds it, so Build Solution in an IDE or `dotnet build monero-c.sln` starts the native build, except
+    where CI or GITHUB_ACTIONS is true (the workflows build the library on their own). It can also be built by itself (right-click it and Build, or
+    `dotnet build native/Monero.Native.csproj`). The first build takes hours, and the next ones only what changed.
+
+      -p:MoneroCArgs="-DBUILD_TESTS=ON -DCMAKE_BUILD_TYPE=Debug"   the arguments of cmake
+      -p:Jobs=2                                                      the number of jobs, 1 by default
+      -p:MsysRoot=D:\msys2                                           where MSYS2 is on Windows, C:\msys64 by default
+      -p:MoneroCSkipNative=true                                      builds only the project, without the native build
+
+    The sources of src/ and what the build leaves in build/ (the libraries, the test programs, the cache and the log of CTest) are items of the
+    project, so that the IDE shows them under it: MSBuild compiles none of them. The ones of build/ appear after a reload of the project.
+
+    Needs the dependencies of the README, and on Windows an MSYS2 with the packages of the MINGW64 environment.
+  -->
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <EnableDefaultItems>false</EnableDefaultItems>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <AssemblyName>Monero.Native.Build</AssemblyName>
+    <!-- there is nothing to compile, and the compiler says so -->
+    <NoWarn>$(NoWarn);CS2008</NoWarn>
+    <IsPackable>false</IsPackable>
+    <RepoRoot>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..'))</RepoRoot>
+    <OutputPath>$(RepoRoot)/build/msbuild/out/</OutputPath>
+    <MoneroCArgs Condition="'$(MoneroCArgs)' == ''">-DBUILD_TESTS=ON</MoneroCArgs>
+    <Jobs Condition="'$(Jobs)' == ''">1</Jobs>
+    <MsysRoot Condition="'$(MsysRoot)' == ''">C:\msys64</MsysRoot>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="$(RepoRoot)/src/**/*.h;$(RepoRoot)/src/**/*.cpp" Link="src/%(RecursiveDir)%(Filename)%(Extension)" />
+    <None Include="$(RepoRoot)/build/libmonero_c.*;$(RepoRoot)/build/*.dll;$(RepoRoot)/build/*.exe;$(RepoRoot)/build/CMakeCache.txt;$(RepoRoot)/build/Testing/Temporary/LastTest.log;$(RepoRoot)/build/tests/c/**/monero_c_*"
+          Exclude="$(RepoRoot)/build/**/CMakeFiles/**;$(RepoRoot)/build/**/*.cmake;$(RepoRoot)/build/**/*.o;$(RepoRoot)/build/**/*.d"
+          Link="build/%(RecursiveDir)%(Filename)%(Extension)" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="..\CHANGELOG.md">
+      <Link>CHANGELOG.md</Link>
+    </Content>
+    <Content Include="..\CMakeLists.txt">
+      <Link>CMakeLists.txt</Link>
+    </Content>
+    <Content Include="..\README.md">
+      <Link>README.md</Link>
+    </Content>
+    <Content Include="..\TODO.md">
+      <Link>TODO.md</Link>
+    </Content>
+  </ItemGroup>
+
+  <Target Name="BuildNative" BeforeTargets="CoreCompile" Condition="'$(MoneroCSkipNative)' != 'true' And '$(CI)' != 'true' And '$(GITHUB_ACTIONS)' != 'true'">
+    <Exec Condition="!$([MSBuild]::IsOSPlatform('Windows'))" WorkingDirectory="$(RepoRoot)" EnvironmentVariables="JOBS=$(Jobs)"
+          Command="./bin/build_libmonero_c.sh $(MoneroCArgs)" />
+    <Exec Condition="$([MSBuild]::IsOSPlatform('Windows'))" EnvironmentVariables="MSYSTEM=MINGW64;CHERE_INVOKING=1;JOBS=$(Jobs)"
+          Command="&quot;$(MsysRoot)\usr\bin\bash.exe&quot; -lc &quot;cd \&quot;%24(cygpath -u '$(RepoRoot)')\&quot; &amp;&amp; ./bin/build_libmonero_c.sh $(MoneroCArgs)&quot;" />
+  </Target>
+
+  <!-- the IDE calls a project out of date when an input is newer than its assembly, and the libraries of build/ are inputs: they are written
+       while the project builds, so the assembly is touched when everything else is done -->
+  <Target Name="TouchAssembly" AfterTargets="CopyFilesToOutputDirectory">
+    <Touch Files="@(IntermediateAssembly);$(OutDir)$(TargetFileName)" ForceTouch="true" />
+  </Target>
+
+</Project>
