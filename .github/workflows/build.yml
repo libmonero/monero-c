@@ -44,3 +44,13 @@ jobs:
     permissions:
       contents: read
     uses: ./.github/workflows/dotnet.yml
+
+  release:
+    name: Release
+    # a tag v* ends in a draft release with the libraries and the package; publishing the draft pushes the package to nuget.org
+    if: github.ref_type == 'tag' && startsWith(github.ref_name, 'v')
+    needs: [linux, macos, windows, dotnet]
+    permissions:
+      contents: write
+      actions: read
+    uses: ./.github/workflows/release.yml

@@ -1,0 +1,82 @@
+# Called by build.yml for a tag v*: collects what the Build workflow made into a draft GitHub release, with the library of each platform and the
+# NuGet package. Nothing is published from here. Publishing the draft by hand runs publish-nuget.yml, which pushes the package to nuget.org
+name: Release
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  draft:
+    name: Draft release
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: write
+      actions: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Read the version
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          package=$(dotnet msbuild packaging/dotnet-core/monero.pkgproj -getProperty:MoneroNativeVersion)
+          [ "$version" = "$package" ] || { echo "tag $GITHUB_REF_NAME does not match package version $package"; exit 1; }
+          echo "VERSION=$version" >> "$GITHUB_ENV"
+          case "$version" in *-*) echo "PRERELEASE=--prerelease" >> "$GITHUB_ENV" ;; esac
+
+      # the tests don't run on tags: the commit has to be one of main whose Tests workflow passed
+      - name: Check that the commit is on main and its tests passed
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          state=$(gh api "repos/$GITHUB_REPOSITORY/compare/main...$GITHUB_SHA" --jq '.status')
+          case "$state" in identical|behind) ;; *) echo "$GITHUB_SHA is not a commit of main ($state): tag a commit of main"; exit 1 ;; esac
+          passed=$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/test.yml/runs?head_sha=$GITHUB_SHA&event=push&branch=main&status=success&per_page=1" --jq '.total_count')
+          [ "$passed" -ge 1 ] || { echo "the Tests workflow has no successful run on main for $GITHUB_SHA: tag a commit whose tests passed"; exit 1; }
+
+      - name: Download the builds
+        uses: actions/download-artifact@v8
+        with:
+          pattern: monero-c-*
+          path: artifacts
+
+      - name: Download the NuGet package
+        uses: actions/download-artifact@v8
+        with:
+          name: monero-native-nuget
+          path: release
+
+      - name: Pack the libraries of each platform
+        run: |
+          mkdir -p release
+          for platform in linux-x86_64 linux-arm64 mac-x86_64 mac-arm64 windows; do
+            name="monero-c-$VERSION-$platform"
+            mkdir -p "stage/$name/include"
+            cp artifacts/monero-c-$platform/lib* "stage/$name/"
+            cp -R artifacts/monero-c-$platform/licenses "stage/$name/"
+            # the public headers, in the layout that monero_c.h includes them in
+            (cd src && cp --parents monero_c.h common/monero_c_rpc_connection.h daemon/monero_c_daemon.h utils/monero_c_utils.h wallet/monero_c_wallet.h "../stage/$name/include/")
+            cp LICENSE README.md "stage/$name/"
+            if [ "$platform" = windows ]; then
+              (cd stage && zip -qr "../release/$name.zip" "$name")
+            else
+              tar -C stage -czf "release/$name.tar.gz" "$name"
+            fi
+          done
+          (cd release && sha256sum * > SHA256SUMS.txt && cat SHA256SUMS.txt)
+
+      - name: Take the notes from the changelog
+        run: |
+          awk -v v="$VERSION" '/^## /{ if (found) exit; if ($0 == "## " v || index($0, "## " v " ") == 1) { found = 1; next } } found' CHANGELOG.md > notes.md
+          [ -s notes.md ] || { echo "CHANGELOG.md has no section for $VERSION"; exit 1; }
+
+      - name: Create the draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" release/* --draft --verify-tag $PRERELEASE --title "$VERSION" --notes-file notes.md
