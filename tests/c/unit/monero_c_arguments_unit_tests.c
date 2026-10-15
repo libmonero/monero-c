@@ -23,6 +23,7 @@
 #include "monero_c_test.h"
 
 #include <stdint.h>
+#include <time.h>
 
 // calls every exported function with a NULL in each pointer parameter, one at a time, on a full wallet, a keys wallet, a closed wallet, an
 // RPC wallet, a daemon and a connection. The functions come from monero_c_arguments_table.h, which tests/c/generator/generate_argument_tests.py
@@ -98,7 +99,15 @@ typedef struct arg_function {
 #define ADDRESS "48W9YHwPzRz9aPTeXCA6kmSpW6HsvmWx578jj3of2gT3JwZzwTf33amESBoNDkL6SVK34Q2HTKqgYbGyE1hBws3wCrcBDR2"
 #define VIEW_KEY "e8c2288181bad9ec410d7322efd65f663c6da57bd1d1198636278a039743a600"
 #define HEX64 "abababababababababababababababababababababababababababababababab"
+// Windows retries a connection to a closed port of the loopback for about two seconds, and every call that goes to the network pays that, so
+// there it is an address that is refused at once
+#if defined(_WIN32)
+#define CLOSED_PORT "http://0.0.0.0:1"
+#define DNS_SERVER "tcp://0.0.0.0"
+#else
 #define CLOSED_PORT "http://127.0.0.1:1"
+#define DNS_SERVER "tcp://127.0.0.1"
+#endif
 #define CONNECTION_JSON "{\"uri\":\"" CLOSED_PORT "\",\"username\":\"user\",\"password\":\"pass\",\"sslVerify\":false,\"timeoutMs\":1000}"
 
 #define MARK_PTR POISON_PTR
@@ -349,6 +358,16 @@ static void remove_paths(const arg_function* function, call_state* state) {
   }
 }
 
+// a call that takes seconds says so, so that the log of a slow run shows which functions wait for the network. The clock is time(), which every
+// platform has with the same meaning, so a call is reported when it took two seconds or more
+static monero_result timed_call(const arg_function* function, void** args) {
+  time_t start = time(NULL);
+  monero_result result = function->call(args);
+  double seconds = difftime(time(NULL), start);
+  if (seconds >= 2.0) fprintf(stderr, "slow call: %s took %.0f s\n", function->name, seconds);
+  return result;
+}
+
 // runs one call with the parameters of null_mask set to NULL. expected is the parameter that has to be rejected by name, or -1
 static void run_call(const arg_function* function, const fixture* fx, unsigned null_mask, int expected, const char* variant) {
   call_state state;
@@ -357,7 +376,7 @@ static void run_call(const arg_function* function, const fixture* fx, unsigned n
     if ((null_mask & (1u << i)) != 0) state.args[i] = NULL;
   }
   if (g_verbose) fprintf(stderr, "%s [%s] %s\n", function->name, fx->label, variant);
-  monero_result result = function->call(state.args);
+  monero_result result = timed_call(function, state.args);
   if (function->ret == RET_RESULT) {
     g_checks++;
     if (result != MONERO_OK && result != MONERO_ERROR) {
@@ -430,7 +449,7 @@ static void run_function(const arg_function* function, const fixture* fx) {
       if ((null_mask & (1u << i)) != 0) state.args[i] = NULL;
     }
     if (g_verbose) fprintf(stderr, "%s [%s] empty arrays\n", function->name, fx->label);
-    monero_result result = function->call(state.args);
+    monero_result result = timed_call(function, state.args);
     settle(function, &state, "empty arrays", result);
     remove_paths(function, &state);
   }
@@ -442,7 +461,7 @@ static void run_function(const arg_function* function, const fixture* fx) {
     prepare(function, fx, &state, VALUES_VALID);
     state.strs[i][1] = NULL;
     if (g_verbose) fprintf(stderr, "%s [%s] %s holds a NULL\n", function->name, fx->label, function->names[i]);
-    monero_result result = function->call(state.args);
+    monero_result result = timed_call(function, state.args);
     if ((function->required & (1u << i)) != 0) {
       char message[128];
       snprintf(message, sizeof(message), "%s must not contain NULL", function->names[i]);
@@ -475,7 +494,7 @@ static void run_once(const arg_function* function, const fixture* fx, value_mode
   call_state state;
   prepare(function, fx, &state, mode);
   if (g_verbose) fprintf(stderr, "%s [%s] %s\n", function->name, fx->label, names[mode]);
-  monero_result result = function->call(state.args);
+  monero_result result = timed_call(function, state.args);
   if (function->ret == RET_RESULT) {
     g_checks++;
     if (result != MONERO_OK && result != MONERO_ERROR) {
@@ -512,9 +531,9 @@ int main(void) {
   // a long text or a name that is no address is looked up as an OpenAlias name, and the public servers make each lookup wait for its timeout.
   // Pointing the resolver at a port that refuses makes them fail
 #if defined(_WIN32)
-  _putenv_s("DNS_PUBLIC", "tcp://127.0.0.1");
+  _putenv_s("DNS_PUBLIC", DNS_SERVER);
 #else
-  setenv("DNS_PUBLIC", "tcp://127.0.0.1", 1);
+  setenv("DNS_PUBLIC", DNS_SERVER, 1);
 #endif
   const char* full_path = "monero_c_arguments_full";
   const char* closed_path = "monero_c_arguments_closed";

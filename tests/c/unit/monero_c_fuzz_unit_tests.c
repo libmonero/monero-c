@@ -38,7 +38,15 @@
 #define ADDRESS "48W9YHwPzRz9aPTeXCA6kmSpW6HsvmWx578jj3of2gT3JwZzwTf33amESBoNDkL6SVK34Q2HTKqgYbGyE1hBws3wCrcBDR2"
 #define VIEW_KEY "e8c2288181bad9ec410d7322efd65f663c6da57bd1d1198636278a039743a600"
 #define HEX64 "abababababababababababababababababababababababababababababababab"
+// Windows retries a connection to a closed port of the loopback for about two seconds, and every call that goes to the network pays that, so
+// there it is an address that is refused at once
+#if defined(_WIN32)
+#define CLOSED_PORT "http://0.0.0.0:1"
+#define DNS_SERVER "tcp://0.0.0.0"
+#else
 #define CLOSED_PORT "http://127.0.0.1:1"
+#define DNS_SERVER "tcp://127.0.0.1"
+#endif
 
 #define MAX_INPUT 65536
 
@@ -545,9 +553,9 @@ int main(void) {
   // message, and a mutation of one often looks like a name. The resolver of monero-project goes to the public servers, and on a runner with a
   // network each name waits for their timeouts, minutes together. Pointing it to a port that refuses makes every lookup fail at once
 #if defined(_WIN32)
-  _putenv_s("DNS_PUBLIC", "tcp://127.0.0.1");
+  _putenv_s("DNS_PUBLIC", DNS_SERVER);
 #else
-  setenv("DNS_PUBLIC", "tcp://127.0.0.1", 1);
+  setenv("DNS_PUBLIC", DNS_SERVER, 1);
 #endif
   fuzz_seed(&g_rng, fuzz_seed_value());
   remove_files(path);
@@ -568,9 +576,10 @@ int main(void) {
 
   for (size_t i = 0; i < count; i++) {
     size_t n = g_targets[i].iterations != 0 && g_targets[i].iterations < iterations ? g_targets[i].iterations : iterations;
-    clock_t start = clock();
+    time_t start = time(NULL);
     run_target(&g_targets[i], &fx, n);
-    if (g_verbose) fprintf(stderr, "%s took %.2f s\n", g_targets[i].name, (double) (clock() - start) / CLOCKS_PER_SEC);
+    double seconds = difftime(time(NULL), start);
+    if (g_verbose || seconds > 5.0) fprintf(stderr, "%s took %.0f s\n", g_targets[i].name, seconds);
   }
   printf("%lu targets, %lu inputs for each, seed %llu\n", (unsigned long) count, (unsigned long) iterations, (unsigned long long) fuzz_seed_value());
 
