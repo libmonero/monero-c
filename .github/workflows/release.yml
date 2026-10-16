@@ -58,7 +58,8 @@ jobs:
             name="monero-c-$VERSION-$platform"
             mkdir -p "stage/$name/include"
             cp artifacts/monero-c-$platform/lib* "stage/$name/"
-            cp -R artifacts/monero-c-$platform/licenses "stage/$name/"
+            # only the Linux build collects the notices, and they cover the components of every platform, as the NuGet package has them
+            cp -R artifacts/monero-c-linux-x86_64/licenses "stage/$name/"
             # the public headers, in the layout that monero_c.h includes them in
             (cd src && cp --parents monero_c.h common/monero_c_rpc_connection.h daemon/monero_c_daemon.h utils/monero_c_utils.h wallet/monero_c_wallet.h "../stage/$name/include/")
             cp LICENSE README.md "stage/$name/"
