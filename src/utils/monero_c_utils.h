@@ -121,7 +121,7 @@ MONERO_EXPORT void monero_utils_free(void* ptr);
 // changes for fixes that leave the ABI as it is
 #define MONERO_C_ABI_VERSION_MAJOR 0
 #define MONERO_C_ABI_VERSION_MINOR 1
-#define MONERO_C_ABI_VERSION_PATCH 0
+#define MONERO_C_ABI_VERSION_PATCH 1
 
 /**
  * Get the version of the C ABI of the loaded library. A binding compares it with the version it

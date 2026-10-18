@@ -1,6 +1,14 @@
 # Changelog
 
-## 0.1.0-alpha.1 (not released yet)
+## 0.1.1-alpha.1 (not released yet)
+
+A fix for building `Monero.Native` from the source in an IDE. The functions and the JSON are the ones of 0.1.0-alpha.1, and the ABI version
+is 0.1.1.
+
+* `native/Monero.Native.csproj` doesn't build the library while an IDE loads the project. Rider and Visual Studio run a design-time build to
+  sync a solution, and that build started the native build, which takes hours. A Build Solution still builds it.
+
+## 0.1.0-alpha.1 (2026-10-16)
 
 The first alpha of the C ABI, version 0.1.0, and of `Monero.Native`, the NuGet package that carries the library for .NET. It is a
 prerelease: the C API and the JSON can still change between versions, and `monero_utils_get_abi_version()` tells which one a program has.

@@ -85,7 +85,7 @@ static void test_bool_size(void) {
 static void test_abi_version(void) {
   CHECK(MONERO_C_ABI_VERSION_MAJOR == 0);
   CHECK(MONERO_C_ABI_VERSION_MINOR == 1);
-  CHECK(MONERO_C_ABI_VERSION_PATCH == 0);
+  CHECK(MONERO_C_ABI_VERSION_PATCH == 1);
 }
 
 int main(void) {
