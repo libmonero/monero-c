@@ -54,7 +54,7 @@
     </Content>
   </ItemGroup>
 
-  <Target Name="BuildNative" BeforeTargets="CoreCompile" Condition="'$(MoneroCSkipNative)' != 'true' And '$(CI)' != 'true' And '$(GITHUB_ACTIONS)' != 'true'">
+  <Target Name="BuildNative" BeforeTargets="CoreCompile" Condition="'$(MoneroCSkipNative)' != 'true' And '$(CI)' != 'true' And '$(GITHUB_ACTIONS)' != 'true' And '$(DesignTimeBuild)' != 'true' And '$(BuildingProject)' != 'false'">
     <Exec Condition="!$([MSBuild]::IsOSPlatform('Windows'))" WorkingDirectory="$(RepoRoot)" EnvironmentVariables="JOBS=$(Jobs)"
           Command="./bin/build_libmonero_c.sh $(MoneroCArgs)" />
     <Exec Condition="$([MSBuild]::IsOSPlatform('Windows'))" EnvironmentVariables="MSYSTEM=MINGW64;CHERE_INVOKING=1;JOBS=$(Jobs)"
