@@ -133,7 +133,6 @@ jobs:
             mingw-w64-x86_64-gcc-libs
             mingw-w64-x86_64-ntldd
             mingw-w64-x86_64-openssl
-            mingw-w64-x86_64-hidapi
             mingw-w64-x86_64-libsodium
             mingw-w64-x86_64-unbound
 

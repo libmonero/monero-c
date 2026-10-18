@@ -33,7 +33,6 @@ jobs:
             mingw-w64-x86_64-openssl
             mingw-w64-x86_64-zeromq
             mingw-w64-x86_64-libsodium
-            mingw-w64-x86_64-hidapi
             mingw-w64-x86_64-unbound
             mingw-w64-x86_64-protobuf
             mingw-w64-x86_64-expat
@@ -65,6 +64,20 @@ jobs:
           pacman -U --noconfirm mingw-w64-x86_64-boost-libs-1.87.0-3-any.pkg.tar.zst mingw-w64-x86_64-boost-1.87.0-3-any.pkg.tar.zst
           # record versions of the msys2 libraries that get statically linked into the shipped binary
           pacman -Q | grep mingw-w64 | sort
+
+      # the MINGW64 repository of MSYS2 doesn't have hidapi anymore, so it is built as on Linux, static
+      - name: Install hidapi 0.14.0
+        shell: msys2 {0}
+        run: |
+          wget --tries=5 --waitretry=5 --timeout=30 --retry-on-http-error=500,502,503,504 https://github.com/libusb/hidapi/archive/refs/tags/hidapi-0.14.0.tar.gz
+          echo "a5714234abe6e1f53647dd8cba7d69f65f71c558b7896ed218864ffcf405bcbd  hidapi-0.14.0.tar.gz" | sha256sum -c
+          tar xzf hidapi-0.14.0.tar.gz
+          cd hidapi-hidapi-0.14.0
+          cmake -G "MSYS Makefiles" -B build -DBUILD_SHARED_LIBS=OFF -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX="$MINGW_PREFIX" -DCMAKE_POLICY_VERSION_MINIMUM=3.5 .
+          cmake --build build
+          cmake --install build
+          test -s "$MINGW_PREFIX/lib/libhidapi.a"
+          test -s "$MINGW_PREFIX/include/hidapi/hidapi.h"
 
       - name: Install libusb 1.0.27
         shell: msys2 {0}
