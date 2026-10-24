@@ -1,7 +1,8 @@
-# Pushes Monero.Native to nuget.org when a draft release is published. The package is the one that the Build workflow made for the tag and that
-# the release carries, so what is pushed is what the release lists and what its checksums cover. There is no stored key: the job asks GitHub for an OIDC
-# token, nuget.org checks it against the Trusted Publishing policy of the organization and answers with an API key that lasts one hour. The
-# environment nuget can be set to ask a reviewer before the job runs
+# Pushes Monero.Native to nuget.org and to GitHub Packages when a draft release is published. The package is the one that the Build workflow made for
+# the tag and that the release carries, so what is pushed is what the release lists and what its checksums cover. There is no stored key: the nuget.org
+# job asks GitHub for an OIDC token, nuget.org checks it against the Trusted Publishing policy of the organization and answers with an API key that
+# lasts one hour, and the GitHub Packages job pushes with the token of the run. The environment nuget can be set to ask a reviewer before the nuget.org
+# job runs. The two jobs do not wait for each other, so a registry that refuses or hides the package does not stop the other one
 name: Publish NuGet
 
 on:
@@ -56,3 +57,42 @@ jobs:
           TAG: ${{ github.event.release.tag_name }}
         run: |
           dotnet nuget push "Monero.Native.${TAG#v}.nupkg" --api-key "$NUGET_API_KEY" --source https://api.nuget.org/v3/index.json
+
+  github-packages:
+    name: Push Monero.Native to GitHub Packages
+    if: github.repository == 'libmonero/monero-c' && startsWith(github.event.release.tag_name, 'v')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Download the package of the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          gh release download "$TAG" -R "$GITHUB_REPOSITORY" --pattern 'Monero.Native.*.nupkg' --pattern SHA256SUMS.txt
+          [ "$(ls Monero.Native.*.nupkg | wc -l)" = 1 ] || { echo "the release must have exactly one Monero.Native package"; exit 1; }
+          grep " Monero.Native.*\.nupkg$" SHA256SUMS.txt | sha256sum -c -
+
+      - name: Check the package is the version of the tag
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          [ -f "Monero.Native.${TAG#v}.nupkg" ] || { echo "the package does not match the tag $TAG"; ls; exit 1; }
+
+      # GitHub Packages answers 409 to a version that is already there, so a rerun of the job skips it instead of failing
+      - name: Push to GitHub Packages
+        env:
+          NUGET_API_KEY: ${{ github.token }}
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          dotnet nuget push "Monero.Native.${TAG#v}.nupkg" --api-key "$NUGET_API_KEY" --skip-duplicate \
+            --source "https://nuget.pkg.github.com/$GITHUB_REPOSITORY_OWNER/index.json"
