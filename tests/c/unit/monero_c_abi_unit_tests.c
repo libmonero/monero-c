@@ -102,6 +102,7 @@ static void test_abi_version(void) {
   CHECK(MONERO_C_ABI_VERSION_MAJOR == 0);
   CHECK(MONERO_C_ABI_VERSION_MINOR == 4);
   CHECK(MONERO_C_ABI_VERSION_PATCH == 0);
+>>>>>>> fbdfef9 (wallet: light wallets behind the C ABI)
 }
 
 int main(void) {
