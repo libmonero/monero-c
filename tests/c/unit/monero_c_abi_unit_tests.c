@@ -100,7 +100,7 @@ static void test_bool_size(void) {
 // change the version together with an enum value, a layout or a signature above
 static void test_abi_version(void) {
   CHECK(MONERO_C_ABI_VERSION_MAJOR == 0);
-  CHECK(MONERO_C_ABI_VERSION_MINOR == 2);
+  CHECK(MONERO_C_ABI_VERSION_MINOR == 3);
   CHECK(MONERO_C_ABI_VERSION_PATCH == 0);
 }
 
