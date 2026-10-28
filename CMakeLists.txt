@@ -201,47 +201,51 @@ if (MONERO_C_STATIC_DEPENDENCIES)
   endforeach()
 endif()
 
-if (MONERO_C_STATIC_DEPENDENCIES)
-  set(MONERO_C_FIND_LIBRARY_SUFFIXES ${CMAKE_FIND_LIBRARY_SUFFIXES})
-  if (WIN32)
-    set(CMAKE_FIND_LIBRARY_SUFFIXES .dll.a .lib)
-  elseif (APPLE)
-    set(CMAKE_FIND_LIBRARY_SUFFIXES .dylib)
+# Android builds monero-project without Trezor, the only user of libusb, hidapi and protobuf, and an app reaches USB devices
+# through the API of Android
+if (NOT ANDROID)
+  if (MONERO_C_STATIC_DEPENDENCIES)
+    set(MONERO_C_FIND_LIBRARY_SUFFIXES ${CMAKE_FIND_LIBRARY_SUFFIXES})
+    if (WIN32)
+      set(CMAKE_FIND_LIBRARY_SUFFIXES .dll.a .lib)
+    elseif (APPLE)
+      set(CMAKE_FIND_LIBRARY_SUFFIXES .dylib)
+    else()
+      set(CMAKE_FIND_LIBRARY_SUFFIXES .so)
+    endif()
+    find_library(MONERO_C_LIBUSB_SHARED_LIBRARY NAMES usb-1.0 libusb usb)
+    set(CMAKE_FIND_LIBRARY_SUFFIXES ${MONERO_C_FIND_LIBRARY_SUFFIXES})
+    if (NOT MONERO_C_LIBUSB_SHARED_LIBRARY OR
+        NOT EXISTS "${MONERO_C_LIBUSB_SHARED_LIBRARY}")
+      message(FATAL_ERROR "MONERO_C_STATIC_DEPENDENCIES requires a shared libusb library")
+    endif()
+    set(LibUSB_LIBRARIES ${MONERO_C_LIBUSB_SHARED_LIBRARY})
   else()
-    set(CMAKE_FIND_LIBRARY_SUFFIXES .so)
+    find_library(usb_LIBRARY NAMES usb-1.0 libusb usb)
+    if (usb_LIBRARY)
+      set(LibUSB_LIBRARIES ${usb_LIBRARY})
+    endif()
   endif()
-  find_library(MONERO_C_LIBUSB_SHARED_LIBRARY NAMES usb-1.0 libusb usb)
-  set(CMAKE_FIND_LIBRARY_SUFFIXES ${MONERO_C_FIND_LIBRARY_SUFFIXES})
-  if (NOT MONERO_C_LIBUSB_SHARED_LIBRARY OR
-      NOT EXISTS "${MONERO_C_LIBUSB_SHARED_LIBRARY}")
-    message(FATAL_ERROR "MONERO_C_STATIC_DEPENDENCIES requires a shared libusb library")
+
+  find_package(HIDAPI REQUIRED)
+
+  # hidapi's macOS backend needs these directly (see monero-project's own CMakeLists.txt).
+  if (APPLE)
+    find_library(COREFOUNDATION_LIBRARY CoreFoundation REQUIRED)
+    find_library(APPKIT_LIBRARY AppKit REQUIRED)
+    find_library(IOKIT_LIBRARY IOKit REQUIRED)
+    list(APPEND HIDAPI_LIBRARIES ${COREFOUNDATION_LIBRARY} ${APPKIT_LIBRARY} ${IOKIT_LIBRARY})
   endif()
-  set(LibUSB_LIBRARIES ${MONERO_C_LIBUSB_SHARED_LIBRARY})
-else()
-  find_library(usb_LIBRARY NAMES usb-1.0 libusb usb)
-  if (usb_LIBRARY)
-    set(LibUSB_LIBRARIES ${usb_LIBRARY})
+
+  # hidapi's Windows backend needs setupapi.
+  if (WIN32)
+    list(APPEND HIDAPI_LIBRARIES setupapi)
   endif()
-endif()
-
-find_package(HIDAPI REQUIRED)
-
-# hidapi's macOS backend needs these directly (see monero-project's own CMakeLists.txt).
-if (APPLE)
-  find_library(COREFOUNDATION_LIBRARY CoreFoundation REQUIRED)
-  find_library(APPKIT_LIBRARY AppKit REQUIRED)
-  find_library(IOKIT_LIBRARY IOKit REQUIRED)
-  list(APPEND HIDAPI_LIBRARIES ${COREFOUNDATION_LIBRARY} ${APPKIT_LIBRARY} ${IOKIT_LIBRARY})
-endif()
-
-# hidapi's Windows backend needs setupapi.
-if (WIN32)
-  list(APPEND HIDAPI_LIBRARIES setupapi)
 endif()
 
 find_library(SODIUM_LIBRARY sodium REQUIRED)
 
-if (NOT APPLE)
+if (NOT APPLE AND NOT ANDROID)
   include(FindProtobuf)
   find_package(Protobuf)
 endif()
@@ -347,7 +351,7 @@ if (WIN32)
 endif()
 
 # monero-project's ge25519 asm lacks .note.GNU-stack. Keep the stack non-executable (GNU ld/lld only)
-if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
+if (CMAKE_SYSTEM_NAME STREQUAL "Linux" OR ANDROID)
   target_link_options(monero_c PRIVATE -Wl,-z,noexecstack)
   # export only the C ABI, not the symbols of the static archives (monero-project, boost, OpenSSL)
   target_link_options(monero_c PRIVATE -Wl,--exclude-libs,ALL)
@@ -357,6 +361,12 @@ if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
   target_link_options(monero_c PRIVATE -Wl,--no-undefined)
   # the static lib has no link step, so its consumers must get the flag
   target_link_options(monero_c-static INTERFACE -Wl,-z,noexecstack)
+endif()
+
+if (ANDROID)
+  # devices with 16 KB pages, which Google Play requires of apps that target Android 15, map only a library that is aligned to them.
+  # The NDK before r28 aligns to 4 KB unless it is told to
+  target_link_options(monero_c PRIVATE -Wl,-z,max-page-size=16384)
 endif()
 
 # export only the C ABI on macOS too, from the list that the tests check. C symbols start with an underscore there
