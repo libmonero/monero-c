@@ -589,10 +589,12 @@ monero::monero_wallet_light& as_light(::monero_wallet* wallet) {
   return *light;
 }
 
-// parses the config of a light wallet, which a seed and keys can't both initialize. A light wallet
-// has no files and no multisig, so a seed is always a mnemonic
+// parses the config of a light wallet, which a seed and keys can't both initialize, and which has
+// no daemon: its server is the connection of the call, so a config that has one is a mistake. A
+// light wallet has no files and no multisig, so a seed is always a mnemonic
 std::shared_ptr<monero::monero_wallet_config> light_config_of(const char* json) {
   std::shared_ptr<monero::monero_wallet_config> config = wallet_config_of(json);
+  if (config->m_server != nullptr) throw std::invalid_argument("Cannot provide server config for light wallet");
   bool has_seed = config->m_seed != boost::none && !config->m_seed->empty();
   bool has_keys = (config->m_primary_address != boost::none && !config->m_primary_address->empty()) || (config->m_private_view_key != boost::none && !config->m_private_view_key->empty()) ||
                   (config->m_private_spend_key != boost::none && !config->m_private_spend_key->empty());
@@ -1776,11 +1778,13 @@ monero_result monero_wallet_light_open(const char* config_json, ::monero_rpc_con
 }
 
 monero_result monero_wallet_light_wallet_exists(const char* config_json, ::monero_rpc_connection* connection, bool* out_exists) {
+  reset_out(out_exists);
   if (!require(config_json, "config_json") || !require(connection, "connection") || !require(out_exists, "out_exists")) return MONERO_ERROR;
   return guard([&] { *out_exists = monero::monero_wallet_light::wallet_exists(*light_config_of(config_json), monero_c::connection_of(connection)); });
 }
 
 monero_result monero_wallet_light_get_unrefined_spend_count(::monero_wallet* wallet, uint64_t* out_count) {
+  reset_out(out_count);
   if (!require(wallet, "wallet") || !require(out_count, "out_count")) return MONERO_ERROR;
   return guard([&] { *out_count = as_light(wallet).get_unrefined_spend_count(); });
 }
