@@ -137,10 +137,13 @@ jobs:
           run-id: ${{ inputs.run-id }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
+      # the package database is updated, as the build job does: the one of the MSYS2 installer is weeks old, and a package that MSYS2 publishes again
+      # under the same name fails its checksum
       - name: Setup MSYS2 MINGW64
         uses: msys2/setup-msys2@ec48f7c5447b3140e2b088413ae3a55687bccb6e # v2.33.0
         with:
           msystem: MINGW64
+          update: true
           install: >-
             mingw-w64-x86_64-binutils
             mingw-w64-x86_64-ntldd
