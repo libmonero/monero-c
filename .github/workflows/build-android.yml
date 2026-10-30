@@ -23,6 +23,11 @@ jobs:
       CXX: ${{ matrix.triple }}${{ matrix.api }}-clang++
       AR: llvm-ar
       RANLIB: llvm-ranlib
+      CCACHE_DIR: ${{ github.workspace }}/.ccache
+      # monero-project finds ccache by itself, the other projects get it as the compiler launcher
+      CMAKE_CCACHE: -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+      CCACHE_MAXSIZE: 1G
+      CCACHE_COMPRESS: "1"
 
     strategy:
       fail-fast: false
@@ -52,6 +57,23 @@ jobs:
         uses: actions/checkout@v5
         with:
           submodules: recursive
+
+      - name: Install ccache
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ccache
+
+      - name: Restore ccache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .ccache
+          key: ccache-${{ matrix.arch }}-${{ github.run_id }}
+          restore-keys: |
+            ccache-${{ matrix.arch }}-
+
+      # the statistics are kept in the cache directory, so reset them to see what this run did
+      - name: Reset the ccache statistics
+        run: ccache --zero-stats
 
       - name: Install the NDK
         run: |
@@ -145,7 +167,7 @@ jobs:
           cd external/monero-cpp
           mkdir -p build
           cd build
-          cmake $CMAKE_ANDROID -DSTATIC=ON -DBUILD_LIBRARY=ON -DBUILD_SAMPLE=OFF -DBUILD_SCRATCHPAD=OFF -DBUILD_TESTS=OFF -DBOOST_ROOT="$PREFIX" -DBoost_NO_SYSTEM_PATHS=ON ..
+          cmake $CMAKE_ANDROID -DSTATIC=ON -DBUILD_LIBRARY=ON -DBUILD_SAMPLE=OFF -DBUILD_SCRATCHPAD=OFF -DBUILD_TESTS=OFF -DBOOST_ROOT="$PREFIX" -DBoost_NO_SYSTEM_PATHS=ON $CMAKE_CCACHE ..
           cmake --build . --target monero-cpp-static -j3
           cd ../../..
 
@@ -154,7 +176,7 @@ jobs:
         run: |
           mkdir -p build
           cd build
-          cmake $CMAKE_ANDROID -DMONERO_C_STATIC_DEPENDENCIES=ON -DBOOST_ROOT="$PREFIX" -DBoost_NO_SYSTEM_PATHS=ON ..
+          cmake $CMAKE_ANDROID -DMONERO_C_STATIC_DEPENDENCIES=ON -DBOOST_ROOT="$PREFIX" -DBoost_NO_SYSTEM_PATHS=ON $CMAKE_CCACHE ..
           cmake --build . -j3
           cd ..
 
@@ -185,3 +207,15 @@ jobs:
           path: dist/
           if-no-files-found: error
           retention-days: 1
+
+      - name: Show the ccache statistics
+        if: ${{ !cancelled() }}
+        run: ccache --show-stats
+
+      # only main saves, so that the caches of the pull requests don't evict the one that every pull request restores
+      - name: Save ccache
+        if: ${{ !cancelled() && github.ref == 'refs/heads/main' }}
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .ccache
+          key: ccache-${{ matrix.arch }}-${{ github.run_id }}

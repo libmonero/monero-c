@@ -16,6 +16,12 @@ jobs:
     env:
       # coverage runs on pull requests and on main
       COVERAGE: ${{ matrix.arch == 'linux-x86_64' && (github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/main')) }}
+      # the job runs as root in the container, and github.workspace is not the path of the workspace in it
+      CCACHE_DIR: /root/.ccache
+      # monero-project finds ccache by itself, the other projects get it as the compiler launcher
+      CMAKE_CCACHE: -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+      CCACHE_MAXSIZE: 1G
+      CCACHE_COMPRESS: "1"
 
     strategy:
       fail-fast: false
@@ -49,6 +55,18 @@ jobs:
           apt-get install -y build-essential cmake pkg-config file perl wget libzmq3-dev libunbound-dev libsodium-dev libunwind-dev liblzma-dev libreadline-dev libexpat1-dev libpgm-dev libhidapi-dev libusb-1.0-0-dev libprotobuf-dev protobuf-compiler libudev-dev python3 ccache git curl autoconf libtool gperf bison flex nettle-dev libevent-dev
           # record versions of the distro libraries that get statically linked into the shipped binary
           dpkg -s libsodium-dev libprotobuf-dev | grep -E '^(Package|Version)'
+
+      - name: Restore ccache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: /root/.ccache
+          key: ccache-${{ matrix.arch }}-${{ github.run_id }}
+          restore-keys: |
+            ccache-${{ matrix.arch }}-
+
+      # the statistics are kept in the cache directory, so reset them to see what this run did
+      - name: Reset the ccache statistics
+        run: ccache --zero-stats
 
       - name: Install openssl
         run: |
@@ -128,7 +146,7 @@ jobs:
           cd external/monero-cpp
           mkdir -p build
           cd build
-          cmake -DBUILD_LIBRARY=ON -DBUILD_SAMPLE=OFF -DBUILD_SCRATCHPAD=OFF -DBUILD_TESTS=OFF -DBOOST_ROOT=/usr/local -DBoost_NO_SYSTEM_PATHS=ON ..
+          cmake -DBUILD_LIBRARY=ON -DBUILD_SAMPLE=OFF -DBUILD_SCRATCHPAD=OFF -DBUILD_TESTS=OFF -DBOOST_ROOT=/usr/local -DBoost_NO_SYSTEM_PATHS=ON $CMAKE_CCACHE ..
           cmake --build . --target monero-cpp-static -j3
           cd ../../..
 
@@ -136,7 +154,7 @@ jobs:
         run: |
           mkdir -p build
           cd build
-          cmake -DBUILD_TESTS=ON -DMONERO_C_STATIC_DEPENDENCIES=ON -DMONERO_C_LIBUSB_SHARED_LIBRARY:FILEPATH=/usr/local/lib/libusb-1.0.so -DBOOST_ROOT=/usr/local -DBoost_NO_SYSTEM_PATHS=ON ..
+          cmake -DBUILD_TESTS=ON -DMONERO_C_STATIC_DEPENDENCIES=ON -DMONERO_C_LIBUSB_SHARED_LIBRARY:FILEPATH=/usr/local/lib/libusb-1.0.so -DBOOST_ROOT=/usr/local -DBoost_NO_SYSTEM_PATHS=ON $CMAKE_CCACHE ..
           grep -Fxq 'MONERO_C_LIBUSB_SHARED_LIBRARY:FILEPATH=/usr/local/lib/libusb-1.0.so' CMakeCache.txt
           cmake --build . -j3
           cd ..
@@ -178,7 +196,7 @@ jobs:
       - name: Build monero-c with coverage
         if: env.COVERAGE == 'true'
         run: |
-          cmake -S . -B build-coverage -DBUILD_TESTS=ON -DENABLE_COVERAGE=ON -DBOOST_ROOT=/usr/local -DBoost_NO_SYSTEM_PATHS=ON
+          cmake -S . -B build-coverage -DBUILD_TESTS=ON -DENABLE_COVERAGE=ON -DBOOST_ROOT=/usr/local -DBoost_NO_SYSTEM_PATHS=ON $CMAKE_CCACHE
           cmake --build build-coverage -j3
 
       - name: Build monerod for the integration tests
@@ -231,7 +249,7 @@ jobs:
         if: env.COVERAGE == 'true'
         run: |
           flags="-fsanitize=address,undefined -fno-omit-frame-pointer -fno-sanitize-recover=undefined"
-          cmake -S . -B build-sanitizers -DBUILD_TESTS=ON -DCMAKE_BUILD_TYPE=Debug -DBOOST_ROOT=/usr/local -DBoost_NO_SYSTEM_PATHS=ON \
+          cmake -S . -B build-sanitizers -DBUILD_TESTS=ON -DCMAKE_BUILD_TYPE=Debug -DBOOST_ROOT=/usr/local -DBoost_NO_SYSTEM_PATHS=ON $CMAKE_CCACHE \
             "-DCMAKE_C_FLAGS=$flags" "-DCMAKE_CXX_FLAGS=$flags" \
             "-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=address,undefined" "-DCMAKE_SHARED_LINKER_FLAGS=-fsanitize=address,undefined"
           cmake --build build-sanitizers -j3
@@ -264,3 +282,15 @@ jobs:
           done
           MONERO_C_TEST_DAEMON_URI=http://127.0.0.1:18081 build-sanitizers/tests/c/integration/monero_c_daemon_integration_tests
           MONERO_C_TEST_DAEMON_URI=http://127.0.0.1:18081 build-sanitizers/tests/c/integration/monero_c_wallet_integration_tests
+
+      - name: Show the ccache statistics
+        if: ${{ !cancelled() }}
+        run: ccache --show-stats
+
+      # only main saves, so that the caches of the pull requests don't evict the one that every pull request restores
+      - name: Save ccache
+        if: ${{ !cancelled() && github.ref == 'refs/heads/main' }}
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: /root/.ccache
+          key: ccache-${{ matrix.arch }}-${{ github.run_id }}

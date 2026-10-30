@@ -16,6 +16,13 @@ jobs:
       run:
         shell: msys2 {0}
 
+    env:
+      CCACHE_DIR: ${{ github.workspace }}/.ccache
+      # monero-project finds ccache by itself, the other projects get it as the compiler launcher
+      CMAKE_CCACHE: -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+      CCACHE_MAXSIZE: 1G
+      CCACHE_COMPRESS: "1"
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
@@ -30,6 +37,7 @@ jobs:
           install: >-
             mingw-w64-x86_64-toolchain
             mingw-w64-x86_64-cmake
+            mingw-w64-x86_64-ccache
             mingw-w64-x86_64-openssl
             mingw-w64-x86_64-zeromq
             mingw-w64-x86_64-libsodium
@@ -45,6 +53,18 @@ jobs:
             automake
             libtool
             wget
+
+      - name: Restore ccache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .ccache
+          key: ccache-windows-${{ github.run_id }}
+          restore-keys: |
+            ccache-windows-
+
+      # the statistics are kept in the cache directory, so reset them to see what this run did
+      - name: Reset the ccache statistics
+        run: ccache --zero-stats
 
       - name: Install ICU v76.1
         shell: msys2 {0}
@@ -116,7 +136,7 @@ jobs:
           cd external/monero-cpp
           mkdir -p build
           cd build
-          cmake -DBUILD_LIBRARY=ON -DBUILD_SAMPLE=OFF -DBUILD_SCRATCHPAD=OFF -DBUILD_TESTS=OFF ..
+          cmake -DBUILD_LIBRARY=ON -DBUILD_SAMPLE=OFF -DBUILD_SCRATCHPAD=OFF -DBUILD_TESTS=OFF $CMAKE_CCACHE ..
           cmake --build . --target monero-cpp-static
           cd ../../..
 
@@ -126,7 +146,7 @@ jobs:
           mkdir -p build
           cd build
           libusb_import=$(cygpath -m "$MINGW_PREFIX/lib/libusb-1.0.dll.a")
-          cmake -DBUILD_TESTS=ON -DMONERO_C_STATIC_DEPENDENCIES=ON -DMONERO_C_LIBUSB_SHARED_LIBRARY:FILEPATH="$libusb_import" ..
+          cmake -DBUILD_TESTS=ON -DMONERO_C_STATIC_DEPENDENCIES=ON -DMONERO_C_LIBUSB_SHARED_LIBRARY:FILEPATH="$libusb_import" $CMAKE_CCACHE ..
           grep -Fxq "MONERO_C_LIBUSB_SHARED_LIBRARY:FILEPATH=$libusb_import" CMakeCache.txt
           cmake --build .
           cd ..
@@ -148,3 +168,15 @@ jobs:
           path: dist/
           if-no-files-found: error
           retention-days: 1
+
+      - name: Show the ccache statistics
+        if: ${{ !cancelled() }}
+        run: ccache --show-stats
+
+      # only main saves, so that the caches of the pull requests don't evict the one that every pull request restores
+      - name: Save ccache
+        if: ${{ !cancelled() && github.ref == 'refs/heads/main' }}
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .ccache
+          key: ccache-windows-${{ github.run_id }}
