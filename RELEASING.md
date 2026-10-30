@@ -1,7 +1,7 @@
 # Releasing
 
 A release is a tag `v<version>` on a commit of `main`. CI builds the libraries and the NuGet package `Monero.Native` for that tag and
-collects them in a draft GitHub release. Publishing the draft pushes the package to nuget.org.
+collects them in a draft GitHub release. Publishing the draft pushes the package to nuget.org and to the GitHub Packages registry of the organization.
 
 ## Versions
 
@@ -40,7 +40,8 @@ bumps the minor version until 1.0, and a fix that leaves them as they are bumps 
 
    Nothing is public yet. If the run fails, delete the draft and the tag, fix it and tag again.
 5. Download the draft, check the checksums and try the package, then **publish** the release. Publishing runs `publish-nuget.yml`, which pushes
-   the package of the release to nuget.org.
+   the package of the release to nuget.org and to GitHub Packages. The two jobs are independent: one registry that refuses the package
+   doesn't stop the other.
 6. In the projects that use the package, such as monero-csharp, move the submodule to the tagged commit and set their
    `MoneroNativeVersion` to the new version.
 
@@ -49,7 +50,9 @@ bumps the minor version until 1.0, and a fix that leaves them as they are bumps 
 * **A version can't be pushed twice.** nuget.org lets you unlist a version but not delete it or push it again, so a package that is wrong
   needs a new version.
 * **A package that stays unlisted.** nuget.org checks a new version before it lists it. If it is still unlisted after a few days, write to
-  their support from the page of the package. The GitHub release and its files don't depend on nuget.org.
+  their support from the page of the package. The GitHub release, its files and the package on GitHub Packages don't depend on nuget.org.
+* **A rerun of the workflow.** GitHub Packages skips a version that is already there, so rerunning the workflow after a failure of the nuget.org
+  job is safe. nuget.org refuses the second push of a version, so rerun only the failed job.
 * **A wrong tag.** Before the release is published, delete the tag (`git push <remote> :refs/tags/v<version>`) and the draft, and tag
   again. After it is published, don't move the tag: make a new version.
 
@@ -65,3 +68,6 @@ nuget.org gets no stored key. The workflow asks for one, valid for an hour, with
 * In the repository settings, create the environment `nuget` (add required reviewers if a second person should approve each push), and add the
   secret `NUGET_USER`: the **profile name** of the nuget.org account of the policy, not its email.
 * Nothing else: no API key is created.
+
+GitHub Packages needs no setup: its job pushes with the token of the run (`packages: write`). The file name `publish-nuget.yml` is part of the
+nuget.org policy, so renaming the file means updating the policy first.

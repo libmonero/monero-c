@@ -1,5 +1,6 @@
 # Called by build.yml for a tag v*: collects what the Build workflow made into a draft GitHub release, with the library of each platform and the
 # NuGet package. Nothing is published from here. Publishing the draft by hand runs publish-nuget.yml, which pushes the package to nuget.org
+# and to GitHub Packages
 name: Release
 
 on:

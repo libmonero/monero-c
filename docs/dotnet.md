@@ -38,3 +38,19 @@ dotnet nuget push Monero.Native.<version>.nupkg \
 ```
 
 Create the API key on NuGet.org and keep it out of the repository. Each package version can only be published once.
+
+## Install from GitHub Packages
+
+Publishing a draft release also pushes `Monero.Native` to the GitHub Packages registry of the `libmonero` organization (see [`publish-nuget.yml`](../.github/workflows/publish-nuget.yml)). GitHub Packages asks for a login even for public packages, so create a personal access token (classic) with the `read:packages` scope, add the source once and install the package:
+
+```sh
+dotnet nuget add source https://nuget.pkg.github.com/libmonero/index.json \
+  --name github-libmonero \
+  --username <github-user> \
+  --password <token> \
+  --store-password-in-clear-text
+
+dotnet add package Monero.Native --version <version>
+```
+
+`--store-password-in-clear-text` is needed on Linux and macOS, where NuGet cannot encrypt the password.
