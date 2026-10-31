@@ -81,7 +81,7 @@ jobs:
         run: |
           package_runtimes=packaging/dotnet-core/runtimes
           mkdir -p "$package_runtimes"/{linux-x64,linux-arm64,win-x64,osx-x64,osx-arm64}/native
-          cp -R artifacts/linux-x64/licenses packaging/dotnet-core/
+          cp -R artifacts/linux-x64/licenses packaging/common/
           cp artifacts/linux-x64/libmonero_c.so "$package_runtimes/linux-x64/native/"
           cp artifacts/linux-x64/libusb-1.0.so.0 "$package_runtimes/linux-x64/native/"
           cp artifacts/linux-arm64/libmonero_c.so "$package_runtimes/linux-arm64/native/"
@@ -98,7 +98,7 @@ jobs:
       - name: Check the notices cover the components that the libraries link
         run: |
           package_runtimes=packaging/dotnet-core/runtimes
-          bash packaging/dotnet-core/check-notices.sh packaging/dotnet-core/licenses "$package_runtimes"/*/native/*monero_c*
+          bash packaging/common/check-notices.sh packaging/common/licenses "$package_runtimes"/*/native/*monero_c*
 
       - name: Strip the Linux libraries
         run: |
@@ -154,9 +154,9 @@ jobs:
             easyloggingpp-MIT.txt \
             qrcodegen-MIT.txt \
             openaes-BSD-3-Clause.txt; do
-            test -s "packaging/dotnet-core/licenses/$notice" || { echo "missing third-party license text: $notice"; exit 1; }
+            test -s "packaging/common/licenses/$notice" || { echo "missing third-party license text: $notice"; exit 1; }
           done
-          test -s packaging/dotnet-core/licenses/source/libusb-1.0.27.tar.bz2 || { echo "missing corresponding libusb source archive"; exit 1; }
+          test -s packaging/common/licenses/source/libusb-1.0.27.tar.bz2 || { echo "missing corresponding libusb source archive"; exit 1; }
 
       - name: Pack native NuGet package
         run: |
@@ -183,7 +183,7 @@ jobs:
           grep -Fxq 'LICENSE' package-files.txt || { echo "package is missing LICENSE"; exit 1; }
           grep -Fxq 'THIRD-PARTY-NOTICES.md' package-files.txt || { echo "package is missing THIRD-PARTY-NOTICES.md"; exit 1; }
           grep -Fxq 'licenses/source/libusb-1.0.27.tar.bz2' package-files.txt || { echo "package is missing corresponding libusb source"; exit 1; }
-          for notice in $(find packaging/dotnet-core/licenses -maxdepth 1 -type f -printf '%f\n' | sort); do
+          for notice in $(find packaging/common/licenses -maxdepth 1 -type f -printf '%f\n' | sort); do
             notice_path="licenses/$notice"
             grep -Fxq "$notice_path" package-files.txt || { echo "package is missing third-party notice: $notice_path"; exit 1; }
           done

@@ -1,9 +1,10 @@
 # Third-party notices
 
-`Monero.Native` contains native code from this project and its dependencies.
-The license texts listed below are included in the package at the indicated
-paths. The applicable set of linked components can differ by RID and build
-configuration.
+The monero-c packages (`Monero.Native` and the packages for the other
+languages) contain native code from this project and its dependencies.
+The license texts listed below are included in each package at the indicated
+paths. The applicable set of linked components can differ by platform and
+build configuration.
 
 | Component | License | License text |
 | --- | --- | --- |
@@ -36,8 +37,11 @@ Trezor common code is not intended to be part of these binaries.
 
 ## LGPL component distribution
 
-Each supported RID links to a separately packaged shared libusb runtime, next
-to `libmonero_c`, so the native loader can locate it from the package directory.
+Each supported desktop platform links to a separately packaged shared libusb
+runtime, next to `libmonero_c`, so the native loader can locate it from the
+package directory. The Android libraries link no libusb, because Android
+builds disable Trezor support, and a package for Android has no libusb source
+archive.
 The package also includes the exact `libusb-1.0.27` source archive at
 `licenses/source/libusb-1.0.27.tar.bz2` and the corresponding LGPL license
 text. The CI checks that every RID has the shared runtime and that libusb is
