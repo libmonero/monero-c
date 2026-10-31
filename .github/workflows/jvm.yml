@@ -1,0 +1,113 @@
+# Called by build.yml after the desktop builds. Checks that the notices cover what the libraries link, strips the Linux libraries, checks that they
+# export the C ABI, and packs the libraries of every platform into a JAR with its POM. The JAR is loaded and its ABI version read on Linux.
+# The release workflow adds the files to the draft release
+name: JVM archive
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  jar:
+    name: JAR
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Download Linux x64 native build
+        uses: actions/download-artifact@v8
+        with:
+          name: monero-c-linux-x86_64
+          path: artifacts/linux-x86-64
+
+      - name: Download Linux ARM64 native build
+        uses: actions/download-artifact@v8
+        with:
+          name: monero-c-linux-arm64
+          path: artifacts/linux-aarch64
+
+      - name: Download Windows x64 native build
+        uses: actions/download-artifact@v8
+        with:
+          name: monero-c-windows
+          path: artifacts/win32-x86-64
+
+      - name: Download macOS x64 native build
+        uses: actions/download-artifact@v8
+        with:
+          name: monero-c-mac-x86_64
+          path: artifacts/darwin-x86-64
+
+      - name: Download macOS ARM64 native build
+        uses: actions/download-artifact@v8
+        with:
+          name: monero-c-mac-arm64
+          path: artifacts/darwin-aarch64
+
+      - name: Read the package version
+        run: |
+          version=$(dotnet msbuild packaging/dotnet-core/monero.pkgproj -getProperty:MoneroNativeVersion)
+          test -n "$version" || { echo "no version in packaging/dotnet-core/Version.props"; exit 1; }
+          echo "PACKAGE_VERSION=$version" >> "$GITHUB_ENV"
+
+      - name: Check the tag matches the package version
+        if: github.ref_type == 'tag'
+        run: |
+          [ "${GITHUB_REF_NAME#v}" = "$PACKAGE_VERSION" ] || { echo "tag $GITHUB_REF_NAME does not match package version $PACKAGE_VERSION"; exit 1; }
+
+      - name: Stage the license texts
+        run: cp -R artifacts/linux-x86-64/licenses packaging/common/
+
+      # on the libraries as they are built: the strip below removes the names that it looks for
+      - name: Check the notices cover the components that the libraries link
+        run: bash packaging/common/check-notices.sh packaging/common/licenses artifacts/*/*monero_c*
+
+      - name: Strip the Linux libraries
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y binutils-aarch64-linux-gnu
+          strip --strip-unneeded artifacts/linux-x86-64/*.so*
+          aarch64-linux-gnu-strip --strip-unneeded artifacts/linux-aarch64/*.so*
+
+      - name: Check the stripped libraries export the C ABI
+        run: |
+          cmake -DLIBRARY=artifacts/linux-x86-64/libmonero_c.so -DEXPECTED=tests/c/abi/monero_c.symbols -P tests/c/abi/check_symbols.cmake
+          cmake -DNM=aarch64-linux-gnu-nm -DLIBRARY=artifacts/linux-aarch64/libmonero_c.so -DEXPECTED=tests/c/abi/monero_c.symbols -P tests/c/abi/check_symbols.cmake
+
+      - name: Pack the JAR
+        run: |
+          bash packaging/jvm/build-jar.sh "$PACKAGE_VERSION" packaging/jvm/packages \
+            linux-x86-64=artifacts/linux-x86-64 linux-aarch64=artifacts/linux-aarch64 \
+            darwin-x86-64=artifacts/darwin-x86-64 darwin-aarch64=artifacts/darwin-aarch64 \
+            win32-x86-64=artifacts/win32-x86-64
+
+      - name: Check the JAR
+        run: |
+          bash packaging/jvm/check-jar.sh "packaging/jvm/packages/monero-native-jvm-$PACKAGE_VERSION.jar" \
+            linux-x86-64 linux-aarch64 darwin-x86-64 darwin-aarch64 win32-x86-64
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      # the library and libusb are extracted from the JAR, as a program does, and the library has to be the ABI version of the header
+      - name: Load the library from the JAR
+        run: |
+          abi=$(awk '/#define MONERO_C_ABI_VERSION_(MAJOR|MINOR|PATCH)/ {printf "%s%s", sep, $3; sep="."}' src/utils/monero_c_utils.h)
+          java --enable-preview --source 21 --enable-native-access=ALL-UNNAMED packaging/jvm/smoke/Smoke.java \
+            "packaging/jvm/packages/monero-native-jvm-$PACKAGE_VERSION.jar" "$abi"
+
+      - name: Upload the JAR
+        uses: actions/upload-artifact@v7
+        with:
+          name: monero-native-jvm
+          path: |
+            packaging/jvm/packages/monero-native-jvm-${{ env.PACKAGE_VERSION }}.jar
+            packaging/jvm/packages/monero-native-jvm-${{ env.PACKAGE_VERSION }}.pom
+          if-no-files-found: error

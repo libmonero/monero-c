@@ -56,11 +56,18 @@ jobs:
       contents: read
     uses: ./.github/workflows/android-aar.yml
 
+  jvm:
+    name: JVM archive
+    needs: [linux, macos, windows]
+    permissions:
+      contents: read
+    uses: ./.github/workflows/jvm.yml
+
   release:
     name: Release
     # a tag v* ends in a draft release with the libraries and the packages; publishing the draft pushes the package to nuget.org
     if: github.ref_type == 'tag' && startsWith(github.ref_name, 'v')
-    needs: [linux, macos, windows, android, dotnet, android-aar]
+    needs: [linux, macos, windows, android, dotnet, android-aar, jvm]
     permissions:
       contents: write
       actions: read
