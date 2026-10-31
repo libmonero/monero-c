@@ -422,7 +422,7 @@ static void test_bandwidth_and_peers(monero_daemon* daemon) {
 // ------------------------------- LISTENERS ----------------------------------
 
 static void test_listener_receives_blocks(monero_daemon* daemon) {
-  monero_daemon_listener_callbacks callbacks = {NULL, on_block_header};
+  monero_daemon_listener_callbacks callbacks = {sizeof(monero_daemon_listener_callbacks), NULL, on_block_header};
   monero_daemon_listener* listener = NULL;
   EXPECT_OK(monero_daemon_listener_create(&callbacks, &listener));
   EXPECT_OK(monero_daemon_add_listener(daemon, listener));

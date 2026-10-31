@@ -24,6 +24,7 @@
 #define MONERO_C_COMMON_H
 
 #include "utils/monero_c_utils.h"
+#include "common/monero_c_callbacks.h"
 #include "common/monero_c_rpc_connection.h"
 
 #include "rapidjson/stringbuffer.h"

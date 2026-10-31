@@ -409,7 +409,7 @@ static void test_unsupported_operations(void) {
   EXPECT_ERR_MSG(monero_wallet_get_account_unlocked_balance(wallet, 0, &balance), "get_unlocked_balance() not supported");
   EXPECT_ERR_MSG(monero_wallet_get_subaddress_unlocked_balance(wallet, 0, 1, &balance), "get_unlocked_balance() not supported");
 
-  monero_wallet_listener_callbacks callbacks = {NULL, NULL, NULL, NULL};
+  monero_wallet_listener_callbacks callbacks = {sizeof(monero_wallet_listener_callbacks), NULL, NULL, NULL, NULL};
   monero_wallet_listener* listener = NULL;
   EXPECT_OK(monero_wallet_listener_create(&callbacks, &listener));
   EXPECT_ERR_MSG(monero_wallet_add_listener(wallet, listener), "add_listener() not supported");
@@ -447,7 +447,7 @@ static void test_listener_rollback(void) {
   EXPECT_OK(monero_wallet_create_from_seed(path, PASSWORD, MAINNET, SEED, NULL, 0, NULL, &full));
   CHECK(keys != NULL && full != NULL);
 
-  monero_wallet_listener_callbacks callbacks = {NULL, NULL, NULL, NULL};
+  monero_wallet_listener_callbacks callbacks = {sizeof(monero_wallet_listener_callbacks), NULL, NULL, NULL, NULL};
   monero_wallet_listener* listener = NULL;
   EXPECT_OK(monero_wallet_listener_create(&callbacks, &listener));
 

@@ -1011,7 +1011,7 @@ monero_result monero_wallet_listener_create(const monero_wallet_listener_callbac
   return guard([&] {
     std::unique_ptr<::monero_wallet_listener> listener(new ::monero_wallet_listener());
     listener->adapter.owner = listener.get();
-    listener->adapter.callbacks = *callbacks;
+    listener->adapter.callbacks = monero_c::copy_callbacks(*callbacks, offsetof(monero_wallet_listener_callbacks, user_data) + sizeof(void*));
     *out_listener = listener.release();
   });
 }

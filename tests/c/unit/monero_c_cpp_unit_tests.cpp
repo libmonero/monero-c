@@ -21,9 +21,12 @@
  */
 
 #include "monero_c_test.h"
+#include "common/monero_c_callbacks.h"
 #include "common/monero_c_tls.h"
 
+#include <cstddef>
 #include <cstdlib>
+#include <stdexcept>
 #include <set>
 #include <string>
 
@@ -49,6 +52,65 @@ static void test_calls_from_cpp() {
   monero_wallet_free(wallet);
 
   EXPECT_ERR_MSG(monero_daemon_get_height(nullptr, nullptr), "daemon must not be null");
+}
+
+// the struct of a first version, and the one of a later version that has one more callback at the end
+struct callbacks_v1 {
+  uint32_t struct_size;
+  void* user_data;
+  void (*first)(void*);
+};
+
+struct callbacks_v2 {
+  uint32_t struct_size;
+  void* user_data;
+  void (*first)(void*);
+  void (*second)(void*);
+};
+
+static void callback(void*) {}
+
+static const size_t V1_MIN_SIZE = offsetof(callbacks_v1, user_data) + sizeof(void*);
+
+// a program built with the first version, read by a library of the second: the callback that the program doesn't have is NULL
+static void test_older_callbacks_are_completed() {
+  callbacks_v1 older = {sizeof(callbacks_v1), &older, callback};
+  callbacks_v2 copy = monero_c::copy_callbacks(*reinterpret_cast<const callbacks_v2*>(&older), V1_MIN_SIZE);
+  CHECK(copy.struct_size == sizeof(callbacks_v2));
+  CHECK(copy.user_data == &older);
+  CHECK(copy.first == callback);
+  CHECK(copy.second == nullptr);
+}
+
+// a struct that ends right after user_data has no callbacks, whatever the bytes after it are
+static void test_bytes_past_the_size_are_not_read() {
+  callbacks_v2 full = {offsetof(callbacks_v2, user_data) + sizeof(void*), &full, callback, callback};
+  callbacks_v2 copy = monero_c::copy_callbacks(full, V1_MIN_SIZE);
+  CHECK(copy.user_data == &full);
+  CHECK(copy.first == nullptr && copy.second == nullptr);
+}
+
+// a program built with a later version, read by a library of the first: the members that the library doesn't know are left out
+static void test_newer_callbacks_are_cut() {
+  callbacks_v2 newer = {sizeof(callbacks_v2), &newer, callback, callback};
+  callbacks_v1 copy = monero_c::copy_callbacks(*reinterpret_cast<const callbacks_v1*>(&newer), V1_MIN_SIZE);
+  CHECK(copy.struct_size == sizeof(callbacks_v1));
+  CHECK(copy.user_data == &newer);
+  CHECK(copy.first == callback);
+}
+
+static void test_struct_size_too_small() {
+  const uint32_t sizes[] = {0, 1, 4, static_cast<uint32_t>(V1_MIN_SIZE - 1)};
+  for (uint32_t size : sizes) {
+    callbacks_v1 callbacks = {size, nullptr, callback};
+    bool threw = false;
+    try {
+      monero_c::copy_callbacks(callbacks, V1_MIN_SIZE);
+    } catch (const std::invalid_argument&) {
+      threw = true;
+    }
+    CHECK(threw);
+  }
 }
 
 // a system with the files that have content and the directories that have certificates by hashed name
@@ -149,6 +211,10 @@ static void test_hashed_certificate_names() {
 
 int main() {
   test_calls_from_cpp();
+  test_older_callbacks_are_completed();
+  test_bytes_past_the_size_are_not_read();
+  test_newer_callbacks_are_cut();
+  test_struct_size_too_small();
   test_ca_paths();
   test_hashed_certificate_names();
 

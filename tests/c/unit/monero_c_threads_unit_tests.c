@@ -293,7 +293,7 @@ typedef struct listener_handles {
 static void* daemon_listener_worker(void* arg) {
   worker* w = (worker*) arg;
   listener_handles* shared = (listener_handles*) w->shared;
-  monero_daemon_listener_callbacks callbacks = {NULL, NULL};
+  monero_daemon_listener_callbacks callbacks = {sizeof(monero_daemon_listener_callbacks), NULL, NULL};
   gate_wait(&shared->start);
   for (int i = 0; i < 40; i++) {
     monero_daemon_listener* listener = NULL;
@@ -332,7 +332,7 @@ static void test_listeners_from_many_threads(void) {
   listener_handles shared;
   const char* paths[2] = {"monero_c_threads_listener_a", "monero_c_threads_listener_b"};
   monero_rpc_connection* connection = NULL;
-  monero_wallet_listener_callbacks wallet_callbacks = {0};
+  monero_wallet_listener_callbacks wallet_callbacks = {sizeof(monero_wallet_listener_callbacks)};
   memset(&shared, 0, sizeof(shared));
   pthread_mutex_init(&shared.lock, NULL);
   EXPECT_OK(monero_rpc_connection_create(CLOSED_PORT, &connection));

@@ -58,7 +58,7 @@ monero_wallet_create_from_seed("sample_wallet_full", "supersecretpassword123", M
 monero_wallet_set_daemon_connection(wallet_full, "http://localhost:38081", "superuser", "abctesting123", "", NULL, true); // NULL trusts a local daemon
 
 // synchronize the wallet and receive progress notifications
-monero_wallet_listener_callbacks sync_callbacks = {NULL, on_sync_progress, NULL, NULL, NULL, NULL};
+monero_wallet_listener_callbacks sync_callbacks = {sizeof(monero_wallet_listener_callbacks), NULL, on_sync_progress, NULL, NULL, NULL, NULL};
 monero_wallet_listener* sync_listener = NULL;
 monero_wallet_listener_create(&sync_callbacks, &sync_listener);
 char* sync_result = NULL;
@@ -69,7 +69,7 @@ monero_utils_free(sync_result);
 monero_wallet_start_syncing(wallet_full, 5000);
 
 // receive notifications when funds are received, confirmed, and unlocked
-monero_wallet_listener_callbacks callbacks = {NULL, NULL, NULL, NULL, on_output_received, NULL};
+monero_wallet_listener_callbacks callbacks = {sizeof(monero_wallet_listener_callbacks), NULL, NULL, NULL, NULL, on_output_received, NULL};
 monero_wallet_listener* listener = NULL;
 monero_wallet_listener_create(&callbacks, &listener);
 monero_wallet_add_listener(wallet_full, listener);
@@ -109,7 +109,7 @@ monero_wallet_listener_free(sync_listener);
 monero_daemon_free(daemon);
 ```
 
-Every call returns `MONERO_OK` or `MONERO_ERROR`, and `monero_last_error()` gives the message. The sample leaves the checks out.
+Every call returns `MONERO_OK` or `MONERO_ERROR`, and `monero_last_error()` gives the message. The sample leaves the checks out. The structs of callbacks start with `struct_size`, which is the `sizeof` of the struct as the program was built with it: a later version can add callbacks at the end, and a program built with this header keeps working.
 
 ## Documentation
 

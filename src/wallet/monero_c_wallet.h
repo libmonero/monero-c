@@ -119,8 +119,13 @@ typedef void (*monero_wallet_on_output_spent_fn)(void* user_data, const char* ou
 /**
  * Callbacks of a wallet listener. The struct is copied by monero_wallet_listener_create().
  * A NULL callback is skipped.
+ *
+ * Set struct_size to sizeof(monero_wallet_listener_callbacks). A later version of monero_c can add callbacks at the end of the struct,
+ * and copies only as many bytes as struct_size says, so a program built with this header keeps working, and a callback that the
+ * program's struct doesn't have is NULL.
  */
 typedef struct monero_wallet_listener_callbacks {
+  uint32_t struct_size;  /**< is sizeof(monero_wallet_listener_callbacks) as the program was built with it. monero_wallet_listener_create() fails if it is less than the size up to and including user_data */
   void* user_data;  /**< is passed to every callback, and monero_c doesn't read it */
   monero_wallet_on_sync_progress_fn on_sync_progress;  /**< is called with the progress of a sync, or NULL to skip */
   monero_wallet_on_new_block_fn on_new_block;  /**< is called with each new block, or NULL to skip */

@@ -75,8 +75,13 @@ typedef void (*monero_daemon_on_block_header_fn)(void* user_data, const char* he
 
 /**
  * Callbacks of a daemon listener. The struct is copied by monero_daemon_listener_create().
+ *
+ * Set struct_size to sizeof(monero_daemon_listener_callbacks). A later version of monero_c can add callbacks at the end of the struct,
+ * and copies only as many bytes as struct_size says, so a program built with this header keeps working, and a callback that the
+ * program's struct doesn't have is NULL.
  */
 typedef struct monero_daemon_listener_callbacks {
+  uint32_t struct_size;  /**< is sizeof(monero_daemon_listener_callbacks) as the program was built with it. monero_daemon_listener_create() fails if it is less than the size up to and including user_data */
   void* user_data;  /**< is passed to the callback, and monero_c doesn't read it */
   monero_daemon_on_block_header_fn on_block_header;  /**< is called with each new block header, or NULL to skip */
 } monero_daemon_listener_callbacks;

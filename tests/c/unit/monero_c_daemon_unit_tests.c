@@ -22,6 +22,7 @@
 
 #include "monero_c_test.h"
 
+#include <stddef.h>
 #include <stdlib.h>
 
 #if !defined(_WIN32)
@@ -456,8 +457,41 @@ static void check_registered(monero_daemon* daemon, size_t expected_count, moner
   monero_utils_free(listeners);
 }
 
+// a program tells the size of the struct of callbacks that it was built with. A size that doesn't reach user_data is refused, and a struct
+// that is bigger than the library's, from a later header, is accepted
+static void test_listener_struct_size(void) {
+  const size_t least = offsetof(monero_daemon_listener_callbacks, user_data) + sizeof(void*);
+  monero_daemon_listener_callbacks callbacks;
+  monero_daemon_listener* listener = NULL;
+
+  memset(&callbacks, 0, sizeof(callbacks));
+  EXPECT_ERR(monero_daemon_listener_create(&callbacks, &listener));
+  CHECK(listener == NULL);
+  CHECK(strstr(monero_last_error(), "struct_size") != NULL);
+
+  callbacks.struct_size = (uint32_t) (least - 1);
+  EXPECT_ERR(monero_daemon_listener_create(&callbacks, &listener));
+  CHECK(listener == NULL);
+
+  callbacks.struct_size = (uint32_t) least;
+  EXPECT_OK(monero_daemon_listener_create(&callbacks, &listener));
+  CHECK(listener != NULL);
+  monero_daemon_listener_free(listener);
+
+  struct {
+    monero_daemon_listener_callbacks base;
+    void (*from_a_later_version)(void*);
+  } later;
+  memset(&later, 0, sizeof(later));
+  later.base.struct_size = sizeof(later);
+  listener = NULL;
+  EXPECT_OK(monero_daemon_listener_create(&later.base, &listener));
+  CHECK(listener != NULL);
+  monero_daemon_listener_free(listener);
+}
+
 static void test_listener_handles(monero_daemon* daemon) {
-  monero_daemon_listener_callbacks callbacks = {NULL, NULL};
+  monero_daemon_listener_callbacks callbacks = {sizeof(monero_daemon_listener_callbacks), NULL, NULL};
   monero_daemon_listener* first = NULL;
   monero_daemon_listener* second = NULL;
 
@@ -527,7 +561,7 @@ static void test_listener_registered_with_one_daemon(void) {
   monero_daemon* first = create_unreachable_daemon();
   monero_daemon* second = create_unreachable_daemon();
   CHECK(first != NULL && second != NULL);
-  monero_daemon_listener_callbacks callbacks = {NULL, NULL};
+  monero_daemon_listener_callbacks callbacks = {sizeof(monero_daemon_listener_callbacks), NULL, NULL};
   monero_daemon_listener* listener = NULL;
   EXPECT_OK(monero_daemon_listener_create(&callbacks, &listener));
 
@@ -571,6 +605,7 @@ int main(void) {
   test_errors_from_the_binding_and_monero_cpp(daemon);
   test_listener_handles(daemon);
   test_listener_registered_with_one_daemon();
+  test_listener_struct_size();
 #if !defined(_WIN32)
   test_last_error_is_per_thread(daemon);
 #endif

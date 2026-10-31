@@ -234,7 +234,7 @@ static void test_daemon(const char* daemon_uri) {
   bool trusted = true;
   uint64_t value = 0;
   monero_wallet_listener* listener = NULL;
-  monero_wallet_listener_callbacks callbacks = {NULL, NULL, NULL, NULL, on_output_received, on_output_spent};
+  monero_wallet_listener_callbacks callbacks = {sizeof(monero_wallet_listener_callbacks), NULL, NULL, NULL, NULL, on_output_received, on_output_spent};
 
   EXPECT_OK(monero_daemon_connect(daemon_uri, "", "", "", 10000, &g_daemon));
   CHECK(g_daemon != NULL);

@@ -263,6 +263,8 @@ static int keeps_its_text(const char* name) {
 
 static void prepare(const arg_function* function, const fixture* fx, call_state* state, value_mode mode) {
   memset(state, 0, sizeof(*state));
+  state->wallet_callbacks.struct_size = sizeof(state->wallet_callbacks);
+  state->daemon_callbacks.struct_size = sizeof(state->daemon_callbacks);
   for (int i = 0; i < function->count; i++) {
     const char* name = function->names[i];
     arg_kind kind = function->kinds[i];
@@ -555,6 +557,8 @@ int main(void) {
 
   memset(&wallet_callbacks, 0, sizeof(wallet_callbacks));
   memset(&daemon_callbacks, 0, sizeof(daemon_callbacks));
+  wallet_callbacks.struct_size = sizeof(wallet_callbacks);
+  daemon_callbacks.struct_size = sizeof(daemon_callbacks);
   EXPECT_OK(monero_wallet_keys_create_from_seed(MAINNET, SEED, NULL, NULL, &keys));
   EXPECT_OK(monero_rpc_connection_create(CONNECTION_JSON, &connection));
   EXPECT_OK(monero_wallet_rpc_connect(connection, &rpc));

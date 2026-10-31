@@ -22,6 +22,7 @@
 
 #include "monero_c_test.h"
 
+#include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -31,6 +32,39 @@
 
 #define NETWORK MONERO_UTILS_NETWORK_STAGENET
 #define PASSWORD "password"
+
+// a program tells the size of the struct of callbacks that it was built with. A size that doesn't reach user_data is refused, and a struct
+// that is bigger than the library's, from a later header, is accepted
+static void test_listener_struct_size(void) {
+  const size_t least = offsetof(monero_wallet_listener_callbacks, user_data) + sizeof(void*);
+  monero_wallet_listener_callbacks callbacks;
+  monero_wallet_listener* listener = NULL;
+
+  memset(&callbacks, 0, sizeof(callbacks));
+  EXPECT_ERR(monero_wallet_listener_create(&callbacks, &listener));
+  CHECK(listener == NULL);
+  CHECK(strstr(monero_last_error(), "struct_size") != NULL);
+
+  callbacks.struct_size = (uint32_t) (least - 1);
+  EXPECT_ERR(monero_wallet_listener_create(&callbacks, &listener));
+  CHECK(listener == NULL);
+
+  callbacks.struct_size = (uint32_t) least;
+  EXPECT_OK(monero_wallet_listener_create(&callbacks, &listener));
+  CHECK(listener != NULL);
+  monero_wallet_listener_free(listener);
+
+  struct {
+    monero_wallet_listener_callbacks base;
+    void (*from_a_later_version)(void*);
+  } later;
+  memset(&later, 0, sizeof(later));
+  later.base.struct_size = sizeof(later);
+  listener = NULL;
+  EXPECT_OK(monero_wallet_listener_create(&later.base, &listener));
+  CHECK(listener != NULL);
+  monero_wallet_listener_free(listener);
+}
 
 static void test_create_random(void) {
   const char* path = "monero_c_wallet_unit_random";
@@ -282,7 +316,7 @@ static void test_listeners(void) {
     return;
   }
 
-  monero_wallet_listener_callbacks callbacks = {NULL, NULL, NULL, NULL};
+  monero_wallet_listener_callbacks callbacks = {sizeof(monero_wallet_listener_callbacks), NULL, NULL, NULL, NULL};
   monero_wallet_listener* listener = NULL;
   EXPECT_OK(monero_wallet_listener_create(&callbacks, &listener));
   CHECK(listener != NULL);
@@ -316,7 +350,7 @@ static void test_listener_outlives_wallet(void) {
     return;
   }
 
-  monero_wallet_listener_callbacks callbacks = {NULL, NULL, NULL, NULL};
+  monero_wallet_listener_callbacks callbacks = {sizeof(monero_wallet_listener_callbacks), NULL, NULL, NULL, NULL};
   monero_wallet_listener* listener = NULL;
   EXPECT_OK(monero_wallet_listener_create(&callbacks, &listener));
   EXPECT_OK(monero_wallet_add_listener(wallet, listener));
@@ -359,7 +393,7 @@ static void test_every_function_rejects_null_wallet(void) {
   monero_optional_bool status = MONERO_OPTIONAL_BOOL_UNSET;
   monero_tx_priority priority = MONERO_TX_PRIORITY_DEFAULT;
   monero_utils_network_type network = MONERO_UTILS_NETWORK_MAINNET;
-  monero_wallet_listener_callbacks callbacks = {NULL, NULL, NULL, NULL, NULL, NULL};
+  monero_wallet_listener_callbacks callbacks = {sizeof(monero_wallet_listener_callbacks), NULL, NULL, NULL, NULL, NULL, NULL};
   monero_wallet_listener* listener = NULL;
   EXPECT_OK(monero_wallet_listener_create(&callbacks, &listener));
 
@@ -512,6 +546,7 @@ int main(void) {
   test_seed_length_limit();
   test_null_arguments_reset_outputs();
   test_listeners();
+  test_listener_struct_size();
   test_listener_outlives_wallet();
   test_exists_and_seed_languages();
   test_every_function_rejects_null_wallet();

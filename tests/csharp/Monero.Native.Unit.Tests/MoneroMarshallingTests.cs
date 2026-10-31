@@ -120,7 +120,7 @@ public class MoneroMarshallingTests
         try
         {
             OnBlockHeader callback = (userData, headerJson) => { };
-            var callbacks = new DaemonListenerCallbacks { OnBlockHeader = Marshal.GetFunctionPointerForDelegate(callback) };
+            var callbacks = new DaemonListenerCallbacks { StructSize = (uint) Marshal.SizeOf<DaemonListenerCallbacks>(), OnBlockHeader = Marshal.GetFunctionPointerForDelegate(callback) };
             Assert.Equal(0, ListenerCreateNative(ref callbacks, out IntPtr listener));
             try
             {
@@ -271,6 +271,7 @@ public class MoneroMarshallingTests
     [StructLayout(LayoutKind.Sequential)]
     private record struct DaemonListenerCallbacks
     {
+        public uint StructSize;
         public IntPtr UserData;
         public IntPtr OnBlockHeader;
     }

@@ -59,21 +59,26 @@ static void test_enum_values(void) {
   CHECK(MONERO_OPTIONAL_BOOL_TRUE == 1);
 }
 
-// user_data, then the callbacks in order, no padding
+// struct_size, then user_data and the callbacks in order. struct_size is 4 bytes and user_data is aligned to a pointer, so the callbacks
+// start at 2 pointers, and padding is only between struct_size and user_data
 static void test_callback_layout(void) {
   const size_t p = sizeof(void*);
 
-  CHECK(sizeof(monero_daemon_listener_callbacks) == 2 * p);
-  CHECK(offsetof(monero_daemon_listener_callbacks, user_data) == 0);
-  CHECK(offsetof(monero_daemon_listener_callbacks, on_block_header) == p);
+  CHECK(sizeof(monero_daemon_listener_callbacks) == 3 * p);
+  CHECK(offsetof(monero_daemon_listener_callbacks, struct_size) == 0);
+  CHECK(sizeof(((monero_daemon_listener_callbacks*) 0)->struct_size) == 4);
+  CHECK(offsetof(monero_daemon_listener_callbacks, user_data) == p);
+  CHECK(offsetof(monero_daemon_listener_callbacks, on_block_header) == 2 * p);
 
-  CHECK(sizeof(monero_wallet_listener_callbacks) == 6 * p);
-  CHECK(offsetof(monero_wallet_listener_callbacks, user_data) == 0);
-  CHECK(offsetof(monero_wallet_listener_callbacks, on_sync_progress) == p);
-  CHECK(offsetof(monero_wallet_listener_callbacks, on_new_block) == 2 * p);
-  CHECK(offsetof(monero_wallet_listener_callbacks, on_balances_changed) == 3 * p);
-  CHECK(offsetof(monero_wallet_listener_callbacks, on_output_received) == 4 * p);
-  CHECK(offsetof(monero_wallet_listener_callbacks, on_output_spent) == 5 * p);
+  CHECK(sizeof(monero_wallet_listener_callbacks) == 7 * p);
+  CHECK(offsetof(monero_wallet_listener_callbacks, struct_size) == 0);
+  CHECK(sizeof(((monero_wallet_listener_callbacks*) 0)->struct_size) == 4);
+  CHECK(offsetof(monero_wallet_listener_callbacks, user_data) == p);
+  CHECK(offsetof(monero_wallet_listener_callbacks, on_sync_progress) == 2 * p);
+  CHECK(offsetof(monero_wallet_listener_callbacks, on_new_block) == 3 * p);
+  CHECK(offsetof(monero_wallet_listener_callbacks, on_balances_changed) == 4 * p);
+  CHECK(offsetof(monero_wallet_listener_callbacks, on_output_received) == 5 * p);
+  CHECK(offsetof(monero_wallet_listener_callbacks, on_output_spent) == 6 * p);
 }
 
 // bool is one byte across the ABI

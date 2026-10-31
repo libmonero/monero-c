@@ -306,7 +306,7 @@ monero_result monero_daemon_listener_create(const monero_daemon_listener_callbac
   if (!require(callbacks, "callbacks") || !require(out_listener, "out_listener")) return MONERO_ERROR;
   return guard([&] {
     std::unique_ptr<monero_daemon_listener> listener(new monero_daemon_listener());
-    listener->adapter.callbacks = *callbacks;
+    listener->adapter.callbacks = monero_c::copy_callbacks(*callbacks, offsetof(monero_daemon_listener_callbacks, user_data) + sizeof(void*));
     *out_listener = listener.release();
   });
 }

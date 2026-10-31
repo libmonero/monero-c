@@ -519,7 +519,7 @@ static void test_close(void) {
   }
 
   // a binding closes the wallet, frees its one native listener, then frees the wallet
-  monero_wallet_listener_callbacks callbacks = {NULL, NULL, NULL, NULL};
+  monero_wallet_listener_callbacks callbacks = {sizeof(monero_wallet_listener_callbacks), NULL, NULL, NULL, NULL};
   monero_wallet_listener* listener = NULL;
   EXPECT_OK(monero_wallet_listener_create(&callbacks, &listener));
   EXPECT_OK(monero_wallet_add_listener(wallet, listener));
@@ -882,7 +882,7 @@ static void test_listener_one_wallet(void) {
   const char* path_b = "monero_c_wallet_offline_listener_b";
   monero_wallet* a = create_test_wallet(path_a);
   monero_wallet* b = create_test_wallet(path_b);
-  monero_wallet_listener_callbacks callbacks = {NULL, NULL, NULL, NULL};
+  monero_wallet_listener_callbacks callbacks = {sizeof(monero_wallet_listener_callbacks), NULL, NULL, NULL, NULL};
   monero_wallet_listener* listener = NULL;
   EXPECT_OK(monero_wallet_listener_create(&callbacks, &listener));
 
