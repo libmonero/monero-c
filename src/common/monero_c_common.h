@@ -107,6 +107,14 @@ inline void check_period_ms(uint64_t period_ms) {
   if (period_ms == 0 || period_ms > MAX_PERIOD_MS) throw std::invalid_argument("period_ms must be between 1 and " + std::to_string(MAX_PERIOD_MS));
 }
 
+// the longest wait for a block that is accepted, in milliseconds, 24.8 days, as long as the longest period
+const uint64_t MAX_TIMEOUT_MS = MAX_PERIOD_MS;
+
+// throws std::invalid_argument if the timeout is 0 or longer than MAX_TIMEOUT_MS
+inline void check_timeout_ms(uint64_t timeout_ms) {
+  if (timeout_ms == 0 || timeout_ms > MAX_TIMEOUT_MS) throw std::invalid_argument("timeout_ms must be between 1 and " + std::to_string(MAX_TIMEOUT_MS));
+}
+
 // mallocs at least 1 byte so a successful zero-length allocation is never
 // mistaken for malloc() failure (which is the only case this throws)
 inline char* dup_string(const std::string& s) {

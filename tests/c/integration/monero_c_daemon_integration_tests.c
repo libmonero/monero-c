@@ -500,6 +500,46 @@ static void test_wait_for_next_block_header(monero_daemon* daemon) {
   monero_utils_free(args.header);
 }
 
+struct timed_wait_arguments {
+  monero_daemon* daemon;
+  char* header;
+  bool timed_out;
+  int ok;
+};
+
+static void* wait_for_block_with_timeout(void* arg) {
+  struct timed_wait_arguments* args = (struct timed_wait_arguments*)arg;
+  args->ok = monero_daemon_wait_for_next_block_header_timeout(args->daemon, 60000, &args->header, &args->timed_out) == MONERO_OK;
+  return NULL;
+}
+
+// a block that is mined meanwhile ends the wait with its header, and without one the wait ends at the timeout
+static void test_wait_for_next_block_header_timeout(monero_daemon* daemon) {
+  struct timed_wait_arguments args = {daemon, NULL, true, 0};
+  pthread_t waiter;
+  CHECK(pthread_create(&waiter, NULL, wait_for_block_with_timeout, &args) == 0);
+
+  sleep(2);  // give the waiter time to register its listener
+  char* json = NULL;
+  monero_result generated = monero_daemon_generate_blocks(daemon, ADDRESS, 1, NULL, NULL, &json);
+  EXPECT_OK(generated);
+  monero_utils_free(json);
+
+  if (generated != MONERO_OK) {
+    pthread_detach(waiter);  // the waiter might never return, so don't join it
+    return;
+  }
+  CHECK(pthread_join(waiter, NULL) == 0);
+  CHECK(args.ok && !args.timed_out);
+  CHECK(has_key(args.header, "height"));
+  monero_utils_free(args.header);
+
+  char* header = NULL;
+  bool timed_out = false;
+  EXPECT_OK(monero_daemon_wait_for_next_block_header_timeout(daemon, 1500, &header, &timed_out));
+  CHECK(timed_out && header == NULL);
+}
+
 // ---------------------------------- ADMIN -----------------------------------
 
 static void test_admin(monero_daemon* daemon) {
@@ -625,6 +665,7 @@ int main(void) {
   test_bandwidth_and_peers(daemon);
   test_listener_receives_blocks(daemon);
   test_wait_for_next_block_header(daemon);
+  test_wait_for_next_block_header_timeout(daemon);
   test_admin(daemon);
   test_rpc_connection(uri);
   // monero_daemon_stop() isn't called here, since it would shut the node down for the next run

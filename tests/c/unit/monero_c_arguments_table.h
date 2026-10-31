@@ -94,6 +94,7 @@ static monero_result call_monero_daemon_submit_block(void** a) { return monero_d
 static monero_result call_monero_daemon_submit_blocks(void** a) { return monero_daemon_submit_blocks((monero_daemon*) a[0], (const char* const*) a[1], *(size_t*) a[2]); }
 static monero_result call_monero_daemon_submit_tx_hex(void** a) { return monero_daemon_submit_tx_hex((monero_daemon*) a[0], (const char*) a[1], *(bool*) a[2], (char**) a[3]); }
 static monero_result call_monero_daemon_wait_for_next_block_header(void** a) { return monero_daemon_wait_for_next_block_header((monero_daemon*) a[0], (char**) a[1]); }
+static monero_result call_monero_daemon_wait_for_next_block_header_timeout(void** a) { return monero_daemon_wait_for_next_block_header_timeout((monero_daemon*) a[0], *(uint32_t*) a[1], (char**) a[2], (bool*) a[3]); }
 static monero_result call_monero_last_error(void** a) { (void) monero_last_error(); return MONERO_OK; }
 static monero_result call_monero_last_error_code(void** a) { (void) monero_last_error_code(); return MONERO_OK; }
 static monero_result call_monero_rpc_connection_check_connection(void** a) { return monero_rpc_connection_check_connection((monero_rpc_connection*) a[0], (const uint32_t*) a[1], (bool*) a[2]); }
@@ -295,6 +296,7 @@ static monero_result call_monero_wallet_thaw_output(void** a) { return monero_wa
 static monero_result call_monero_wallet_untag_accounts(void** a) { return monero_wallet_untag_accounts((monero_wallet*) a[0], (const uint32_t*) a[1], *(size_t*) a[2]); }
 static monero_result call_monero_wallet_verify_message(void** a) { return monero_wallet_verify_message((monero_wallet*) a[0], (const char*) a[1], (const char*) a[2], (const char*) a[3], (char**) a[4]); }
 static monero_result call_monero_wallet_wait_for_next_block(void** a) { return monero_wallet_wait_for_next_block((monero_wallet*) a[0], (uint64_t*) a[1]); }
+static monero_result call_monero_wallet_wait_for_next_block_timeout(void** a) { return monero_wallet_wait_for_next_block_timeout((monero_wallet*) a[0], *(uint32_t*) a[1], (uint64_t*) a[2], (bool*) a[3]); }
 
 static const arg_function g_functions[] = {
   {"monero_daemon_add_auxiliary_pow", call_monero_daemon_add_auxiliary_pow, 4, {K_DAEMON, K_STR, K_STR, K_OUT_STR}, {"daemon", "block_template_blob", "aux_pow_json", "out_json"}, 0x9, RET_RESULT},
@@ -389,6 +391,7 @@ static const arg_function g_functions[] = {
   {"monero_daemon_submit_blocks", call_monero_daemon_submit_blocks, 3, {K_DAEMON, K_STRS, K_SIZE}, {"daemon", "block_blobs", "num_block_blobs"}, 0x3, RET_RESULT},
   {"monero_daemon_submit_tx_hex", call_monero_daemon_submit_tx_hex, 4, {K_DAEMON, K_STR, K_BOOL, K_OUT_STR}, {"daemon", "tx_hex", "do_not_relay", "out_json"}, 0x9, RET_RESULT},
   {"monero_daemon_wait_for_next_block_header", call_monero_daemon_wait_for_next_block_header, 2, {K_DAEMON, K_OUT_STR}, {"daemon", "out_json"}, 0x3, RET_RESULT},
+  {"monero_daemon_wait_for_next_block_header_timeout", call_monero_daemon_wait_for_next_block_header_timeout, 4, {K_DAEMON, K_U32, K_OUT_STR, K_OUT_BOOL}, {"daemon", "timeout_ms", "out_json", "out_timed_out"}, 0xd, RET_RESULT},
   {"monero_last_error", call_monero_last_error, 0, {K_END}, {""}, 0x0, RET_OTHER},
   {"monero_last_error_code", call_monero_last_error_code, 0, {K_END}, {""}, 0x0, RET_OTHER},
   {"monero_rpc_connection_check_connection", call_monero_rpc_connection_check_connection, 3, {K_CONNECTION, K_PU32, K_OUT_BOOL}, {"connection", "timeout_ms", "out_changed"}, 0x5, RET_RESULT},
@@ -590,4 +593,5 @@ static const arg_function g_functions[] = {
   {"monero_wallet_untag_accounts", call_monero_wallet_untag_accounts, 3, {K_WALLET, K_PU32, K_SIZE}, {"wallet", "account_indices", "num_account_indices"}, 0x3, RET_RESULT},
   {"monero_wallet_verify_message", call_monero_wallet_verify_message, 5, {K_WALLET, K_STR, K_STR, K_STR, K_OUT_STR}, {"wallet", "message", "address", "signature", "out_json"}, 0x1f, RET_RESULT},
   {"monero_wallet_wait_for_next_block", call_monero_wallet_wait_for_next_block, 2, {K_WALLET, K_OUT_U64}, {"wallet", "out_height"}, 0x3, RET_RESULT},
+  {"monero_wallet_wait_for_next_block_timeout", call_monero_wallet_wait_for_next_block_timeout, 4, {K_WALLET, K_U32, K_OUT_U64, K_OUT_BOOL}, {"wallet", "timeout_ms", "out_height", "out_timed_out"}, 0xd, RET_RESULT},
 };

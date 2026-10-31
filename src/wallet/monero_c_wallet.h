@@ -1071,13 +1071,28 @@ MONERO_EXPORT monero_result monero_wallet_get_daemon_max_peer_height(monero_wall
  * Wait until the next block is added to the chain. It blocks until a block arrives, and the wallet
  * must be syncing in the background with monero_wallet_start_syncing(), or it never returns.
  * Neither monero_wallet_stop_syncing() nor monero_wallet_close() wakes it, so call it from a thread
- * that the application can leave behind, or use a listener instead.
+ * that the application can leave behind, use a listener instead, or use
+ * monero_wallet_wait_for_next_block_timeout(), which gives up after a time.
  *
  * @param wallet is the wallet handle
  * @param out_height receives the height of the new block
  * @return MONERO_OK or MONERO_ERROR
  */
 MONERO_EXPORT monero_result monero_wallet_wait_for_next_block(monero_wallet* wallet, uint64_t* out_height);
+
+/**
+ * Wait until the next block is added to the chain, or until the timeout. The wallet must be syncing in the
+ * background with monero_wallet_start_syncing(), or no block comes. A call that times out succeeds, and
+ * out_timed_out says so, so the caller can check its own cancellation and wait again. Only the calling thread blocks.
+ * A wallet that can't be listened to, such as a wallet that only has the keys, fails.
+ *
+ * @param wallet is the wallet handle
+ * @param timeout_ms is how long to wait, from 1 to 2147483647 milliseconds
+ * @param out_height receives the height of the new block, or 0 if the wait timed out
+ * @param out_timed_out receives true if no block came within the timeout
+ * @return MONERO_OK or MONERO_ERROR
+ */
+MONERO_EXPORT monero_result monero_wallet_wait_for_next_block_timeout(monero_wallet* wallet, uint32_t timeout_ms, uint64_t* out_height, bool* out_timed_out);
 
 /**
  * Scan transactions by their hashes.

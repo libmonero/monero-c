@@ -491,6 +491,27 @@ static void test_listener_struct_size(void) {
   monero_daemon_listener_free(listener);
 }
 
+// a daemon that doesn't answer announces no block, so the wait ends at the timeout and says so, with no header
+static void test_wait_for_next_block_header_timeout(void) {
+  monero_daemon* daemon = create_unreachable_daemon();
+  CHECK(daemon != NULL);
+  if (daemon == NULL) return;
+
+  char* json = NULL;
+  bool timed_out = false;
+  EXPECT_OK(monero_daemon_wait_for_next_block_header_timeout(daemon, 100, &json, &timed_out));
+  CHECK(timed_out && json == NULL);
+
+  EXPECT_ERR_MSG(monero_daemon_wait_for_next_block_header_timeout(daemon, 0, &json, &timed_out), "timeout_ms must be between 1 and 2147483647");
+  CHECK(monero_last_error_code() == MONERO_ERROR_INVALID_ARGUMENT);
+  EXPECT_ERR_MSG(monero_daemon_wait_for_next_block_header_timeout(daemon, 2147483648u, &json, &timed_out), "timeout_ms must be between 1 and 2147483647");
+  EXPECT_ERR_MSG(monero_daemon_wait_for_next_block_header_timeout(NULL, 100, &json, &timed_out), "daemon must not be null");
+  EXPECT_ERR_MSG(monero_daemon_wait_for_next_block_header_timeout(daemon, 100, NULL, &timed_out), "out_json must not be null");
+  EXPECT_ERR_MSG(monero_daemon_wait_for_next_block_header_timeout(daemon, 100, &json, NULL), "out_timed_out must not be null");
+
+  monero_daemon_free(daemon);
+}
+
 static void test_listener_handles(monero_daemon* daemon) {
   monero_daemon_listener_callbacks callbacks = {sizeof(monero_daemon_listener_callbacks), NULL, NULL};
   monero_daemon_listener* first = NULL;
@@ -607,6 +628,7 @@ int main(void) {
   test_listener_handles(daemon);
   test_listener_registered_with_one_daemon();
   test_listener_struct_size();
+  test_wait_for_next_block_header_timeout();
 #if !defined(_WIN32)
   test_last_error_is_per_thread(daemon);
 #endif

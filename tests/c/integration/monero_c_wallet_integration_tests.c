@@ -695,6 +695,17 @@ static void test_daemon(const char* daemon_uri) {
   EXPECT_OK(monero_wallet_wait_for_next_block(a, &value));
   pthread_join(miner, NULL);
   CHECK(value >= before);
+
+  // with a timeout, a block that is mined meanwhile ends the wait with its height, and without one the wait ends at the timeout
+  bool timed_out = true;
+  EXPECT_OK(monero_wallet_get_height(a, &before));
+  pthread_create(&miner, NULL, mine_later, NULL);
+  EXPECT_OK(monero_wallet_wait_for_next_block_timeout(a, 60000, &value, &timed_out));
+  pthread_join(miner, NULL);
+  CHECK(!timed_out && value >= before);
+  value = 7;
+  EXPECT_OK(monero_wallet_wait_for_next_block_timeout(a, 1500, &value, &timed_out));
+  CHECK(timed_out && value == 0);
   EXPECT_OK(monero_wallet_stop_syncing(a));
 
   // scans and the rescans. The rescan of the blockchain comes last, since it discards local data

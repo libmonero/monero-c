@@ -496,7 +496,21 @@ static void test_ground_truth_against_full_wallet(void) {
   remove_files(path);
 }
 
+// a wallet that only has the keys can't be listened to, so there is no block to wait for
+static void test_wait_for_next_block_timeout_is_refused(void) {
+  monero_wallet* wallet = NULL;
+  uint64_t height = 7;
+  bool timed_out = false;
+
+  EXPECT_OK(monero_wallet_keys_create_random(MAINNET, NULL, &wallet));
+  if (wallet == NULL) return;
+  EXPECT_ERR(monero_wallet_wait_for_next_block_timeout(wallet, 100, &height, &timed_out));
+  CHECK(height == 7 && !timed_out);
+  monero_wallet_free(wallet);
+}
+
 int main(void) {
+  test_wait_for_next_block_timeout_is_refused();
   test_create_random();
   test_create_random_in_language();
   test_create_from_seed();

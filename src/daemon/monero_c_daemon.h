@@ -538,6 +538,19 @@ MONERO_EXPORT monero_result monero_daemon_get_block_hashes(monero_daemon* daemon
  */
 MONERO_EXPORT monero_result monero_daemon_wait_for_next_block_header(monero_daemon* daemon, char** out_json);
 
+/**
+ * Wait for the next block and return its header, or give up after the timeout. Only the calling thread blocks.
+ * Other calls on the same handle can run meanwhile. A call that times out succeeds, out_json is NULL and
+ * out_timed_out says so, so the caller can check its own cancellation and wait again.
+ *
+ * @param daemon is the handle returned by monero_daemon_connect()
+ * @param timeout_ms is how long to wait, from 1 to 2147483647 milliseconds
+ * @param out_json receives a JSON-serialized monero_block_header, freed with monero_utils_free(), or NULL if the wait timed out
+ * @param out_timed_out receives true if no block came within the timeout
+ * @return MONERO_OK on success, or MONERO_ERROR (see monero_last_error())
+ */
+MONERO_EXPORT monero_result monero_daemon_wait_for_next_block_header_timeout(monero_daemon* daemon, uint32_t timeout_ms, char** out_json, bool* out_timed_out);
+
 // ---------------------------- TRANSACTIONS ----------------------------------
 
 /**

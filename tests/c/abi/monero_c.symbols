@@ -90,6 +90,7 @@ monero_daemon_submit_block
 monero_daemon_submit_blocks
 monero_daemon_submit_tx_hex
 monero_daemon_wait_for_next_block_header
+monero_daemon_wait_for_next_block_header_timeout
 monero_last_error
 monero_last_error_code
 monero_rpc_connection_check_connection
@@ -291,3 +292,4 @@ monero_wallet_thaw_output
 monero_wallet_untag_accounts
 monero_wallet_verify_message
 monero_wallet_wait_for_next_block
+monero_wallet_wait_for_next_block_timeout

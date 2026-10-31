@@ -34,6 +34,8 @@
 #include "rapidjson/writer.h"
 
 #include <boost/optional.hpp>
+#include <chrono>
+#include <condition_variable>
 #include <memory>
 #include <mutex>
 #include <stdexcept>
@@ -44,6 +46,7 @@ using monero_c::array_of;
 using monero_c::check_json_depth;
 using monero_c::check_mnemonic_length;
 using monero_c::check_period_ms;
+using monero_c::check_timeout_ms;
 using monero_c::dup_secret;
 using monero_c::dup_string;
 using monero_c::guard;
@@ -99,6 +102,47 @@ std::string json_of_notification(const monero::monero_output_wallet& output, boo
   block->m_txs.push_back(tx);
   return "{\"blocks\":[" + block->serialize() + "]}";
 }
+
+// a listener that a wait registers to learn of the next block. It lives on the stack of the wait, and the condition has a predicate, so a
+// block that comes before the wait starts is not lost
+class next_block_waiter : public monero::monero_wallet_listener {
+public:
+  void on_new_block(uint64_t height) override {
+    {
+      std::lock_guard<std::mutex> lock(mutex_);
+      height_ = height;
+      ready_ = true;
+    }
+    condition_.notify_all();
+  }
+
+  // returns true and the height if a block came within the timeout
+  bool wait(std::chrono::milliseconds timeout, uint64_t& height) {
+    std::unique_lock<std::mutex> lock(mutex_);
+    bool arrived = condition_.wait_for(lock, timeout, [this] { return ready_; });
+    height = arrived ? height_ : 0;
+    return arrived;
+  }
+
+private:
+  std::mutex mutex_;
+  std::condition_variable condition_;
+  bool ready_ = false;
+  uint64_t height_ = 0;
+};
+
+// removes a listener when the wait ends, whichever way. A destructor can't let remove_listener() throw
+struct wallet_listener_removal {
+  monero::monero_wallet& wallet;
+  monero::monero_wallet_listener& listener;
+
+  ~wallet_listener_removal() {
+    try {
+      wallet.remove_listener(listener);
+    } catch (...) {
+    }
+  }
+};
 
 // forwards the wallet's notifications to the C callbacks of a listener
 class wallet_listener_adapter : public monero::monero_wallet_listener {
@@ -1166,6 +1210,20 @@ monero_result monero_wallet_get_daemon_max_peer_height(::monero_wallet* wallet, 
 monero_result monero_wallet_wait_for_next_block(::monero_wallet* wallet, uint64_t* out_height) {
   if (!require(wallet, "wallet") || !require(out_height, "out_height")) return MONERO_ERROR;
   return guard([&] { *out_height = wallet->wallet->wait_for_next_block(); });
+}
+
+monero_result monero_wallet_wait_for_next_block_timeout(::monero_wallet* wallet, uint32_t timeout_ms, uint64_t* out_height, bool* out_timed_out) {
+  if (!require(wallet, "wallet") || !require(out_height, "out_height") || !require(out_timed_out, "out_timed_out")) return MONERO_ERROR;
+  return guard([&] {
+    check_timeout_ms(timeout_ms);
+    next_block_waiter waiter;
+    wallet->wallet->add_listener(waiter);
+    wallet_listener_removal removal{*wallet->wallet, waiter};
+    uint64_t height = 0;
+    bool arrived = waiter.wait(std::chrono::milliseconds(timeout_ms), height);
+    *out_height = height;
+    *out_timed_out = !arrived;
+  });
 }
 
 monero_result monero_wallet_scan_txs(::monero_wallet* wallet, const char* const* tx_hashes, size_t num_tx_hashes) {

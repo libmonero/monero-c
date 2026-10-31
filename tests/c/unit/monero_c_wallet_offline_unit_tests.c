@@ -53,6 +53,34 @@ static int contains(const char* json, const char* fragment) {
   return json != NULL && strstr(json, fragment) != NULL;
 }
 
+// a wallet that doesn't sync gets no block, so the wait ends at the timeout and says so. The timeout has limits, and a wallet that is closed refuses
+static void test_wait_for_next_block_timeout(void) {
+  const char* path = "monero_c_wallet_offline_wait";
+  monero_wallet* wallet = create_test_wallet(path);
+  if (wallet == NULL) {
+    remove_files(path);
+    return;
+  }
+
+  uint64_t height = 7;
+  bool timed_out = false;
+  EXPECT_OK(monero_wallet_wait_for_next_block_timeout(wallet, 100, &height, &timed_out));
+  CHECK(timed_out && height == 0);
+
+  EXPECT_ERR_MSG(monero_wallet_wait_for_next_block_timeout(wallet, 0, &height, &timed_out), "timeout_ms must be between 1 and 2147483647");
+  CHECK(monero_last_error_code() == MONERO_ERROR_INVALID_ARGUMENT);
+  EXPECT_ERR_MSG(monero_wallet_wait_for_next_block_timeout(wallet, 2147483648u, &height, &timed_out), "timeout_ms must be between 1 and 2147483647");
+  EXPECT_ERR_MSG(monero_wallet_wait_for_next_block_timeout(NULL, 100, &height, &timed_out), "wallet must not be null");
+  EXPECT_ERR_MSG(monero_wallet_wait_for_next_block_timeout(wallet, 100, NULL, &timed_out), "out_height must not be null");
+  EXPECT_ERR_MSG(monero_wallet_wait_for_next_block_timeout(wallet, 100, &height, NULL), "out_timed_out must not be null");
+
+  EXPECT_OK(monero_wallet_close(wallet, false));
+  EXPECT_ERR_MSG(monero_wallet_wait_for_next_block_timeout(wallet, 100, &height, &timed_out), "Wallet is closed");
+
+  monero_wallet_free(wallet);
+  remove_files(path);
+}
+
 static void test_address_book(void) {
   const char* path = "monero_c_wallet_offline_address_book";
   monero_wallet* wallet = create_test_wallet(path);
@@ -902,6 +930,7 @@ static void test_listener_one_wallet(void) {
 }
 
 int main(void) {
+  test_wait_for_next_block_timeout();
   test_address_book();
   test_accounts_and_subaddresses();
   test_change_password();

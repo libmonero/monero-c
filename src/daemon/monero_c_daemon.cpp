@@ -33,6 +33,8 @@
 
 #include <algorithm>
 #include <boost/optional.hpp>
+#include <chrono>
+#include <condition_variable>
 #include <cstdio>
 #include <map>
 #include <memory>
@@ -86,6 +88,7 @@ namespace {
 using monero_c::array_of;
 using monero_c::check_json_depth;
 using monero_c::check_period_ms;
+using monero_c::check_timeout_ms;
 using monero_c::dup_array;
 using monero_c::dup_string;
 using monero_c::guard;
@@ -230,6 +233,44 @@ char* dup_json_blocks_released(const std::vector<std::shared_ptr<monero::monero_
 monero_key_image_spent_status to_c_status(monero::monero_key_image_spent_status status) {
   return static_cast<monero_key_image_spent_status>(static_cast<int>(status));
 }
+
+// a listener that a wait registers to learn of the next block header. It lives on the stack of the wait, and the condition has a predicate,
+// so a header that comes before the wait starts is not lost
+class next_header_waiter : public monero::monero_daemon_listener {
+public:
+  void on_block_header(const std::shared_ptr<monero::monero_block_header>& header) override {
+    {
+      std::lock_guard<std::mutex> lock(mutex_);
+      header_ = header;
+    }
+    condition_.notify_all();
+  }
+
+  // returns the header if one came within the timeout, and a null pointer if not
+  std::shared_ptr<monero::monero_block_header> wait(std::chrono::milliseconds timeout) {
+    std::unique_lock<std::mutex> lock(mutex_);
+    condition_.wait_for(lock, timeout, [this] { return header_ != nullptr; });
+    return header_;
+  }
+
+private:
+  std::mutex mutex_;
+  std::condition_variable condition_;
+  std::shared_ptr<monero::monero_block_header> header_;
+};
+
+// removes a listener when the wait ends, whichever way. A destructor can't let remove_listener() throw
+struct daemon_listener_removal {
+  monero::monero_daemon_rpc& daemon;
+  monero::monero_daemon_listener& listener;
+
+  ~daemon_listener_removal() {
+    try {
+      daemon.remove_listener(listener);
+    } catch (...) {
+    }
+  }
+};
 
 // forwards the daemon's block header notifications to the C callbacks of a listener
 class listener_adapter : public monero::monero_daemon_listener {
@@ -583,6 +624,20 @@ monero_result monero_daemon_wait_for_next_block_header(monero_daemon* daemon, ch
   reset_out(out_json);
   if (!require(daemon, "daemon") || !require(out_json, "out_json")) return MONERO_ERROR;
   return guard([&] { *out_json = dup_json(daemon->rpc->wait_for_next_block_header()); });
+}
+
+monero_result monero_daemon_wait_for_next_block_header_timeout(monero_daemon* daemon, uint32_t timeout_ms, char** out_json, bool* out_timed_out) {
+  reset_out(out_json);
+  if (!require(daemon, "daemon") || !require(out_json, "out_json") || !require(out_timed_out, "out_timed_out")) return MONERO_ERROR;
+  return guard([&] {
+    check_timeout_ms(timeout_ms);
+    next_header_waiter waiter;
+    daemon->rpc->add_listener(waiter);
+    daemon_listener_removal removal{*daemon->rpc, waiter};
+    std::shared_ptr<monero::monero_block_header> header = waiter.wait(std::chrono::milliseconds(timeout_ms));
+    if (header != nullptr) *out_json = dup_json(header);
+    *out_timed_out = header == nullptr;
+  });
 }
 
 // ---------------------------- TRANSACTIONS ----------------------------------
