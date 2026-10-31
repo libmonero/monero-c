@@ -261,7 +261,7 @@ monero_result monero_daemon_connect(const char* uri, const char* username, const
   reset_out(out_daemon);
   if (!require(out_daemon, "out_daemon")) return MONERO_ERROR;
   std::string uri_str = safe_str(uri);
-  if (uri_str.empty()) { set_last_error("uri must not be empty"); return MONERO_ERROR; }
+  if (uri_str.empty()) { set_last_error("uri must not be empty", MONERO_ERROR_INVALID_ARGUMENT); return MONERO_ERROR; }
   return guard([&] {
     boost::optional<uint32_t> timeout;
     if (timeout_ms != 0) timeout = timeout_ms;

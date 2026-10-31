@@ -81,6 +81,17 @@ static void test_callback_layout(void) {
   CHECK(offsetof(monero_wallet_listener_callbacks, on_output_spent) == 6 * p);
 }
 
+// the kinds of failure keep their numbers
+static void test_error_code_values(void) {
+  CHECK(sizeof(monero_error_code) == 4);
+  CHECK(MONERO_ERROR_NONE == 0);
+  CHECK(MONERO_ERROR_GENERIC == 1);
+  CHECK(MONERO_ERROR_INVALID_ARGUMENT == 2);
+  CHECK(MONERO_ERROR_OUT_OF_MEMORY == 3);
+  CHECK(MONERO_ERROR_RPC == 4);
+  CHECK(MONERO_ERROR_IO == 5);
+}
+
 // bool is one byte across the ABI
 static void test_bool_size(void) {
   CHECK(sizeof(bool) == 1);
@@ -96,6 +107,7 @@ static void test_abi_version(void) {
 int main(void) {
   test_enum_values();
   test_callback_layout();
+  test_error_code_values();
   test_bool_size();
   test_abi_version();
 

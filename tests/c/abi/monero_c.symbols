@@ -91,6 +91,7 @@ monero_daemon_submit_blocks
 monero_daemon_submit_tx_hex
 monero_daemon_wait_for_next_block_header
 monero_last_error
+monero_last_error_code
 monero_rpc_connection_check_connection
 monero_rpc_connection_create
 monero_rpc_connection_free

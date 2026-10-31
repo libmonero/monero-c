@@ -59,15 +59,22 @@ std::shared_ptr<monero::monero_rpc_connection> connection_of(::monero_rpc_connec
 // process ends. guard() calls it, so every thread that calls the library is covered
 void free_slow_hash_state_at_thread_exit() noexcept;
 
-// records msg as the calling thread's last error. It never throws: if the message can't be
+// records msg and its kind as the calling thread's last error. It never throws: if the message can't be
 // stored because memory ran out, the last error is empty
-void set_last_error(const char* msg) noexcept;
+void set_last_error(const char* msg, monero_error_code code = MONERO_ERROR_GENERIC) noexcept;
 
 // records "<name> must not be null" as the last error, with the same guarantee
 void set_null_error(const char* name) noexcept;
 
+// records the exception that is being handled as the last error: its message, and the kind that its type tells. Call it from a catch
+// block. It never throws
+void set_last_error_from_current_exception() noexcept;
+
 // returns the calling thread's last error, or "" if none
 const std::string& last_error();
+
+// returns the kind of the calling thread's last error, or MONERO_ERROR_NONE if there is none
+monero_error_code last_error_code();
 
 inline std::string safe_str(const char* s) {
   return s ? std::string(s) : std::string();
@@ -132,11 +139,8 @@ monero_result guard(F&& fn) {
   try {
     fn();
     return MONERO_OK;
-  } catch (const std::exception& e) {
-    set_last_error(e.what());
-    return MONERO_ERROR;
   } catch (...) {
-    set_last_error("unknown error");
+    set_last_error_from_current_exception();
     return MONERO_ERROR;
   }
 }

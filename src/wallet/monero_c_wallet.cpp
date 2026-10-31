@@ -177,7 +177,7 @@ void restart_from_genesis(monero::monero_wallet_full& wallet, const std::string&
 
 // monero-cpp's signature key enum has the same values as the C enum
 monero::monero_message_signature_type to_signature_type(int32_t signature_type) {
-  if (signature_type < MONERO_MESSAGE_SIGN_WITH_SPEND_KEY || signature_type > MONERO_MESSAGE_SIGN_WITH_VIEW_KEY) throw std::runtime_error("unknown signature type");
+  if (signature_type < MONERO_MESSAGE_SIGN_WITH_SPEND_KEY || signature_type > MONERO_MESSAGE_SIGN_WITH_VIEW_KEY) throw std::invalid_argument("unknown signature type");
   return static_cast<monero::monero_message_signature_type>(signature_type);
 }
 
@@ -186,7 +186,7 @@ template <class T>
 std::vector<std::shared_ptr<T>> parse_list(const std::string& json, const char* message) {
   check_json_depth(json);
   rapidjson::Document doc;
-  if (doc.Parse(json.c_str()).HasParseError() || !doc.IsArray()) throw std::runtime_error(message);
+  if (doc.Parse(json.c_str()).HasParseError() || !doc.IsArray()) throw std::invalid_argument(message);
   std::vector<std::shared_ptr<T>> items;
   for (const auto& item : doc.GetArray()) {
     rapidjson::StringBuffer buffer;
@@ -204,9 +204,9 @@ std::vector<std::shared_ptr<monero::monero_key_image>> parse_key_images(const st
 // the metadata of a transaction created without relaying. monero-cpp can't deserialize a created transaction
 // (it has an outgoingTransfer), so only the metadata is read
 std::string tx_metadata_of(const rapidjson::Value& tx) {
-  if (!tx.IsObject()) throw std::runtime_error("tx must be a JSON object");
+  if (!tx.IsObject()) throw std::invalid_argument("tx must be a JSON object");
   auto it = tx.FindMember("metadata");
-  if (it == tx.MemberEnd() || !it->value.IsString() || it->value.GetStringLength() == 0) throw std::runtime_error("tx metadata is not initialized");
+  if (it == tx.MemberEnd() || !it->value.IsString() || it->value.GetStringLength() == 0) throw std::invalid_argument("tx metadata is not initialized");
   return it->value.GetString();
 }
 
@@ -239,16 +239,16 @@ std::vector<const rapidjson::Value*> txs_in(const rapidjson::Value& root) {
 std::string tx_metadata_of_json(const std::string& json) {
   check_json_depth(json);
   rapidjson::Document doc;
-  if (doc.Parse(json.c_str()).HasParseError() || !doc.IsObject()) throw std::runtime_error("tx must be a JSON object");
+  if (doc.Parse(json.c_str()).HasParseError() || !doc.IsObject()) throw std::invalid_argument("tx must be a JSON object");
   std::vector<const rapidjson::Value*> txs = txs_in(doc);
-  if (txs.size() != 1) throw std::runtime_error("the JSON holds " + std::to_string(txs.size()) + " txs, and one can be relayed");
+  if (txs.size() != 1) throw std::invalid_argument("the JSON holds " + std::to_string(txs.size()) + " txs, and one can be relayed");
   return tx_metadata_of(*txs[0]);
 }
 
 std::vector<std::string> tx_metadatas_of_json(const std::string& json) {
   check_json_depth(json);
   rapidjson::Document doc;
-  if (doc.Parse(json.c_str()).HasParseError() || !(doc.IsArray() || (doc.IsObject() && (doc.HasMember("txSets") || doc.HasMember("txs"))))) throw std::runtime_error("txs must be a JSON array");
+  if (doc.Parse(json.c_str()).HasParseError() || !(doc.IsArray() || (doc.IsObject() && (doc.HasMember("txSets") || doc.HasMember("txs"))))) throw std::invalid_argument("txs must be a JSON array");
   std::vector<std::string> metadatas;
   for (const rapidjson::Value* tx : txs_in(doc)) metadatas.push_back(tx_metadata_of(*tx));
   return metadatas;
@@ -259,11 +259,11 @@ template <class T>
 std::shared_ptr<T> model_json(const char* json, const char* name) {
   const char* p = json;
   while (p != nullptr && (*p == ' ' || *p == '\t' || *p == '\r' || *p == '\n')) p++;
-  if (p == nullptr || *p != '{') throw std::runtime_error(std::string(name) + " must be a JSON object");
+  if (p == nullptr || *p != '{') throw std::invalid_argument(std::string(name) + " must be a JSON object");
   std::string text(json);
   check_json_depth(text);
   std::shared_ptr<T> model = T::deserialize(text);
-  if (model == nullptr) throw std::runtime_error(std::string(name) + " must be a JSON object");
+  if (model == nullptr) throw std::invalid_argument(std::string(name) + " must be a JSON object");
   return model;
 }
 
@@ -273,19 +273,19 @@ std::shared_ptr<monero::monero_tx_set> tx_set_of_hex(const char* json) {
   std::string text(json);
   check_json_depth(text);
   rapidjson::Document doc;
-  if (doc.Parse(text.c_str()).HasParseError() || !doc.IsObject()) throw std::runtime_error("tx_set must be a JSON object");
+  if (doc.Parse(text.c_str()).HasParseError() || !doc.IsObject()) throw std::invalid_argument("tx_set must be a JSON object");
   // what a call that makes txs returns holds the tx sets, and one of them is described
   const rapidjson::Value* set = &doc;
   auto sets = doc.FindMember("txSets");
   if (sets != doc.MemberEnd()) {
-    if (!sets->value.IsArray() || sets->value.Size() != 1 || !sets->value[0].IsObject()) throw std::runtime_error("txSets must hold one tx set");
+    if (!sets->value.IsArray() || sets->value.Size() != 1 || !sets->value[0].IsObject()) throw std::invalid_argument("txSets must hold one tx set");
     set = &sets->value[0];
   }
   std::shared_ptr<monero::monero_tx_set> tx_set = std::make_shared<monero::monero_tx_set>();
   auto copy_hex = [&](const char* name, boost::optional<std::string>& hex) {
     auto it = set->FindMember(name);
     if (it == set->MemberEnd() || it->value.IsNull()) return;
-    if (!it->value.IsString()) throw std::runtime_error(std::string(name) + " must be a string");
+    if (!it->value.IsString()) throw std::invalid_argument(std::string(name) + " must be a string");
     if (it->value.GetStringLength() > 0) hex = std::string(it->value.GetString(), it->value.GetStringLength());
   };
   copy_hex("unsignedTxHex", tx_set->m_unsigned_tx_hex);
@@ -308,11 +308,11 @@ std::shared_ptr<monero::monero_wallet_config> wallet_config_of(const char* json)
   std::string text(json);
   check_json_depth(text);
   rapidjson::Document doc;
-  if (doc.Parse(text.c_str()).HasParseError() || !doc.IsObject()) throw std::runtime_error("config must be a JSON object");
+  if (doc.Parse(text.c_str()).HasParseError() || !doc.IsObject()) throw std::invalid_argument("config must be a JSON object");
   drop_nulls(doc);
   auto server = doc.FindMember("server");
   if (server != doc.MemberEnd()) {
-    if (!server->value.IsObject()) throw std::runtime_error("server must be a JSON object");
+    if (!server->value.IsObject()) throw std::invalid_argument("server must be a JSON object");
     drop_nulls(server->value);
   }
   auto network = doc.FindMember("networkType");
@@ -392,7 +392,7 @@ std::shared_ptr<monero::monero_tx_query> parse_tx_query(const std::string& json)
 std::shared_ptr<monero::monero_tx_query> tx_query_of(const char* json) {
   const char* p = json;
   while (*p == ' ' || *p == '\t' || *p == '\r' || *p == '\n') p++;
-  if (*p != '{') throw std::runtime_error("query must be a JSON object");
+  if (*p != '{') throw std::invalid_argument("query must be a JSON object");
   std::string text(json);
   check_json_depth(text);
   return parse_tx_query(text);
@@ -405,12 +405,12 @@ std::string tx_rooted_query(const char* json, const char* member) {
   std::string text(json);
   check_json_depth(text);
   rapidjson::Document doc;
-  if (doc.Parse(text.c_str()).HasParseError() || !doc.IsObject()) throw std::runtime_error("query must be a JSON object");
+  if (doc.Parse(text.c_str()).HasParseError() || !doc.IsObject()) throw std::invalid_argument("query must be a JSON object");
   rapidjson::Document::AllocatorType& allocator = doc.GetAllocator();
   rapidjson::Value tx_query(rapidjson::kObjectType);
   auto it = doc.FindMember("txQuery");
   if (it != doc.MemberEnd()) {
-    if (!it->value.IsObject()) throw std::runtime_error("txQuery must be a JSON object");
+    if (!it->value.IsObject()) throw std::invalid_argument("txQuery must be a JSON object");
     tx_query = it->value;  // moves it
     doc.RemoveMember(it);
   }
@@ -461,7 +461,7 @@ std::shared_ptr<monero::monero_output_query> output_query_of(const char* json) {
 // the RPC methods are only on monero_wallet_rpc, so the handle must hold an RPC wallet
 monero::monero_wallet_rpc& as_rpc(::monero_wallet* wallet) {
   monero::monero_wallet_rpc* rpc = dynamic_cast<monero::monero_wallet_rpc*>(wallet->wallet.get());
-  if (rpc == nullptr) throw std::runtime_error("not an RPC wallet");
+  if (rpc == nullptr) throw std::invalid_argument("not an RPC wallet");
   return *rpc;
 }
 

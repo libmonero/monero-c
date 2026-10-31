@@ -109,7 +109,7 @@ monero_wallet_listener_free(sync_listener);
 monero_daemon_free(daemon);
 ```
 
-Every call returns `MONERO_OK` or `MONERO_ERROR`, and `monero_last_error()` gives the message. The sample leaves the checks out. The structs of callbacks start with `struct_size`, which is the `sizeof` of the struct as the program was built with it: a later version can add callbacks at the end, and a program built with this header keeps working.
+Every call returns `MONERO_OK` or `MONERO_ERROR`, `monero_last_error()` gives the message and `monero_last_error_code()` the kind of the failure. The sample leaves the checks out. The structs of callbacks start with `struct_size`, which is the `sizeof` of the struct as the program was built with it: a later version can add callbacks at the end, and a program built with this header keeps working.
 
 ## Documentation
 
@@ -254,7 +254,7 @@ What holds today:
 - One listener can be on one wallet at a time. Adding it to a second wallet fails.
 - A binding avoids the races of adding, removing and freeing a wallet listener by keeping one native listener per wallet and fanning out to its own listeners. It adds the native listener once, when the first of its own arrives, and doesn't remove it. It frees it after `monero_wallet_close()` has returned, which waits for the callbacks in flight, and then frees the wallet. monero-java works this way.
 - `monero_daemon_wait_for_next_block_header()` blocks only its calling thread, and other calls on the handle run meanwhile.
-- `monero_last_error()` is per thread: it returns the last error of the calling thread.
+- `monero_last_error()` and `monero_last_error_code()` are per thread: they return the last error of the calling thread. The code comes from the type of the exception that ended the call: `MONERO_ERROR_INVALID_ARGUMENT` for what monero_c checks (a NULL pointer, a value out of range, a JSON or a text that doesn't parse, and the `validate_` functions), `MONERO_ERROR_OUT_OF_MEMORY`, `MONERO_ERROR_RPC` for an error that the daemon or the wallet RPC server answered with, and `MONERO_ERROR_IO` for a system error of a file or a socket. What monero-cpp reports as a plain error, a network failure included, is `MONERO_ERROR_GENERIC`, and a binding keeps the message for it.
 
 ## Related projects
 

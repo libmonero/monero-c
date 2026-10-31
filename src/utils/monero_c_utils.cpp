@@ -54,6 +54,7 @@
 
 #include "monero_c_utils.h"
 #include "common/monero_c_common.h"
+#include "common/monero_error.h"
 #include "utils/monero_utils.h"
 #include "crypto/hash.h"
 #include <cstdlib>
@@ -77,6 +78,19 @@ using monero_c::require;
 using monero_c::reset_out;
 using monero_c::safe_str;
 using monero_c::to_network_type;
+
+// runs one of the validate_ functions of monero-cpp. They exist to say whether the text of a caller is good, so a failure of one is an
+// invalid argument, whatever exception monero-cpp throws, and the message stays the same
+template <class F>
+void validate(F&& fn) {
+  try {
+    fn();
+  } catch (const monero::monero_error& e) {
+    throw std::invalid_argument(e.what());
+  } catch (const std::runtime_error& e) {
+    throw std::invalid_argument(e.what());
+  }
+}
 
 // the logging of monero-project is one global state, and two threads that change it together crash
 std::mutex& logging_mutex() {
@@ -110,6 +124,10 @@ extern "C" {
 
 const char* monero_last_error(void) {
   return monero_c::last_error().c_str();
+}
+
+monero_error_code monero_last_error_code(void) {
+  return monero_c::last_error_code();
 }
 
 void monero_utils_free(void* ptr) {
@@ -181,34 +199,34 @@ bool monero_utils_is_valid_language(const char* language) {
 }
 
 monero_result monero_utils_validate_address(const char* address, int32_t network_type) {
-  return guard([&] { monero_utils::validate_address(safe_str(address), network_of<monero_network_type>(network_type)); });
+  return guard([&] { validate([&] { monero_utils::validate_address(safe_str(address), network_of<monero_network_type>(network_type)); }); });
 }
 
 monero_result monero_utils_validate_private_view_key(const char* private_view_key) {
-  return guard([&] { monero_utils::validate_private_view_key(safe_str(private_view_key)); });
+  return guard([&] { validate([&] { monero_utils::validate_private_view_key(safe_str(private_view_key)); }); });
 }
 
 monero_result monero_utils_validate_private_spend_key(const char* private_spend_key) {
-  return guard([&] { monero_utils::validate_private_spend_key(safe_str(private_spend_key)); });
+  return guard([&] { validate([&] { monero_utils::validate_private_spend_key(safe_str(private_spend_key)); }); });
 }
 
 monero_result monero_utils_validate_public_view_key(const char* public_view_key) {
-  return guard([&] { monero_utils::validate_public_view_key(safe_str(public_view_key)); });
+  return guard([&] { validate([&] { monero_utils::validate_public_view_key(safe_str(public_view_key)); }); });
 }
 
 monero_result monero_utils_validate_public_spend_key(const char* public_spend_key) {
-  return guard([&] { monero_utils::validate_public_spend_key(safe_str(public_spend_key)); });
+  return guard([&] { validate([&] { monero_utils::validate_public_spend_key(safe_str(public_spend_key)); }); });
 }
 
 monero_result monero_utils_validate_payment_id(const char* payment_id) {
-  return guard([&] { monero_utils::validate_payment_id(safe_str(payment_id)); });
+  return guard([&] { validate([&] { monero_utils::validate_payment_id(safe_str(payment_id)); }); });
 }
 
 monero_result monero_utils_validate_mnemonic(const char* mnemonic, const char* language) {
   return guard([&] {
     std::string text = safe_str(mnemonic);
     check_mnemonic_length(text);
-    monero_utils::validate_mnemonic(text, safe_str(language));
+    validate([&] { monero_utils::validate_mnemonic(text, safe_str(language)); });
   });
 }
 
@@ -317,14 +335,14 @@ bool monero_utils_is_valid_payment_id_short(const char* payment_id_str) {
 monero_result monero_utils_validate_payment_id_long(const char* payment_id_str) {
   return guard([&] {
     crypto::hash h;
-    if (!monero_utils::parse_payment_id_long(safe_str(payment_id_str), h)) throw std::runtime_error("Invalid long payment id");
+    if (!monero_utils::parse_payment_id_long(safe_str(payment_id_str), h)) throw std::invalid_argument("Invalid long payment id");
   });
 }
 
 monero_result monero_utils_validate_payment_id_short(const char* payment_id_str) {
   return guard([&] {
     crypto::hash8 h;
-    if (!monero_utils::parse_payment_id_short(safe_str(payment_id_str), h)) throw std::runtime_error("Invalid short payment id");
+    if (!monero_utils::parse_payment_id_short(safe_str(payment_id_str), h)) throw std::invalid_argument("Invalid short payment id");
   });
 }
 

@@ -95,6 +95,7 @@ static monero_result call_monero_daemon_submit_blocks(void** a) { return monero_
 static monero_result call_monero_daemon_submit_tx_hex(void** a) { return monero_daemon_submit_tx_hex((monero_daemon*) a[0], (const char*) a[1], *(bool*) a[2], (char**) a[3]); }
 static monero_result call_monero_daemon_wait_for_next_block_header(void** a) { return monero_daemon_wait_for_next_block_header((monero_daemon*) a[0], (char**) a[1]); }
 static monero_result call_monero_last_error(void** a) { (void) monero_last_error(); return MONERO_OK; }
+static monero_result call_monero_last_error_code(void** a) { (void) monero_last_error_code(); return MONERO_OK; }
 static monero_result call_monero_rpc_connection_check_connection(void** a) { return monero_rpc_connection_check_connection((monero_rpc_connection*) a[0], (const uint32_t*) a[1], (bool*) a[2]); }
 static monero_result call_monero_rpc_connection_create(void** a) { return monero_rpc_connection_create((const char*) a[0], (monero_rpc_connection**) a[1]); }
 static monero_result call_monero_rpc_connection_free(void** a) { (void) monero_rpc_connection_free((monero_rpc_connection*) a[0]); return MONERO_OK; }
@@ -388,6 +389,7 @@ static const arg_function g_functions[] = {
   {"monero_daemon_submit_tx_hex", call_monero_daemon_submit_tx_hex, 4, {K_DAEMON, K_STR, K_BOOL, K_OUT_STR}, {"daemon", "tx_hex", "do_not_relay", "out_json"}, 0x9, RET_RESULT},
   {"monero_daemon_wait_for_next_block_header", call_monero_daemon_wait_for_next_block_header, 2, {K_DAEMON, K_OUT_STR}, {"daemon", "out_json"}, 0x3, RET_RESULT},
   {"monero_last_error", call_monero_last_error, 0, {K_END}, {""}, 0x0, RET_OTHER},
+  {"monero_last_error_code", call_monero_last_error_code, 0, {K_END}, {""}, 0x0, RET_OTHER},
   {"monero_rpc_connection_check_connection", call_monero_rpc_connection_check_connection, 3, {K_CONNECTION, K_PU32, K_OUT_BOOL}, {"connection", "timeout_ms", "out_changed"}, 0x5, RET_RESULT},
   {"monero_rpc_connection_create", call_monero_rpc_connection_create, 2, {K_STR, K_OUT_CONNECTION}, {"connection_json", "out_connection"}, 0x3, RET_RESULT},
   {"monero_rpc_connection_free", call_monero_rpc_connection_free, 1, {K_CONNECTION}, {"connection"}, 0x0, RET_OTHER},

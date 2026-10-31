@@ -43,6 +43,7 @@ static void test_listener_struct_size(void) {
   memset(&callbacks, 0, sizeof(callbacks));
   EXPECT_ERR(monero_wallet_listener_create(&callbacks, &listener));
   CHECK(listener == NULL);
+  CHECK(monero_last_error_code() == MONERO_ERROR_INVALID_ARGUMENT);
   CHECK(strstr(monero_last_error(), "struct_size") != NULL);
 
   callbacks.struct_size = (uint32_t) (least - 1);

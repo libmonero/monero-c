@@ -55,7 +55,7 @@ struct json_params : public monero::monero_request_params {
 
   explicit json_params(const char* json) {
     check_json_depth(json);
-    if (m_doc.Parse(json).HasParseError() || !m_doc.IsObject()) throw std::runtime_error("params must be a JSON object");
+    if (m_doc.Parse(json).HasParseError() || !m_doc.IsObject()) throw std::invalid_argument("params must be a JSON object");
   }
 
   rapidjson::Value to_rapidjson_val(rapidjson::Document::AllocatorType& allocator) const override {
@@ -159,7 +159,7 @@ std::string json_of_tree(const boost::optional<boost::property_tree::ptree>& tre
 namespace monero_c {
 
 std::shared_ptr<monero::monero_rpc_connection> connection_of(::monero_rpc_connection* connection) {
-  if (connection == nullptr) throw std::runtime_error("connection must not be null");
+  if (connection == nullptr) throw std::invalid_argument("connection must not be null");
   return connection->connection;
 }
 

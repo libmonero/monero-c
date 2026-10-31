@@ -23,6 +23,14 @@
 #include "monero_c_common.h"
 #include "monero_c_tls.h"
 
+#include "common/monero_error.h"
+
+#include <boost/system/system_error.hpp>
+#include <ios>
+#include <new>
+#include <stdexcept>
+#include <system_error>
+
 #if !defined(_WIN32)
 #include <dirent.h>
 #include <openssl/x509.h>
@@ -37,6 +45,7 @@ namespace monero_c {
 namespace {
 
 thread_local std::string g_last_error;
+thread_local monero_error_code g_last_error_code = MONERO_ERROR_NONE;
 
 struct slow_hash_state_owner {
   ~slow_hash_state_owner() { slow_hash_free_state(); }
@@ -49,16 +58,44 @@ void free_slow_hash_state_at_thread_exit() noexcept {
   (void) owner;
 }
 
-void set_last_error(const char* msg) noexcept {
+void set_last_error(const char* msg, monero_error_code code) noexcept {
+  g_last_error_code = code;
   try { g_last_error = msg; } catch (...) { g_last_error.clear(); }
 }
 
 void set_null_error(const char* name) noexcept {
+  g_last_error_code = MONERO_ERROR_INVALID_ARGUMENT;
   try { g_last_error = std::string(name) + " must not be null"; } catch (...) { g_last_error.clear(); }
+}
+
+void set_last_error_from_current_exception() noexcept {
+  try {
+    throw;
+  } catch (const std::bad_alloc& e) {
+    set_last_error(e.what(), MONERO_ERROR_OUT_OF_MEMORY);
+  } catch (const std::invalid_argument& e) {
+    set_last_error(e.what(), MONERO_ERROR_INVALID_ARGUMENT);
+  } catch (const monero::monero_rpc_error& e) {
+    set_last_error(e.what(), MONERO_ERROR_RPC);
+  } catch (const std::ios_base::failure& e) {
+    set_last_error(e.what(), MONERO_ERROR_IO);
+  } catch (const std::system_error& e) {
+    set_last_error(e.what(), MONERO_ERROR_IO);
+  } catch (const boost::system::system_error& e) {
+    set_last_error(e.what(), MONERO_ERROR_IO);
+  } catch (const std::exception& e) {
+    set_last_error(e.what(), MONERO_ERROR_GENERIC);
+  } catch (...) {
+    set_last_error("unknown error", MONERO_ERROR_GENERIC);
+  }
 }
 
 const std::string& last_error() {
   return g_last_error;
+}
+
+monero_error_code last_error_code() {
+  return g_last_error_code;
 }
 
 void check_json_depth(const std::string& json) {

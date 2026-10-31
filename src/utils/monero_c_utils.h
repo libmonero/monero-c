@@ -83,6 +83,18 @@ typedef enum monero_result {
   MONERO_ERROR = -1
 } monero_result;
 
+// the kind of failure that monero_last_error_code() reports. The kind comes from the type of the exception that ended the call, not
+// from its text, so a failure that monero-cpp reports with its generic exception is MONERO_ERROR_GENERIC. More kinds can be added
+// before 1.0, so treat a value that you don't know as MONERO_ERROR_GENERIC
+typedef enum monero_error_code {
+  MONERO_ERROR_NONE = 0,              /**< no call has failed on this thread yet */
+  MONERO_ERROR_GENERIC = 1,           /**< any other failure */
+  MONERO_ERROR_INVALID_ARGUMENT = 2,  /**< a NULL pointer, a value out of range, or a text that doesn't parse */
+  MONERO_ERROR_OUT_OF_MEMORY = 3,     /**< a memory allocation failed */
+  MONERO_ERROR_RPC = 4,               /**< the daemon or the wallet RPC server answered with an error, or with an HTTP status that is not OK */
+  MONERO_ERROR_IO = 5                 /**< a file or a network operation failed */
+} monero_error_code;
+
 // mirrors monero_network_type in monero-cpp (daemon/monero_daemon_model.h):
 // values must stay numerically identical since they're cast directly across the bridge
 // REGTEST has no monero-cpp value. It maps to mainnet, whose address format a regtest node uses, and
@@ -105,6 +117,16 @@ typedef enum monero_utils_network_type {
  *   monero_utils_* out params, don't pass it to monero_utils_free().
  */
 MONERO_EXPORT const char* monero_last_error(void);
+
+/**
+ * Return the kind of the most recent MONERO_ERROR result on the calling thread, from any monero_c
+ * function. It is set with the message of monero_last_error(), so read it right after the failing call,
+ * before any other call on the thread. A successful call doesn't clear it, so read it only after
+ * MONERO_ERROR.
+ *
+ * @return the kind of the failure, or MONERO_ERROR_NONE if no call has failed on this thread
+ */
+MONERO_EXPORT monero_error_code monero_last_error_code(void);
 
 /**
  * Frees a string or byte buffer returned by any monero_utils_* function.

@@ -484,6 +484,29 @@ static void* configure_logging_worker(void* arg) {
   return NULL;
 }
 
+static monero_error_code g_worker_first_code = MONERO_ERROR_GENERIC;
+static monero_error_code g_worker_code_after_failure = MONERO_ERROR_NONE;
+
+static void* error_code_worker(void* unused) {
+  (void) unused;
+  g_worker_first_code = monero_last_error_code();
+  monero_utils_get_abi_version(NULL, NULL, NULL);
+  g_worker_code_after_failure = monero_last_error_code();
+  return NULL;
+}
+
+// the code is per thread, as the message is: a new thread has none, and its failure doesn't change the one of this thread
+static void test_last_error_code_is_per_thread(void) {
+  pthread_t worker;
+  EXPECT_ERR(monero_utils_validate_address("not an address", MONERO_UTILS_NETWORK_MAINNET));
+  CHECK(monero_last_error_code() == MONERO_ERROR_INVALID_ARGUMENT);
+
+  CHECK(pthread_create(&worker, NULL, error_code_worker, NULL) == 0);
+  CHECK(pthread_join(worker, NULL) == 0);
+  CHECK(g_worker_first_code == MONERO_ERROR_NONE);
+  CHECK(g_worker_code_after_failure == MONERO_ERROR_INVALID_ARGUMENT);
+}
+
 static void test_logging_from_several_threads(void) {
   const char* paths[4] = {"monero_c_utils_unit_tests_a.log", "monero_c_utils_unit_tests_b.log", "monero_c_utils_unit_tests_a.log", "monero_c_utils_unit_tests_b.log"};
   pthread_t threads[4];
@@ -500,6 +523,37 @@ static void test_logging_from_several_threads(void) {
 }
 
 #endif
+
+// the kind of a failure comes from the type of the exception: what monero-c checks, and what the validate_ functions say about a text, is
+// an invalid argument. What monero-cpp throws as a plain monero_error is generic
+static void test_last_error_code(void) {
+  uint32_t major = 0, minor = 0, patch = 0;
+  uint8_t* bin = NULL;
+  size_t bin_len = 0;
+  char* nested = nested_json(65);
+
+  EXPECT_ERR(monero_utils_get_abi_version(NULL, &minor, &patch));
+  CHECK(monero_last_error_code() == MONERO_ERROR_INVALID_ARGUMENT);
+
+  // a call that works doesn't clear the code, as it doesn't clear the message
+  EXPECT_OK(monero_utils_get_abi_version(&major, &minor, &patch));
+  CHECK(monero_last_error_code() == MONERO_ERROR_INVALID_ARGUMENT);
+
+  EXPECT_ERR(monero_utils_json_to_binary(nested, &bin, &bin_len));
+  CHECK(monero_last_error_code() == MONERO_ERROR_INVALID_ARGUMENT);
+
+  EXPECT_ERR(monero_utils_validate_address("not an address", MONERO_UTILS_NETWORK_MAINNET));
+  CHECK(monero_last_error_code() == MONERO_ERROR_INVALID_ARGUMENT);
+  CHECK(strcmp(monero_last_error(), "Invalid address") == 0);
+  EXPECT_ERR(monero_utils_validate_payment_id_long("x"));
+  CHECK(monero_last_error_code() == MONERO_ERROR_INVALID_ARGUMENT);
+  EXPECT_ERR(monero_utils_validate_mnemonic("a b c", "English"));
+  CHECK(monero_last_error_code() == MONERO_ERROR_INVALID_ARGUMENT);
+  EXPECT_ERR(monero_utils_validate_address("x", 99));
+  CHECK(monero_last_error_code() == MONERO_ERROR_INVALID_ARGUMENT);
+
+  free(nested);
+}
 
 static void test_logging(void) {
   const char* path = "monero_c_utils_unit_tests.log";
@@ -541,9 +595,11 @@ int main(void) {
   test_json_binary_roundtrip();
   test_binary_blocks_to_json();
   test_failed_calls_reset_outputs();
+  test_last_error_code();
   test_logging();
 #if !defined(_WIN32)
   test_logging_from_several_threads();
+  test_last_error_code_is_per_thread();
 #endif
 
   printf("%d/%d checks passed\n", g_checks - g_failures, g_checks);
