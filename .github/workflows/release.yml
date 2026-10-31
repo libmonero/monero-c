@@ -58,19 +58,8 @@ jobs:
         run: |
           mkdir -p release
           for platform in linux-x86_64 linux-arm64 mac-x86_64 mac-arm64 windows android-arm64 android-x86_64; do
-            name="monero-c-$VERSION-$platform"
-            mkdir -p "stage/$name/include"
-            cp artifacts/monero-c-$platform/lib* "stage/$name/"
             # only the Linux build collects the notices, and they cover the components of every platform, as the NuGet package has them
-            cp -R artifacts/monero-c-linux-x86_64/licenses "stage/$name/"
-            # the public headers, in the layout that monero_c.h includes them in
-            (cd src && cp --parents $(cat ../packaging/common/headers.txt) "../stage/$name/include/")
-            cp LICENSE README.md "stage/$name/"
-            if [ "$platform" = windows ]; then
-              (cd stage && zip -qr "../release/$name.zip" "$name")
-            else
-              tar -C stage -czf "release/$name.tar.gz" "$name"
-            fi
+            bash packaging/common/pack-archive.sh "$VERSION" "$platform" "artifacts/monero-c-$platform" artifacts/monero-c-linux-x86_64/licenses release
           done
           (cd release && sha256sum * > SHA256SUMS.txt && cat SHA256SUMS.txt)
 
