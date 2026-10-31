@@ -30,6 +30,7 @@ build configuration.
 | nghttp2, macOS only | MIT | `licenses/nghttp2-MIT.txt` |
 | winpthreads (mingw-w64), Windows only | MIT and BSD-3-Clause (Lockless Inc.) | `licenses/winpthreads-COPYING.txt` |
 | mingw-w64 C runtime, Windows only, linked statically | Several permissive licenses, and LGPL-2.1-or-later for headers imported from Wine. The file lists them | `licenses/mingw-w64-runtime-COPYING.txt` |
+| LLVM C++ runtime (libc++, libc++abi, libunwind) of the Android NDK, Android only, linked statically | Apache-2.0 with LLVM Exceptions | `licenses/llvm-project-Apache-2.0-LLVM-exception.txt`, taken from `NOTICE.toolchain` of NDK r30 |
 | GCC runtime libraries (libgcc, libstdc++), Windows only, linked statically | GPL-3.0-or-later with the GCC Runtime Library Exception 3.1 | `licenses/gcc-runtime-GPL-3.0.txt` and `licenses/gcc-runtime-COPYING.RUNTIME.txt` |
 
 The build disables Trezor support (`USE_DEVICE_TREZOR=OFF`), so the LGPL-3.0

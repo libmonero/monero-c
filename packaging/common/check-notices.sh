@@ -24,6 +24,7 @@ LMDB|mdb_env_create|lmdb-OLDAP-2.8.txt
 RandomX|randomx_alloc_cache|randomx-BSD-3-Clause.txt
 OpenAES|oaes_key_gen|openaes-BSD-3-Clause.txt
 mingw-w64 runtime|Mingw-w64 runtime failure|mingw-w64-runtime-COPYING.txt
+LLVM C++ runtime (libc++, libc++abi, libunwind)|unw_init_local|llvm-project-Apache-2.0-LLVM-exception.txt
 '
 
 # components with no notice. Finding one is a failure until its license text is in the package and in THIRD-PARTY-NOTICES.md
@@ -34,7 +35,6 @@ xz|lzma_stream_decoder
 bzip2|BZ2_bzCompress
 Zstandard|ZSTD_compress
 miniupnpc|upnpDiscover
-libunwind|unw_init_local
 OpenPGM|pgm_init
 '
 

@@ -31,6 +31,9 @@ binding should ask for 0.2.x. The JSON is the one of 0.1.0-alpha.1.
   of milliseconds, from 1 to 2147483647. A timeout is a success with `out_timed_out` set, so a task that can be cancelled waits again.
 * `MONERO_C_STATIC`, to define before the headers when a program links `libmonero_c.a` on Windows, where they declare the functions as
   imported from a DLL otherwise. The target `monero_c-static` of CMake defines it. `monero_c_static_unit_tests` links the archive.
+* `monero-native-android`, an Android archive (AAR) with `libmonero_c.so` for `arm64-v8a` and `x86_64`, the headers as a Prefab package and the
+  licenses, built by `packaging/android`. The draft release has it with its POM, and the archives `monero-c-<version>-android-arm64` and
+  `-android-x86_64` with the library, the headers and the licenses. See [packaging/android](packaging/android/README.md).
 
 The functions go from 291 to 295.
 

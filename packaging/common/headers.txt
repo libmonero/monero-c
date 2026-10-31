@@ -1,0 +1,5 @@
+monero_c.h
+common/monero_c_rpc_connection.h
+daemon/monero_c_daemon.h
+utils/monero_c_utils.h
+wallet/monero_c_wallet.h

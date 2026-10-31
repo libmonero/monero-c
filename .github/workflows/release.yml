@@ -1,5 +1,5 @@
 # Called by build.yml for a tag v*: collects what the Build workflow made into a draft GitHub release, with the library of each platform and the
-# NuGet package. Nothing is published from here. Publishing the draft by hand runs publish-nuget.yml, which pushes the package to nuget.org
+# packages. Nothing is published from here. Publishing the draft by hand runs publish-nuget.yml, which pushes the package to nuget.org
 # and to GitHub Packages
 name: Release
 
@@ -46,23 +46,25 @@ jobs:
           pattern: monero-c-*
           path: artifacts
 
-      - name: Download the NuGet package
+      # the NuGet package, and the packages of the other languages. Their artifacts are called monero-native-<name>
+      - name: Download the packages
         uses: actions/download-artifact@v8
         with:
-          name: monero-native-nuget
+          pattern: monero-native-*
+          merge-multiple: true
           path: release
 
       - name: Pack the libraries of each platform
         run: |
           mkdir -p release
-          for platform in linux-x86_64 linux-arm64 mac-x86_64 mac-arm64 windows; do
+          for platform in linux-x86_64 linux-arm64 mac-x86_64 mac-arm64 windows android-arm64 android-x86_64; do
             name="monero-c-$VERSION-$platform"
             mkdir -p "stage/$name/include"
             cp artifacts/monero-c-$platform/lib* "stage/$name/"
             # only the Linux build collects the notices, and they cover the components of every platform, as the NuGet package has them
             cp -R artifacts/monero-c-linux-x86_64/licenses "stage/$name/"
             # the public headers, in the layout that monero_c.h includes them in
-            (cd src && cp --parents monero_c.h common/monero_c_rpc_connection.h daemon/monero_c_daemon.h utils/monero_c_utils.h wallet/monero_c_wallet.h "../stage/$name/include/")
+            (cd src && cp --parents $(cat ../packaging/common/headers.txt) "../stage/$name/include/")
             cp LICENSE README.md "stage/$name/"
             if [ "$platform" = windows ]; then
               (cd stage && zip -qr "../release/$name.zip" "$name")

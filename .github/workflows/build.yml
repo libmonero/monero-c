@@ -49,11 +49,18 @@ jobs:
       contents: read
     uses: ./.github/workflows/dotnet.yml
 
+  android-aar:
+    name: Android archive
+    needs: [linux, android]
+    permissions:
+      contents: read
+    uses: ./.github/workflows/android-aar.yml
+
   release:
     name: Release
-    # a tag v* ends in a draft release with the libraries and the package; publishing the draft pushes the package to nuget.org
+    # a tag v* ends in a draft release with the libraries and the packages; publishing the draft pushes the package to nuget.org
     if: github.ref_type == 'tag' && startsWith(github.ref_name, 'v')
-    needs: [linux, macos, windows, dotnet]
+    needs: [linux, macos, windows, android, dotnet, android-aar]
     permissions:
       contents: write
       actions: read

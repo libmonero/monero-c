@@ -1,0 +1,87 @@
+# Called by build.yml after the Android build. Strips the libraries, checks that they export the C ABI and that the notices cover what they link,
+# and packs them into an Android archive (AAR) with its POM. The release workflow adds the files to the draft release
+name: Android archive
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  aar:
+    name: AAR
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Download the Android builds
+        uses: actions/download-artifact@v8
+        with:
+          name: monero-c-android-arm64
+          path: artifacts/arm64-v8a
+
+      - name: Download the x86_64 Android build
+        uses: actions/download-artifact@v8
+        with:
+          name: monero-c-android-x86_64
+          path: artifacts/x86_64
+
+      # only the Linux build collects the notices
+      - name: Download the Linux build for its notices
+        uses: actions/download-artifact@v8
+        with:
+          name: monero-c-linux-x86_64
+          path: artifacts/linux
+
+      - name: Read the package version
+        run: |
+          version=$(dotnet msbuild packaging/dotnet-core/monero.pkgproj -getProperty:MoneroNativeVersion)
+          test -n "$version" || { echo "no version in packaging/dotnet-core/Version.props"; exit 1; }
+          echo "PACKAGE_VERSION=$version" >> "$GITHUB_ENV"
+
+      - name: Check the tag matches the package version
+        if: github.ref_type == 'tag'
+        run: |
+          [ "${GITHUB_REF_NAME#v}" = "$PACKAGE_VERSION" ] || { echo "tag $GITHUB_REF_NAME does not match package version $PACKAGE_VERSION"; exit 1; }
+
+      - name: Stage the license texts
+        run: cp -R artifacts/linux/licenses packaging/common/
+
+      # on the libraries as they are built: the strip below removes the names that it looks for
+      - name: Check the notices cover the components that the libraries link
+        run: bash packaging/common/check-notices.sh packaging/common/licenses artifacts/arm64-v8a/libmonero_c.so artifacts/x86_64/libmonero_c.so
+
+      - name: Strip the libraries
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y binutils-aarch64-linux-gnu
+          aarch64-linux-gnu-strip --strip-unneeded artifacts/arm64-v8a/libmonero_c.so
+          strip --strip-unneeded artifacts/x86_64/libmonero_c.so
+
+      - name: Check the stripped libraries export the C ABI
+        run: |
+          cmake -DNM=aarch64-linux-gnu-nm -DLIBRARY=artifacts/arm64-v8a/libmonero_c.so -DEXPECTED=tests/c/abi/monero_c.symbols -P tests/c/abi/check_symbols.cmake
+          cmake -DLIBRARY=artifacts/x86_64/libmonero_c.so -DEXPECTED=tests/c/abi/monero_c.symbols -P tests/c/abi/check_symbols.cmake
+
+      - name: Pack the archive
+        env:
+          # the major version of NDK_VERSION in build-android.yml
+          MONERO_C_NDK: 30
+        run: |
+          bash packaging/android/build-aar.sh "$PACKAGE_VERSION" packaging/android/packages \
+            arm64-v8a=artifacts/arm64-v8a/libmonero_c.so x86_64=artifacts/x86_64/libmonero_c.so
+
+      - name: Check the archive
+        run: bash packaging/android/check-aar.sh "packaging/android/packages/monero-native-android-$PACKAGE_VERSION.aar" arm64-v8a x86_64
+
+      - name: Upload the archive
+        uses: actions/upload-artifact@v7
+        with:
+          name: monero-native-android
+          path: |
+            packaging/android/packages/monero-native-android-${{ env.PACKAGE_VERSION }}.aar
+            packaging/android/packages/monero-native-android-${{ env.PACKAGE_VERSION }}.pom
+          if-no-files-found: error
