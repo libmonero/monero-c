@@ -1,15 +1,18 @@
 # Releasing
 
-A release is a tag `v<version>` on a commit of `main`. CI builds the libraries and the NuGet package `Monero.Native` for that tag and
-collects them in a draft GitHub release. Publishing the draft pushes the package to nuget.org and to the GitHub Packages registry of the organization.
+A release is a tag `v<version>` on a commit of `main`. CI builds the libraries and the packages (the NuGet package `Monero.Native`, and the ones
+for Android, the JVM, Dart, Linux and Apple) for that tag and collects them in a draft GitHub release. Publishing the draft pushes the NuGet
+package to nuget.org and to the GitHub Packages registry of the organization. The other packages are files of the release for now.
 
 ## Versions
 
-There are two versions, and a release changes both.
+There are two versions, and a release changes both. The package version is also in the pubspec of the Dart package.
 
 * **Package version.** `MoneroNativeVersion` in [`packaging/dotnet-core/Version.props`](packaging/dotnet-core/Version.props). It is the version of
   `Monero.Native` and of the release, and the tag has to be `v` plus this version. A version with a hyphen, such as `0.1.1-alpha.1`, is a
   prerelease.
+* **Dart version.** `version` in [`packaging/dart/pubspec.yaml`](packaging/dart/pubspec.yaml), which has to be the package version. pub.dev
+  wants the number in the file, so it is a second place to set. `packaging/dart/build.sh` fails when it differs, and so does the Dart workflow.
 * **ABI version.** `MONERO_C_ABI_VERSION_MAJOR`, `MINOR` and `PATCH` in [`src/utils/monero_c_utils.h`](src/utils/monero_c_utils.h), which
   `monero_utils_get_abi_version()` returns. While the major version is 0, a change of the minor version can break callers. The patch version is
   for fixes that leave the ABI as it is. The numbers are pinned in `tests/c/unit/monero_c_abi_unit_tests.c` and in `MoneroUtilsTests.cs` of the
@@ -20,7 +23,7 @@ bumps the minor version until 1.0, and a fix that leaves them as they are bumps 
 
 ## Make a release
 
-1. In a branch, set `MoneroNativeVersion`, set the ABI version in the three places above, and add a section `## <version> (<date>)` to
+1. In a branch, set `MoneroNativeVersion` and `version` in `packaging/dart/pubspec.yaml`, set the ABI version in the three places above, and add a section `## <version> (<date>)` to
    [`CHANGELOG.md`](CHANGELOG.md). The release notes are that section, so write what a user of the library has to know.
 2. Merge the branch to `main` and wait for Build and Tests to pass on the merge commit. The release refuses a commit whose Tests workflow
    has no successful run, because Tests doesn't run on tags.
@@ -33,9 +36,14 @@ bumps the minor version until 1.0, and a fix that leaves them as they are bumps 
 
 4. Build runs on the tag, and its job `Release` creates a **draft** GitHub release. The job fails when the tag and `MoneroNativeVersion`
    differ, when the commit is not on `main`, and when the changelog has no section for the version. The draft has:
-   * `monero-c-<version>-<platform>.tar.gz` (`.zip` for Windows) for `linux-x86_64`, `linux-arm64`, `mac-x86_64`, `mac-arm64` and `windows`,
-     each with the library, libusb, the public headers and the licenses,
+   * `monero-c-<version>-<platform>.tar.gz` (`.zip` for Windows) for `linux-x86_64`, `linux-arm64`, `mac-x86_64`, `mac-arm64`, `windows`,
+     `android-arm64` and `android-x86_64`, each with the library, libusb where it has one, the public headers and the licenses. The Dart
+     package downloads these, so they have to stay in the release under these names,
    * the NuGet package `Monero.Native.<version>.nupkg`,
+   * `monero-native-android-<version>.aar` and `monero-native-jvm-<version>.jar`, each with its `.pom`,
+   * `monero_native-<version>.tar.gz`, the Dart package with the checksums of the archives above, ready for `dart pub publish`,
+   * `MoneroC-<version>.xcframework.zip`, whose SHA-256 is the checksum of a Swift `binaryTarget`,
+   * `monero-c_<version>_amd64.deb` and `monero-c_<version>_arm64.deb`,
    * `SHA256SUMS.txt`.
 
    Nothing is public yet. If the run fails, delete the draft and the tag, fix it and tag again.
