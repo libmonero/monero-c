@@ -25,6 +25,7 @@
 
 #include "utils/monero_c_utils.h"
 #include "common/monero_c_callbacks.h"
+#include "common/monero_c_event_queue.h"
 #include "common/monero_c_secret.h"
 #include "common/monero_c_rpc_connection.h"
 

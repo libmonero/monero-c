@@ -86,6 +86,21 @@ static void on_output_spent(void* user_data, const char* output_json) {
   g_spent++;
 }
 
+// a listener that asks its wallet for the balance in every new block
+struct asking_wallet {
+  monero_wallet* wallet;
+  volatile int blocks;
+  volatile int answered;
+};
+
+static void on_new_block_asks(void* user_data, uint64_t height) {
+  struct asking_wallet* asking = (struct asking_wallet*)user_data;
+  uint64_t balance = 0;
+  (void)height;
+  asking->blocks++;
+  if (monero_wallet_get_balance(asking->wallet, &balance) == MONERO_OK) asking->answered++;
+}
+
 static int has(const char* json, const char* text) {
   return json != NULL && strstr(json, text) != NULL;
 }
@@ -707,6 +722,19 @@ static void test_daemon(const char* daemon_uri) {
   EXPECT_OK(monero_wallet_wait_for_next_block_timeout(a, 1500, &value, &timed_out));
   CHECK(timed_out && value == 0);
   EXPECT_OK(monero_wallet_stop_syncing(a));
+
+  // a callback can ask the wallet for its balance while the sync that calls it holds the lock of the wallet, since the sync doesn't wait for
+  // the callback, and the callbacks of the sync are done when it returns
+  struct asking_wallet asked = {a, 0, 0};
+  monero_wallet_listener_callbacks asking_callbacks = {sizeof(monero_wallet_listener_callbacks), &asked, NULL, on_new_block_asks, NULL, NULL, NULL};
+  monero_wallet_listener* asking = NULL;
+  EXPECT_OK(monero_wallet_listener_create(&asking_callbacks, &asking));
+  mine(g_daemon, g_mining_address, 3);
+  EXPECT_OK(monero_wallet_sync(a, NULL, asking, &json));
+  monero_utils_free(json);
+  json = NULL;
+  CHECK(asked.blocks >= 3 && asked.answered == asked.blocks);
+  monero_wallet_listener_free(asking);
 
   // scans and the rescans. The rescan of the blockchain comes last, since it discards local data
   EXPECT_ERR_MSG(monero_wallet_scan_txs(a, NULL, 0), "No tx hashes given to scan");

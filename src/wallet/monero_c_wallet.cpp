@@ -33,6 +33,7 @@
 #include "rapidjson/stringbuffer.h"
 #include "rapidjson/writer.h"
 
+#include <algorithm>
 #include <boost/optional.hpp>
 #include <chrono>
 #include <condition_variable>
@@ -144,38 +145,87 @@ struct wallet_listener_removal {
   }
 };
 
-// forwards the wallet's notifications to the C callbacks of a listener
+// the kinds of event that the queue of a listener keeps in different ways. A sync progress and a balance are replaced by the newest, since an
+// older one says nothing more. A new block is kept for each block, up to a limit, so a program that falls behind during a long sync
+// doesn't make the queue grow with every block of the chain: past the limit the oldest ones are dropped. An output is never dropped
+enum event_kind { EVENT_SYNC_PROGRESS = 1, EVENT_NEW_BLOCK, EVENT_BALANCES_CHANGED, EVENT_OUTPUT };
+const size_t MAX_PENDING_NEW_BLOCKS = 100000;
+
+// forwards the wallet's notifications to the C callbacks of a listener. monero-cpp calls it with its own locks held, and a sync waits for the
+// call, so it only puts the event in a queue, and a thread of the listener calls the callbacks, with no lock held. What an event needs from
+// the arguments of monero-cpp, which are valid only during the call, is copied into it
 class wallet_listener_adapter : public monero::monero_wallet_listener {
 public:
   ::monero_wallet_listener* owner = nullptr;  // the C handle, not the base class of the same name
   monero_wallet_listener_callbacks callbacks = {};
+  std::shared_ptr<monero_c::event_queue> queue = std::make_shared<monero_c::event_queue>();
+
+  ~wallet_listener_adapter() { queue->stop(); }
 
   void on_sync_progress(uint64_t height, uint64_t start_height, uint64_t end_height, double percent_done, const std::string& message) override {
     if (callbacks.on_sync_progress == nullptr) return;
-    callbacks.on_sync_progress(callbacks.user_data, height, start_height, end_height, percent_done, message.c_str());
+    monero_wallet_listener_callbacks c = callbacks;
+    queue->post(EVENT_SYNC_PROGRESS, 1, [c, height, start_height, end_height, percent_done, message] {
+      c.on_sync_progress(c.user_data, height, start_height, end_height, percent_done, message.c_str());
+    });
   }
 
   void on_new_block(uint64_t height) override {
     if (callbacks.on_new_block == nullptr) return;
-    callbacks.on_new_block(callbacks.user_data, height);
+    monero_wallet_listener_callbacks c = callbacks;
+    queue->post(EVENT_NEW_BLOCK, MAX_PENDING_NEW_BLOCKS, [c, height] { c.on_new_block(c.user_data, height); });
   }
 
   void on_balances_changed(uint64_t new_balance, uint64_t new_unlocked_balance) override {
     if (callbacks.on_balances_changed == nullptr) return;
-    callbacks.on_balances_changed(callbacks.user_data, new_balance, new_unlocked_balance);
+    monero_wallet_listener_callbacks c = callbacks;
+    queue->post(EVENT_BALANCES_CHANGED, 1, [c, new_balance, new_unlocked_balance] { c.on_balances_changed(c.user_data, new_balance, new_unlocked_balance); });
   }
 
   void on_output_received(const monero::monero_output_wallet& output) override {
     if (callbacks.on_output_received == nullptr) return;
+    monero_wallet_listener_callbacks c = callbacks;
     std::string json = json_of_notification(output, false);
-    callbacks.on_output_received(callbacks.user_data, json.c_str());
+    queue->post(EVENT_OUTPUT, 0, [c, json] { c.on_output_received(c.user_data, json.c_str()); });
   }
 
   void on_output_spent(const monero::monero_output_wallet& output) override {
     if (callbacks.on_output_spent == nullptr) return;
+    monero_wallet_listener_callbacks c = callbacks;
     std::string json = json_of_notification(output, true);
-    callbacks.on_output_spent(callbacks.user_data, json.c_str());
+    queue->post(EVENT_OUTPUT, 0, [c, json] { c.on_output_spent(c.user_data, json.c_str()); });
   }
+};
+
+// the queues of the C listeners that a wallet has now
+std::vector<std::shared_ptr<monero_c::event_queue>> queues_of(monero::monero_wallet& wallet) {
+  std::vector<std::shared_ptr<monero_c::event_queue>> queues;
+  try {
+    for (monero::monero_wallet_listener* listener : wallet.get_listeners()) {
+      auto* adapter = dynamic_cast<wallet_listener_adapter*>(listener);
+      if (adapter != nullptr) queues.push_back(adapter->queue);
+    }
+  } catch (...) {
+    // a wallet that is closed, or that has no listeners to list, has no callbacks to wait for
+  }
+  return queues;
+}
+
+// when a call that feeds the listeners of a wallet ends, whichever way, waits for the callbacks that it caused, so a program that gets the
+// result of a sync or a close has had the callbacks of it. A callback that makes the call doesn't wait for its own listener
+class callbacks_flush {
+public:
+  callbacks_flush(monero::monero_wallet& wallet, const std::shared_ptr<monero_c::event_queue>& extra) : queues_(queues_of(wallet)) {
+    if (extra != nullptr && std::find(queues_.begin(), queues_.end(), extra) == queues_.end()) queues_.push_back(extra);
+  }
+  ~callbacks_flush() {
+    for (const std::shared_ptr<monero_c::event_queue>& queue : queues_) queue->flush();
+  }
+  callbacks_flush(const callbacks_flush&) = delete;
+  callbacks_flush& operator=(const callbacks_flush&) = delete;
+
+private:
+  std::vector<std::shared_ptr<monero_c::event_queue>> queues_;
 };
 
 // copies a mnemonic argument, which can't be longer than a valid one
@@ -701,7 +751,11 @@ monero_result monero_wallet_save(::monero_wallet* wallet) {
 
 monero_result monero_wallet_close(::monero_wallet* wallet, bool save) {
   if (!require(wallet, "wallet")) return MONERO_ERROR;
-  return guard([&] { wallet->wallet->close(save); });
+  return guard([&] {
+    // the callbacks of the sync that the close drains are done when the call returns
+    callbacks_flush flush(*wallet->wallet, nullptr);
+    wallet->wallet->close(save);
+  });
 }
 
 monero_result monero_wallet_request_shutdown(::monero_wallet* wallet) {
@@ -1139,6 +1193,9 @@ monero_result monero_wallet_remove_listener(::monero_wallet* wallet, ::monero_wa
   return guard([&] {
     // monero-cpp notifies under its own lock, so this runs without registration_mutex
     wallet->wallet->remove_listener(listener->adapter);
+    // no callback of the listener comes after the removal: the events that wait are dropped, and the one that runs is waited for. A callback
+    // that removes its own listener only drops them
+    listener->adapter.queue->cancel();
     std::lock_guard<std::mutex> lock(listener->registration_mutex);
     if (listener->registered_with.lock() == wallet->wallet) listener->registered_with.reset();
   });
@@ -1152,6 +1209,7 @@ monero_result monero_wallet_remove_listeners(::monero_wallet* wallet) {
       // listeners that don't come from the C ABI have no handle to reset
       auto* adapter = dynamic_cast<wallet_listener_adapter*>(listener);
       if (adapter == nullptr) continue;
+      adapter->queue->cancel();
       std::lock_guard<std::mutex> lock(adapter->owner->registration_mutex);
       if (adapter->owner->registered_with.lock() == wallet->wallet) adapter->owner->registered_with.reset();
     }
@@ -1164,6 +1222,8 @@ monero_result monero_wallet_sync(::monero_wallet* wallet, const uint64_t* start_
   reset_out(out_json);
   if (!require(wallet, "wallet") || !require(out_json, "out_json")) return MONERO_ERROR;
   return guard([&] {
+    // the callbacks of the sync are done when the call returns, the failure of the sync included
+    callbacks_flush flush(*wallet->wallet, listener != nullptr ? listener->adapter.queue : nullptr);
     monero::monero_sync_result result = listener ? sync_with_listener(wallet, listener, start_height) : (start_height ? wallet->wallet->sync(*start_height) : wallet->wallet->sync());
     *out_json = dup_string(result.serialize());
   });

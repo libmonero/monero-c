@@ -22,15 +22,22 @@
 
 #include "monero_c_test.h"
 #include "common/monero_c_callbacks.h"
+#include "common/monero_c_event_queue.h"
 #include "common/monero_c_secret.h"
 #include "common/monero_c_tls.h"
 
+#include <atomic>
+#include <chrono>
 #include <cstddef>
 #include <cstdlib>
 #include <cstring>
+#include <memory>
+#include <mutex>
 #include <stdexcept>
 #include <set>
 #include <string>
+#include <thread>
+#include <vector>
 
 // links only if the headers declare the functions extern "C"
 
@@ -147,6 +154,184 @@ static void test_secret_string() {
   CHECK(password.get() == "a password");
 }
 
+// ------------------------------ EVENT QUEUE ---------------------------------
+
+using monero_c::event_queue;
+
+// an event that blocks the thread of the queue until the test opens the gate, so the events behind it wait
+struct gate {
+  std::atomic<bool> entered{false};
+  std::atomic<bool> open{false};
+
+  void block() {
+    entered = true;
+    while (!open) std::this_thread::sleep_for(std::chrono::milliseconds(1));
+  }
+  void wait_until_entered() {
+    for (int i = 0; i < 5000 && !entered; i++) std::this_thread::sleep_for(std::chrono::milliseconds(1));
+  }
+};
+
+static std::shared_ptr<event_queue> new_queue() { return std::make_shared<event_queue>(); }
+
+static void test_queue_delivers_in_order() {
+  auto queue = new_queue();
+  std::vector<int> seen;
+  for (int i = 0; i < 200; i++) queue->post(0, 0, [&seen, i] { seen.push_back(i); });
+  queue->flush();
+  CHECK(seen.size() == 200);
+  bool in_order = true;
+  for (size_t i = 0; i < seen.size(); i++) in_order = in_order && seen[i] == static_cast<int>(i);
+  CHECK(in_order);
+  queue->stop();
+}
+
+// a kind with the limit 1 keeps only the newest event that waits, at the end of the queue; a limit of 3 keeps the newest three; and
+// a kind with no limit keeps everything
+static void test_queue_limits() {
+  auto queue = new_queue();
+  gate blocker;
+  std::vector<int> seen;
+  queue->post(0, 0, [&blocker] { blocker.block(); });
+  blocker.wait_until_entered();
+
+  for (int i = 0; i < 5; i++) queue->post(1, 1, [&seen, i] { seen.push_back(10 + i); });
+  for (int i = 0; i < 6; i++) queue->post(2, 3, [&seen, i] { seen.push_back(20 + i); });
+  for (int i = 0; i < 4; i++) queue->post(3, 0, [&seen, i] { seen.push_back(30 + i); });
+  blocker.open = true;
+  queue->flush();
+
+  // the event of kind 1 was replaced by the newest, and the kind 2 events are the last three
+  const int expected[] = {14, 23, 24, 25, 30, 31, 32, 33};
+  CHECK(seen.size() == 8);
+  bool same = seen.size() == 8;
+  for (size_t i = 0; same && i < 8; i++) same = seen[i] == expected[i];
+  CHECK(same);
+  queue->stop();
+}
+
+static void test_queue_flush_waits_for_the_event_that_runs() {
+  auto queue = new_queue();
+  std::atomic<bool> done{false};
+  queue->post(0, 0, [&done] {
+    std::this_thread::sleep_for(std::chrono::milliseconds(150));
+    done = true;
+  });
+  queue->flush();
+  CHECK(done);
+  queue->stop();
+}
+
+static void test_queue_cancel_drops_what_waits() {
+  auto queue = new_queue();
+  gate blocker;
+  std::atomic<bool> first_done{false};
+  std::atomic<int> ran_after{0};
+  queue->post(0, 0, [&] {
+    blocker.block();
+    first_done = true;
+  });
+  blocker.wait_until_entered();
+  queue->post(0, 0, [&ran_after] { ran_after++; });
+  queue->post(1, 1, [&ran_after] { ran_after++; });
+
+  std::thread opener([&blocker] {
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    blocker.open = true;
+  });
+  queue->cancel();
+  opener.join();
+  CHECK(first_done);
+  CHECK(ran_after == 0);
+
+  // the queue works after a cancel
+  queue->post(0, 0, [&ran_after] { ran_after++; });
+  queue->flush();
+  CHECK(ran_after == 1);
+  queue->stop();
+}
+
+// a callback can post, flush and cancel its own queue without waiting for itself
+static void test_queue_callbacks_can_use_their_queue() {
+  auto queue = new_queue();
+  std::atomic<int> count{0};
+  std::atomic<bool> finished{false};
+  queue->post(0, 0, [&, queue] {
+    queue->post(0, 0, [&count] { count++; });
+    queue->flush();   // would wait for itself
+    queue->cancel();  // drops the event it just posted, and would wait for itself
+    finished = true;
+  });
+  queue->flush();
+  CHECK(finished);
+  CHECK(count == 0);
+  queue->stop();
+}
+
+static void test_queue_survives_an_exception() {
+  auto queue = new_queue();
+  std::atomic<int> count{0};
+  queue->post(0, 0, [] { throw std::runtime_error("from a callback"); });
+  queue->post(0, 0, [&count] { count++; });
+  queue->flush();
+  CHECK(count == 1);
+  queue->stop();
+}
+
+static void test_queue_stop_waits_for_the_event_that_runs_and_refuses_more() {
+  auto queue = new_queue();
+  gate blocker;
+  std::atomic<bool> done{false};
+  std::atomic<int> ran_after{0};
+  queue->post(0, 0, [&] {
+    blocker.block();
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    done = true;
+  });
+  blocker.wait_until_entered();
+  std::thread opener([&blocker] { blocker.open = true; });
+  queue->stop();
+  opener.join();
+  CHECK(done);
+  queue->post(0, 0, [&ran_after] { ran_after++; });
+  queue->flush();
+  std::this_thread::sleep_for(std::chrono::milliseconds(30));
+  CHECK(ran_after == 0);
+}
+
+// a callback that stops its own queue, which is what freeing a listener from its own callback does, lets the callback return
+static void test_queue_can_be_stopped_by_its_own_callback() {
+  auto queue = new_queue();
+  std::atomic<bool> returned{false};
+  std::atomic<int> ran_after{0};
+  queue->post(0, 0, [&, queue] {
+    queue->post(0, 0, [&ran_after] { ran_after++; });
+    queue->stop();
+    returned = true;
+  });
+  for (int i = 0; i < 5000 && !returned; i++) std::this_thread::sleep_for(std::chrono::milliseconds(1));
+  CHECK(returned);
+  queue.reset();
+  std::this_thread::sleep_for(std::chrono::milliseconds(50));
+  CHECK(ran_after == 0);
+}
+
+// several threads post at once
+static void test_queue_with_several_producers() {
+  auto queue = new_queue();
+  std::atomic<int> count{0};
+  std::vector<std::thread> producers;
+  for (int t = 0; t < 4; t++) {
+    producers.emplace_back([queue, &count] {
+      for (int i = 0; i < 500; i++) queue->post(0, 0, [&count] { count++; });
+    });
+  }
+  for (std::thread& producer : producers) producer.join();
+  queue->flush();
+  CHECK(count == 2000);
+  queue->stop();
+}
+
 // a system with the files that have content and the directories that have certificates by hashed name
 struct fake_system {
   std::set<std::string> files;
@@ -251,6 +436,15 @@ int main() {
   test_struct_size_too_small();
   test_wipe();
   test_secret_string();
+  test_queue_delivers_in_order();
+  test_queue_limits();
+  test_queue_flush_waits_for_the_event_that_runs();
+  test_queue_cancel_drops_what_waits();
+  test_queue_callbacks_can_use_their_queue();
+  test_queue_survives_an_exception();
+  test_queue_stop_waits_for_the_event_that_runs_and_refuses_more();
+  test_queue_can_be_stopped_by_its_own_callback();
+  test_queue_with_several_producers();
   test_ca_paths();
   test_hashed_certificate_names();
 
