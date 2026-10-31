@@ -19,6 +19,11 @@ target_link_libraries(monero_c_wallet_multisig_unit_tests PRIVATE monero_c moner
 add_executable(monero_c_rpc_connection_unit_tests monero_c_rpc_connection_unit_tests.c)
 target_link_libraries(monero_c_rpc_connection_unit_tests PRIVATE monero_c monero_c_test_common)
 
+# links the static library, to check what a program that does so finds: on Windows the functions are not imported from a DLL, and the closure of
+# the static archives is complete. The other tests use the DLL or the shared library
+add_executable(monero_c_static_unit_tests monero_c_static_unit_tests.c)
+target_link_libraries(monero_c_static_unit_tests PRIVATE monero_c-static monero_c_test_common)
+
 add_executable(monero_c_abi_unit_tests monero_c_abi_unit_tests.c)
 target_link_libraries(monero_c_abi_unit_tests PRIVATE monero_c monero_c_test_common)
 
@@ -35,6 +40,7 @@ add_executable(monero_c_cpp_unit_tests monero_c_cpp_unit_tests.cpp)
 target_link_libraries(monero_c_cpp_unit_tests PRIVATE monero_c monero_c_test_common)
 
 add_test(NAME monero_c_utils_unit_tests COMMAND monero_c_utils_unit_tests)
+add_test(NAME monero_c_static_unit_tests COMMAND monero_c_static_unit_tests)
 add_test(NAME monero_c_daemon_unit_tests COMMAND monero_c_daemon_unit_tests)
 add_test(NAME monero_c_wallet_unit_tests COMMAND monero_c_wallet_unit_tests)
 add_test(NAME monero_c_wallet_keys_unit_tests COMMAND monero_c_wallet_keys_unit_tests)

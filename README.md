@@ -158,6 +158,10 @@ Flags are cached in `./build/CMakeCache.txt`, so pass them on every build to cha
    ./bin/build_libmonero_c.sh -DBUILD_TESTS=ON
    ```
 
+## Linking the static library
+
+The build makes the shared library (`libmonero_c.so`, `libmonero_c.dylib` or `monero_c.dll`) and the static library `libmonero_c.a`. A CMake project that links the target `monero_c-static` gets the include path, the `MONERO_C_STATIC` define and the libraries of the closure. A program that links the archive some other way defines `MONERO_C_STATIC` before it includes the headers: on Windows they declare the functions as imported from a DLL otherwise, and the link fails with undefined `__imp_` symbols. The archive holds the objects of the DLL, so a program that links it on Windows also exports the functions. `monero_c_static_unit_tests` links the archive and calls the library, on every platform.
+
 ## Running tests
 
 ```

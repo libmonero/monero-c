@@ -301,6 +301,9 @@ endif()
 # $<TARGET_OBJECTS:...> doesn't propagate monero_c-obj's PUBLIC include dirs, so repeat them here.
 target_include_directories(monero_c PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
 target_include_directories(monero_c-static PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
+# on Windows the headers declare the functions as imported from a DLL unless this is defined, and a program that links the static library
+# would look for symbols that it does not have
+target_compile_definitions(monero_c-static INTERFACE MONERO_C_STATIC)
 
 set(MONERO_C_LINK_LIBS
     monero-cpp

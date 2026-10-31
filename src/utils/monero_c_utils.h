@@ -59,8 +59,13 @@
 #include <stddef.h>
 #include <stdint.h>
 
+// On Windows a program that uses the DLL includes the headers as they are, and the functions are imported from it. A program that links the
+// static library, libmonero_c.a, has to define MONERO_C_STATIC before it includes them, or it looks for __imp_ symbols that the library does
+// not have. The target monero_c-static of CMake defines it for the programs that link it
 #if defined(_WIN32) || defined(__CYGWIN__)
-  #ifdef MONERO_C_BUILD
+  #if defined(MONERO_C_STATIC)
+    #define MONERO_EXPORT
+  #elif defined(MONERO_C_BUILD)
     #define MONERO_EXPORT __declspec(dllexport)
   #else
     #define MONERO_EXPORT __declspec(dllimport)
