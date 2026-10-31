@@ -22,10 +22,12 @@
 
 #include "monero_c_test.h"
 #include "common/monero_c_callbacks.h"
+#include "common/monero_c_secret.h"
 #include "common/monero_c_tls.h"
 
 #include <cstddef>
 #include <cstdlib>
+#include <cstring>
 #include <stdexcept>
 #include <set>
 #include <string>
@@ -111,6 +113,38 @@ static void test_struct_size_too_small() {
     }
     CHECK(threw);
   }
+}
+
+// wipe() zeroes the bytes in place, whether the characters are in the string itself or on the heap
+static void test_wipe() {
+  unsigned char bytes[16];
+  std::memset(bytes, 0xAB, sizeof(bytes));
+  monero_c::wipe(bytes, 12);
+  for (size_t i = 0; i < 12; i++) CHECK(bytes[i] == 0);
+  for (size_t i = 12; i < sizeof(bytes); i++) CHECK(bytes[i] == 0xAB);
+
+  const char* texts[] = {"short", "a seed of twenty-five words, long enough to leave the buffer of the string and live on the heap"};
+  for (const char* text : texts) {
+    std::string value(text);
+    const char* data = value.data();
+    size_t size = value.size();
+    monero_c::wipe(value);
+    CHECK(value.empty());
+    bool zeroed = true;
+    for (size_t i = 0; i < size; i++) zeroed = zeroed && data[i] == 0;
+    CHECK(zeroed);
+  }
+
+  std::string empty;
+  monero_c::wipe(empty);
+  CHECK(empty.empty());
+}
+
+static void test_secret_string() {
+  monero_c::secret_string none(nullptr);
+  CHECK(none.get().empty());
+  monero_c::secret_string password("a password");
+  CHECK(password.get() == "a password");
 }
 
 // a system with the files that have content and the directories that have certificates by hashed name
@@ -215,6 +249,8 @@ int main() {
   test_bytes_past_the_size_are_not_read();
   test_newer_callbacks_are_cut();
   test_struct_size_too_small();
+  test_wipe();
+  test_secret_string();
   test_ca_paths();
   test_hashed_certificate_names();
 

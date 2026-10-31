@@ -134,6 +134,12 @@ void monero_utils_free(void* ptr) {
   std::free(ptr);
 }
 
+void monero_utils_free_secret(char* secret) {
+  if (secret == nullptr) return;
+  monero_c::wipe(secret, std::strlen(secret));
+  std::free(secret);
+}
+
 // ---------------------------------- VERSION ---------------------------------
 
 monero_result monero_utils_get_abi_version(uint32_t* out_major, uint32_t* out_minor, uint32_t* out_patch) {

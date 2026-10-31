@@ -135,6 +135,16 @@ MONERO_EXPORT monero_error_code monero_last_error_code(void);
  */
 MONERO_EXPORT void monero_utils_free(void* ptr);
 
+/**
+ * Overwrites a secret with zeros and frees it, so it doesn't stay in freed memory. Use it instead of
+ * monero_utils_free() for the strings that hold a seed or a private key: monero_wallet_get_seed(),
+ * monero_wallet_get_private_view_key(), monero_wallet_get_private_spend_key() and monero_wallet_get_tx_key().
+ * The copies that the caller made of the secret are the caller's to overwrite.
+ *
+ * @param secret is a string that one of those functions returned, or NULL
+ */
+MONERO_EXPORT void monero_utils_free_secret(char* secret);
+
 // ---------------------------------- VERSION ---------------------------------
 
 // the version of the C ABI, as major.minor.patch like the releases of monero-cpp. While the major

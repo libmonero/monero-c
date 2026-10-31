@@ -341,7 +341,7 @@ MONERO_EXPORT monero_result monero_wallet_is_multisig(monero_wallet* wallet, boo
  * Get the mnemonic seed of the wallet. Fails for a view-only wallet.
  *
  * @param wallet is the wallet handle
- * @param out_seed receives the seed. Free with monero_utils_free()
+ * @param out_seed receives the seed. Free with monero_utils_free_secret()
  * @return MONERO_OK or MONERO_ERROR
  */
 MONERO_EXPORT monero_result monero_wallet_get_seed(monero_wallet* wallet, char** out_seed);
@@ -368,7 +368,7 @@ MONERO_EXPORT monero_result monero_wallet_get_primary_address(monero_wallet* wal
  * Get the private view key of the wallet, in hex.
  *
  * @param wallet is the wallet handle
- * @param out_key receives the key. Free with monero_utils_free()
+ * @param out_key receives the key. Free with monero_utils_free_secret()
  * @return MONERO_OK or MONERO_ERROR
  */
 MONERO_EXPORT monero_result monero_wallet_get_private_view_key(monero_wallet* wallet, char** out_key);
@@ -377,7 +377,7 @@ MONERO_EXPORT monero_result monero_wallet_get_private_view_key(monero_wallet* wa
  * Get the private spend key of the wallet, in hex. Fails for a view-only wallet.
  *
  * @param wallet is the wallet handle
- * @param out_key receives the key. Free with monero_utils_free()
+ * @param out_key receives the key. Free with monero_utils_free_secret()
  * @return MONERO_OK or MONERO_ERROR
  */
 MONERO_EXPORT monero_result monero_wallet_get_private_spend_key(monero_wallet* wallet, char** out_key);
@@ -1345,7 +1345,7 @@ MONERO_EXPORT monero_result monero_wallet_parse_payment_uri(monero_wallet* walle
  *
  * @param wallet is the wallet handle
  * @param tx_hash is the hash of the transaction
- * @param out_key receives the secret key. Free with monero_utils_free()
+ * @param out_key receives the secret key. Free with monero_utils_free_secret()
  * @return MONERO_OK or MONERO_ERROR
  */
 MONERO_EXPORT monero_result monero_wallet_get_tx_key(monero_wallet* wallet, const char* tx_hash, char** out_key);

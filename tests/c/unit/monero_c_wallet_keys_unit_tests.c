@@ -55,12 +55,12 @@ static void check_keys(monero_wallet* wallet, const char* address, const char* v
   value = NULL;
   EXPECT_OK(monero_wallet_get_private_view_key(wallet, &value));
   CHECK(value != NULL && strcmp(value, view_key) == 0);
-  monero_utils_free(value);
+  monero_utils_free_secret(value);
 
   value = NULL;
   EXPECT_OK(monero_wallet_get_private_spend_key(wallet, &value));
   CHECK(value != NULL && strcmp(value, spend_key) == 0);
-  monero_utils_free(value);
+  monero_utils_free_secret(value);
 }
 
 static void test_create_random(void) {
@@ -77,7 +77,7 @@ static void test_create_random(void) {
   char* seed = NULL;
   EXPECT_OK(monero_wallet_get_seed(wallet, &seed));
   CHECK(count_words(seed) == 25);
-  monero_utils_free(seed);
+  monero_utils_free_secret(seed);
 
   char* language = NULL;
   EXPECT_OK(monero_wallet_get_seed_language(wallet, &language));

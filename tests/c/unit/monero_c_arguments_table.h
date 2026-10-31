@@ -117,6 +117,7 @@ static monero_result call_monero_utils_binary_blocks_to_json(void** a) { return 
 static monero_result call_monero_utils_binary_to_json(void** a) { return monero_utils_binary_to_json((const uint8_t*) a[0], *(size_t*) a[1], (char**) a[2]); }
 static monero_result call_monero_utils_configure_logging(void** a) { (void) monero_utils_configure_logging((const char*) a[0], *(bool*) a[1]); return MONERO_OK; }
 static monero_result call_monero_utils_free(void** a) { (void) monero_utils_free((void*) a[0]); return MONERO_OK; }
+static monero_result call_monero_utils_free_secret(void** a) { (void) monero_utils_free_secret((char*) a[0]); return MONERO_OK; }
 static monero_result call_monero_utils_get_abi_version(void** a) { return monero_utils_get_abi_version((uint32_t*) a[0], (uint32_t*) a[1], (uint32_t*) a[2]); }
 static monero_result call_monero_utils_get_integrated_address(void** a) { return monero_utils_get_integrated_address(*(int32_t*) a[0], (const char*) a[1], (const char*) a[2], (char**) a[3]); }
 static monero_result call_monero_utils_get_payment_uri(void** a) { return monero_utils_get_payment_uri((const char*) a[0], *(int32_t*) a[1], (char**) a[2]); }
@@ -411,6 +412,7 @@ static const arg_function g_functions[] = {
   {"monero_utils_binary_to_json", call_monero_utils_binary_to_json, 3, {K_PBYTES, K_SIZE, K_OUT_STR}, {"data", "len", "out_json"}, 0x0, RET_RESULT},
   {"monero_utils_configure_logging", call_monero_utils_configure_logging, 2, {K_STR, K_BOOL}, {"path", "console"}, 0x0, RET_OTHER},
   {"monero_utils_free", call_monero_utils_free, 1, {K_PTR}, {"ptr"}, 0x0, RET_OTHER},
+  {"monero_utils_free_secret", call_monero_utils_free_secret, 1, {K_PTR}, {"secret"}, 0x0, RET_OTHER},
   {"monero_utils_get_abi_version", call_monero_utils_get_abi_version, 3, {K_OUT_U32, K_OUT_U32, K_OUT_U32}, {"out_major", "out_minor", "out_patch"}, 0x7, RET_RESULT},
   {"monero_utils_get_integrated_address", call_monero_utils_get_integrated_address, 4, {K_I32, K_STR, K_STR, K_OUT_STR}, {"network_type", "standard_address", "payment_id", "out_json"}, 0x8, RET_RESULT},
   {"monero_utils_get_payment_uri", call_monero_utils_get_payment_uri, 3, {K_STR, K_I32, K_OUT_STR}, {"tx_config_json", "network_type", "out_uri"}, 0x4, RET_RESULT},

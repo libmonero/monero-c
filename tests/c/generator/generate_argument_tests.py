@@ -44,6 +44,7 @@ KINDS = {
     'const bool*': 'K_PBOOL',
     'const uint8_t*': 'K_PBYTES',
     'void*': 'K_PTR',
+    'char*': 'K_PTR',
     'char**': 'K_OUT_STR',
     'uint8_t**': 'K_OUT_BYTES',
     'uint64_t**': 'K_OUT_U64S',

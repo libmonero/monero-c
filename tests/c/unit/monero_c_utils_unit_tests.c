@@ -555,6 +555,17 @@ static void test_last_error_code(void) {
   free(nested);
 }
 
+// the secrets that the wallet returns are freed with monero_utils_free_secret(), which accepts NULL as free() does
+static void test_free_secret(void) {
+  char* copy = (char*) malloc(8);
+  monero_utils_free_secret(NULL);
+  if (copy != NULL) {
+    memcpy(copy, "a seed", 7);
+    monero_utils_free_secret(copy);
+  }
+  CHECK(copy != NULL);
+}
+
 static void test_logging(void) {
   const char* path = "monero_c_utils_unit_tests.log";
   FILE* file = NULL;
@@ -596,6 +607,7 @@ int main(void) {
   test_binary_blocks_to_json();
   test_failed_calls_reset_outputs();
   test_last_error_code();
+  test_free_secret();
   test_logging();
 #if !defined(_WIN32)
   test_logging_from_several_threads();

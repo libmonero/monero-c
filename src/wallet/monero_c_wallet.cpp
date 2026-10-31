@@ -44,6 +44,7 @@ using monero_c::array_of;
 using monero_c::check_json_depth;
 using monero_c::check_mnemonic_length;
 using monero_c::check_period_ms;
+using monero_c::dup_secret;
 using monero_c::dup_string;
 using monero_c::guard;
 using monero_c::json_of_list;
@@ -159,6 +160,27 @@ monero::monero_wallet_config make_config(const char* path, const char* password,
   config.m_regtest = network_type == MONERO_UTILS_NETWORK_REGTEST;
   return config;
 }
+
+void wipe(boost::optional<std::string>& value) noexcept {
+  if (value != boost::none) monero_c::wipe(*value);
+}
+
+// wipes the secrets of a wallet config when the call ends, whichever way it ends. The config is the copy that monero-c makes of the
+// arguments, and monero-cpp makes its own for the wallet it creates
+struct config_wipe {
+  monero::monero_wallet_config& config;
+
+  explicit config_wipe(monero::monero_wallet_config& c) : config(c) {}
+  ~config_wipe() {
+    wipe(config.m_password);
+    wipe(config.m_seed);
+    wipe(config.m_seed_offset);
+    wipe(config.m_private_view_key);
+    wipe(config.m_private_spend_key);
+  }
+  config_wipe(const config_wipe&) = delete;
+  config_wipe& operator=(const config_wipe&) = delete;
+};
 
 // a new wallet starts from an estimate of the current date, which is past the height of a regtest chain. The keys file holds the
 // height, and store() doesn't write that file, but a password does, so the same one is set again
@@ -520,6 +542,7 @@ monero_result monero_wallet_create_random(const char* path, const char* password
   if (!require(path, "path") || !require(out_wallet, "out_wallet")) return MONERO_ERROR;
   return guard([&] {
     monero::monero_wallet_config config = make_config(path, password, network_type, language);
+    config_wipe wipe_config(config);
     std::unique_ptr<monero::monero_wallet_full> wallet(monero::monero_wallet_full::create_wallet(config));
     if (network_type == MONERO_UTILS_NETWORK_REGTEST) restart_from_genesis(*wallet, *config.m_password);
     *out_wallet = wrap(std::move(wallet), network_type);
@@ -531,6 +554,7 @@ monero_result monero_wallet_create_from_seed(const char* path, const char* passw
   if (!require(path, "path") || !require(seed, "seed") || !require(out_wallet, "out_wallet")) return MONERO_ERROR;
   return guard([&] {
     monero::monero_wallet_config config = make_config(path, password, network_type, language);
+    config_wipe wipe_config(config);
     config.m_seed = mnemonic_of(seed);
     config.m_seed_offset = safe_str(seed_offset);
     config.m_restore_height = restore_height;
@@ -543,6 +567,7 @@ monero_result monero_wallet_create_from_keys(const char* path, const char* passw
   if (!require(path, "path") || !require(address, "address") || !require(private_view_key, "private_view_key") || !require(out_wallet, "out_wallet")) return MONERO_ERROR;
   return guard([&] {
     monero::monero_wallet_config config = make_config(path, password, network_type, language);
+    config_wipe wipe_config(config);
     config.m_primary_address = std::string(address);
     config.m_private_view_key = std::string(private_view_key);
     config.m_private_spend_key = safe_str(private_spend_key);
@@ -556,6 +581,7 @@ monero_result monero_wallet_create(const char* config_json, ::monero_wallet** ou
   if (!require(config_json, "config_json") || !require(out_wallet, "out_wallet")) return MONERO_ERROR;
   return guard([&] {
     std::shared_ptr<monero::monero_wallet_config> config = wallet_config_of(config_json);
+    config_wipe wipe_config(*config);
     bool has_seed = config->m_seed != boost::none && !config->m_seed->empty();
     bool has_keys = (config->m_primary_address != boost::none && !config->m_primary_address->empty()) || (config->m_private_view_key != boost::none && !config->m_private_view_key->empty()) ||
                     (config->m_private_spend_key != boost::none && !config->m_private_spend_key->empty());
@@ -573,7 +599,8 @@ monero_result monero_wallet_open(const char* path, const char* password, int32_t
   reset_out(out_wallet);
   if (!require(path, "path") || !require(out_wallet, "out_wallet")) return MONERO_ERROR;
   return guard([&] {
-    *out_wallet = wrap(std::unique_ptr<monero::monero_wallet_full>(monero::monero_wallet_full::open_wallet(std::string(path), safe_str(password), network_of<monero::monero_network_type>(network_type), network_type == MONERO_UTILS_NETWORK_REGTEST)), network_type);
+    monero_c::secret_string wallet_password(password);
+    *out_wallet = wrap(std::unique_ptr<monero::monero_wallet_full>(monero::monero_wallet_full::open_wallet(std::string(path), wallet_password.get(), network_of<monero::monero_network_type>(network_type), network_type == MONERO_UTILS_NETWORK_REGTEST)), network_type);
   });
 }
 
@@ -593,6 +620,7 @@ monero_result monero_wallet_keys_create_random(int32_t network_type, const char*
   if (!require(out_wallet, "out_wallet")) return MONERO_ERROR;
   return guard([&] {
     monero::monero_wallet_config config = make_config(nullptr, nullptr, network_type, language);
+    config_wipe wipe_config(config);
     *out_wallet = wrap(std::unique_ptr<monero::monero_wallet>(monero::monero_wallet_keys::create_wallet_random(config)), network_type);
   });
 }
@@ -602,6 +630,7 @@ monero_result monero_wallet_keys_create_from_seed(int32_t network_type, const ch
   if (!require(seed, "seed") || !require(out_wallet, "out_wallet")) return MONERO_ERROR;
   return guard([&] {
     monero::monero_wallet_config config = make_config(nullptr, nullptr, network_type, language);
+    config_wipe wipe_config(config);
     config.m_seed = mnemonic_of(seed);
     config.m_seed_offset = safe_str(seed_offset);
     *out_wallet = wrap(std::unique_ptr<monero::monero_wallet>(monero::monero_wallet_keys::create_wallet_from_seed(config)), network_type);
@@ -613,6 +642,7 @@ monero_result monero_wallet_keys_create_from_keys(int32_t network_type, const ch
   if (!require(address, "address") || !require(private_view_key, "private_view_key") || !require(out_wallet, "out_wallet")) return MONERO_ERROR;
   return guard([&] {
     monero::monero_wallet_config config = make_config(nullptr, nullptr, network_type, language);
+    config_wipe wipe_config(config);
     config.m_primary_address = std::string(address);
     config.m_private_view_key = std::string(private_view_key);
     config.m_private_spend_key = safe_str(private_spend_key);
@@ -665,7 +695,7 @@ monero_result monero_wallet_is_multisig(::monero_wallet* wallet, bool* out_multi
 monero_result monero_wallet_get_seed(::monero_wallet* wallet, char** out_seed) {
   reset_out(out_seed);
   if (!require(wallet, "wallet") || !require(out_seed, "out_seed")) return MONERO_ERROR;
-  return guard([&] { *out_seed = dup_string(wallet->wallet->get_seed()); });
+  return guard([&] { *out_seed = dup_secret(wallet->wallet->get_seed()); });
 }
 
 monero_result monero_wallet_get_seed_language(::monero_wallet* wallet, char** out_language) {
@@ -683,13 +713,13 @@ monero_result monero_wallet_get_primary_address(::monero_wallet* wallet, char** 
 monero_result monero_wallet_get_private_view_key(::monero_wallet* wallet, char** out_key) {
   reset_out(out_key);
   if (!require(wallet, "wallet") || !require(out_key, "out_key")) return MONERO_ERROR;
-  return guard([&] { *out_key = dup_string(wallet->wallet->get_private_view_key()); });
+  return guard([&] { *out_key = dup_secret(wallet->wallet->get_private_view_key()); });
 }
 
 monero_result monero_wallet_get_private_spend_key(::monero_wallet* wallet, char** out_key) {
   reset_out(out_key);
   if (!require(wallet, "wallet") || !require(out_key, "out_key")) return MONERO_ERROR;
-  return guard([&] { *out_key = dup_string(wallet->wallet->get_private_spend_key()); });
+  return guard([&] { *out_key = dup_secret(wallet->wallet->get_private_spend_key()); });
 }
 
 monero_result monero_wallet_get_height(::monero_wallet* wallet, uint64_t* out_height) {
@@ -795,7 +825,11 @@ monero_result monero_wallet_get_address_book_entries(::monero_wallet* wallet, co
 
 monero_result monero_wallet_change_password(::monero_wallet* wallet, const char* old_password, const char* new_password) {
   if (!require(wallet, "wallet")) return MONERO_ERROR;
-  return guard([&] { wallet->wallet->change_password(safe_str(old_password), safe_str(new_password)); });
+  return guard([&] {
+    monero_c::secret_string old_secret(old_password);
+    monero_c::secret_string new_secret(new_password);
+    wallet->wallet->change_password(old_secret.get(), new_secret.get());
+  });
 }
 
 monero_result monero_wallet_create_account(::monero_wallet* wallet, const char* label, char** out_json) {
@@ -1315,7 +1349,10 @@ monero_result monero_wallet_sweep_unlocked(::monero_wallet* wallet, const char* 
 
 monero_result monero_wallet_move_to(::monero_wallet* wallet, const char* path, const char* password) {
   if (!require(wallet, "wallet") || !require(path, "path")) return MONERO_ERROR;
-  return guard([&] { wallet->wallet->move_to(std::string(path), safe_str(password)); });
+  return guard([&] {
+    monero_c::secret_string wallet_password(password);
+    wallet->wallet->move_to(std::string(path), wallet_password.get());
+  });
 }
 
 monero_result monero_wallet_get_payment_uri(::monero_wallet* wallet, const char* config_json, char** out_uri) {
@@ -1333,7 +1370,7 @@ monero_result monero_wallet_parse_payment_uri(::monero_wallet* wallet, const cha
 monero_result monero_wallet_get_tx_key(::monero_wallet* wallet, const char* tx_hash, char** out_key) {
   reset_out(out_key);
   if (!require(wallet, "wallet") || !require(tx_hash, "tx_hash") || !require(out_key, "out_key")) return MONERO_ERROR;
-  return guard([&] { *out_key = dup_string(wallet->wallet->get_tx_key(std::string(tx_hash))); });
+  return guard([&] { *out_key = dup_secret(wallet->wallet->get_tx_key(std::string(tx_hash))); });
 }
 
 monero_result monero_wallet_check_tx_key(::monero_wallet* wallet, const char* tx_hash, const char* tx_key, const char* address, char** out_json) {
@@ -1405,13 +1442,19 @@ monero_result monero_wallet_prepare_multisig(::monero_wallet* wallet, char** out
 monero_result monero_wallet_make_multisig(::monero_wallet* wallet, const char* const* multisig_hexes, size_t num_multisig_hexes, int32_t threshold, const char* password, char** out_multisig_hex) {
   reset_out(out_multisig_hex);
   if (!require(wallet, "wallet") || !require(out_multisig_hex, "out_multisig_hex")) return MONERO_ERROR;
-  return guard([&] { *out_multisig_hex = dup_string(wallet->wallet->make_multisig(string_array(multisig_hexes, num_multisig_hexes, "multisig_hexes"), threshold, safe_str(password))); });
+  return guard([&] {
+    monero_c::secret_string wallet_password(password);
+    *out_multisig_hex = dup_string(wallet->wallet->make_multisig(string_array(multisig_hexes, num_multisig_hexes, "multisig_hexes"), threshold, wallet_password.get()));
+  });
 }
 
 monero_result monero_wallet_exchange_multisig_keys(::monero_wallet* wallet, const char* const* multisig_hexes, size_t num_multisig_hexes, const char* password, char** out_json) {
   reset_out(out_json);
   if (!require(wallet, "wallet") || !require(out_json, "out_json")) return MONERO_ERROR;
-  return guard([&] { *out_json = dup_string(wallet->wallet->exchange_multisig_keys(string_array(multisig_hexes, num_multisig_hexes, "multisig_hexes"), safe_str(password)).serialize()); });
+  return guard([&] {
+    monero_c::secret_string wallet_password(password);
+    *out_json = dup_string(wallet->wallet->exchange_multisig_keys(string_array(multisig_hexes, num_multisig_hexes, "multisig_hexes"), wallet_password.get()).serialize());
+  });
 }
 
 monero_result monero_wallet_export_multisig_hex(::monero_wallet* wallet, char** out_multisig_hex) {
@@ -1447,7 +1490,10 @@ monero_result monero_wallet_rpc_connect(::monero_rpc_connection* connection, ::m
 
 monero_result monero_wallet_rpc_open_wallet(::monero_wallet* wallet, const char* name, const char* wallet_password) {
   if (!require(wallet, "wallet") || !require(name, "name")) return MONERO_ERROR;
-  return guard([&] { as_rpc(wallet).open_wallet(std::string(name), safe_str(wallet_password)); });
+  return guard([&] {
+    monero_c::secret_string secret(wallet_password);
+    as_rpc(wallet).open_wallet(std::string(name), secret.get());
+  });
 }
 
 monero_result monero_wallet_rpc_create_wallet(::monero_wallet* wallet, const char* config_json) {
@@ -1460,7 +1506,8 @@ monero_result monero_wallet_rpc_open(const char* uri, const char* username, cons
   if (!require(uri, "uri") || !require(name, "name") || !require(out_wallet, "out_wallet")) return MONERO_ERROR;
   return guard([&] {
     std::shared_ptr<monero::monero_wallet_rpc> rpc = rpc_client(uri, username, password);
-    rpc->open_wallet(std::string(name), safe_str(wallet_password));
+    monero_c::secret_string secret(wallet_password);
+    rpc->open_wallet(std::string(name), secret.get());
     *out_wallet = wrap_shared(rpc);
   });
 }
@@ -1468,7 +1515,11 @@ monero_result monero_wallet_rpc_open(const char* uri, const char* username, cons
 monero_result monero_wallet_rpc_create_random(const char* uri, const char* username, const char* password, const char* name, const char* wallet_password, const char* language, ::monero_wallet** out_wallet) {
   reset_out(out_wallet);
   if (!require(uri, "uri") || !require(name, "name") || !require(out_wallet, "out_wallet")) return MONERO_ERROR;
-  return guard([&] { *out_wallet = create_rpc_wallet(uri, username, password, rpc_config(name, wallet_password, language)); });
+  return guard([&] {
+    auto config = rpc_config(name, wallet_password, language);
+    config_wipe wipe_config(*config);
+    *out_wallet = create_rpc_wallet(uri, username, password, config);
+  });
 }
 
 monero_result monero_wallet_rpc_create_from_seed(const char* uri, const char* username, const char* password, const char* name, const char* wallet_password, const char* seed, const char* seed_offset, uint64_t restore_height, const char* language, ::monero_wallet** out_wallet) {
@@ -1476,6 +1527,7 @@ monero_result monero_wallet_rpc_create_from_seed(const char* uri, const char* us
   if (!require(uri, "uri") || !require(name, "name") || !require(seed, "seed") || !require(out_wallet, "out_wallet")) return MONERO_ERROR;
   return guard([&] {
     auto config = rpc_config(name, wallet_password, language);
+    config_wipe wipe_config(*config);
     config->m_seed = mnemonic_of(seed);
     config->m_seed_offset = safe_str(seed_offset);
     config->m_restore_height = restore_height;
@@ -1488,6 +1540,7 @@ monero_result monero_wallet_rpc_create_from_keys(const char* uri, const char* us
   if (!require(uri, "uri") || !require(name, "name") || !require(address, "address") || !require(private_view_key, "private_view_key") || !require(out_wallet, "out_wallet")) return MONERO_ERROR;
   return guard([&] {
     auto config = rpc_config(name, wallet_password, language);
+    config_wipe wipe_config(*config);
     config->m_primary_address = std::string(address);
     config->m_private_view_key = std::string(private_view_key);
     config->m_private_spend_key = safe_str(private_spend_key);

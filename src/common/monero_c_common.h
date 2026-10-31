@@ -25,6 +25,7 @@
 
 #include "utils/monero_c_utils.h"
 #include "common/monero_c_callbacks.h"
+#include "common/monero_c_secret.h"
 #include "common/monero_c_rpc_connection.h"
 
 #include "rapidjson/stringbuffer.h"
@@ -112,6 +113,20 @@ inline char* dup_string(const std::string& s) {
   char* out = static_cast<char*>(std::malloc(s.size() + 1));
   if (out == nullptr) throw std::bad_alloc();
   std::copy(s.c_str(), s.c_str() + s.size() + 1, out);
+  return out;
+}
+
+// copies a secret that monero-cpp returned in a string to a buffer for the caller, who frees it with monero_utils_free_secret(), and wipes the
+// string, which would stay in freed memory otherwise
+inline char* dup_secret(std::string&& secret) {
+  char* out = nullptr;
+  try {
+    out = dup_string(secret);
+  } catch (...) {
+    wipe(secret);
+    throw;
+  }
+  wipe(secret);
   return out;
 }
 
