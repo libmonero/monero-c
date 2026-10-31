@@ -1,16 +1,16 @@
-# regtest node and wallet RPC server for the integration tests, same image as monero-python's tests/docker-compose.yml
+# regtest node and wallet RPC server for the integration tests, from the images of libmonero/docker-monero-rpc, which are built from the
+# same fork of monero as monero-cpp. MONERO_TAG pins them, for example MONERO_TAG=v0.18.5.1-1
 services:
 
   node:
-    image: lalanza808/monero:v0.18.5.1
+    image: ghcr.io/libmonero/monero-daemon-rpc:${MONERO_TAG:-master}
     container_name: monero_c_node
     # --fixed-difficulty: otherwise the difficulty grows about 10x per block, and generateblocks times out
+    # the entrypoint is monerod --non-interactive
     command: [
-      "monerod",
       "--regtest",
       "--offline",
       "--fixed-difficulty=1",
-      "--non-interactive",
       "--log-level=0",
       "--hide-my-port",
       "--no-zmq",
@@ -28,12 +28,12 @@ services:
     restart: "no"
 
   wallet_rpc:
-    image: lalanza808/monero:v0.18.5.1
+    image: ghcr.io/libmonero/monero-wallet-rpc:${MONERO_TAG:-master}
     container_name: monero_c_wallet_rpc
     # the tests give the server the daemon URI http://127.0.0.1:18081, which reaches monerod on this network
     network_mode: "service:node"
+    # the entrypoint is monero-wallet-rpc
     command: [
-      "monero-wallet-rpc",
       "--daemon-address=127.0.0.1:18081",
       "--trusted-daemon",
       "--allow-mismatched-daemon-version",
@@ -42,11 +42,11 @@ services:
       "--confirm-external-bind",
       "--disable-rpc-login",
       "--rpc-access-control-origins=*",
-      "--wallet-dir=/wallet",
+      "--wallet-dir=/home/monero/wallets",
       "--non-interactive"
     ]
     volumes:
-      - wallet_rpc_data:/wallet
+      - wallet_rpc_data:/home/monero/wallets
     depends_on:
       - node
     restart: "no"
