@@ -120,6 +120,7 @@ Every call returns `MONERO_OK` or `MONERO_ERROR`, `monero_last_error()` gives th
 * [JVM archive (JAR)](packaging/jvm/README.md)
 * [Dart package](packaging/dart/README.md)
 * [CMake install, pkg-config and Linux packages](packaging/cmake/README.md)
+* [Apple XCFramework](packaging/apple/README.md)
 * [Changelog](CHANGELOG.md)
 
 ## Building monero-c from source

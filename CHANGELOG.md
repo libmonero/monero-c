@@ -43,6 +43,9 @@ binding should ask for 0.2.x. The JSON is the one of 0.1.0-alpha.1.
 * Install rules for CMake: `cmake --install` puts the shared library, the headers, `find_package(monero_c)` (the target `monero_c::monero_c`) and
   `monero_c.pc` in a prefix, and CPack makes a `.deb` or an `.rpm`. The draft release has the `.deb` for x86-64 and ARM64. `MONERO_C_INSTALL=OFF`
   leaves the rules out. See [packaging/cmake](packaging/cmake/README.md).
+* `MoneroC.xcframework`, the macOS libraries as one universal XCFramework with the headers, a module map for `import MoneroC` and libusb next to
+  the library, zipped for a Swift `binaryTarget`. The CI builds a C and a Swift program against it. There is no iOS slice. See
+  [packaging/apple](packaging/apple/README.md).
 
 The functions go from 291 to 295.
 

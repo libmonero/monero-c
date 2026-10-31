@@ -70,11 +70,18 @@ jobs:
       contents: read
     uses: ./.github/workflows/dart.yml
 
+  apple:
+    name: Apple XCFramework
+    needs: [linux, macos]
+    permissions:
+      contents: read
+    uses: ./.github/workflows/apple.yml
+
   release:
     name: Release
     # a tag v* ends in a draft release with the libraries and the packages; publishing the draft pushes the package to nuget.org
     if: github.ref_type == 'tag' && startsWith(github.ref_name, 'v')
-    needs: [linux, macos, windows, android, dotnet, android-aar, jvm, dart]
+    needs: [linux, macos, windows, android, dotnet, android-aar, jvm, dart, apple]
     permissions:
       contents: write
       actions: read
