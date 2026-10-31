@@ -1,12 +1,70 @@
 # Changelog
 
-## 0.1.1-alpha.1 (not released yet)
+## 0.2.0-alpha.1 (not released yet)
 
-A fix for building `Monero.Native` from the source in an IDE. The functions and the JSON are the ones of 0.1.0-alpha.1, and the ABI version
-is 0.1.1.
+The second alpha of the C ABI, version 0.2.0, and of `Monero.Native`. It changes the ABI: a program built with the headers of 0.1.0 has to be
+rebuilt, and the callbacks of a wallet are delivered in another way. `monero_utils_get_abi_version()` tells which version a library has, and a
+binding should ask for 0.2.x. The JSON is the one of 0.1.0-alpha.1.
 
+### Breaking changes
+
+* **`struct_size`.** `monero_wallet_listener_callbacks` and `monero_daemon_listener_callbacks` start with `uint32_t struct_size`, which the
+  program sets to the `sizeof` of its struct. `monero_wallet_listener_create()` and `monero_daemon_listener_create()` copy only that many
+  bytes, and fail with `MONERO_ERROR_INVALID_ARGUMENT` if it is 0 or doesn't reach `user_data`. A later version can add callbacks at the end
+  of the struct and a program built with these headers keeps working: a callback that its struct doesn't have is NULL.
+* **Callbacks of a wallet.** The notifications of a wallet go into a queue of the listener, and a thread of the listener calls the callbacks one
+  at a time and in order, with no lock of the wallet held. A callback can call the wallet: `monero_wallet_get_balance()` and the other calls
+  that need what a sync holds wait until the sync is done, and the sync doesn't wait for the callback. Until now such a call never returned.
+  `monero_wallet_sync()` and `monero_wallet_close()` return after the callbacks they caused, no callback of a listener starts after
+  `monero_wallet_remove_listener()` returns, and a callback can remove or free its own listener. A sync progress and a balance that wait are
+  replaced by the newer one, more than 100000 waiting new blocks drop the oldest, and an output is never dropped. The listeners of the daemon
+  are as they were.
+
+### Added
+
+* `monero_last_error_code()` returns the kind of the last failure of the thread: none, generic, invalid argument, out of memory, RPC or I/O. It
+  comes from the type of the exception. The checks of monero-c and the `validate_` functions are invalid arguments, with the same messages.
+  What monero-cpp throws as a plain error, a network failure included, is generic.
+* `monero_utils_free_secret()` overwrites a string and frees it. Use it for the seed, the private keys and the tx key. Those getters wipe
+  the copy that monero-cpp returned, and the passwords, seeds and keys that monero-c copies from its arguments are wiped when the call ends.
+* `monero_wallet_wait_for_next_block_timeout()` and `monero_daemon_wait_for_next_block_header_timeout()` wait for a block for at most a number
+  of milliseconds, from 1 to 2147483647. A timeout is a success with `out_timed_out` set, so a task that can be cancelled waits again.
+* `MONERO_C_STATIC`, to define before the headers when a program links `libmonero_c.a` on Windows, where they declare the functions as
+  imported from a DLL otherwise. The target `monero_c-static` of CMake defines it. `monero_c_static_unit_tests` links the archive.
+
+The functions go from 291 to 295.
+
+### Changed
+
+* monero-cpp is updated: monero-project v0.18.5.4, and the notes of the txs are written with the cache of the wallet.
+* The macOS libraries are built with `openssl@3` and with unbound 1.22.0 built from source, as on Linux, because the unbound of Homebrew is
+  built with OpenSSL 4, which Boost 1.85 does not build with.
 * `native/Monero.Native.csproj` doesn't build the library while an IDE loads the project. Rider and Visual Studio run a design-time build to
   sync a solution, and that build started the native build, which takes hours. A Build Solution still builds it.
+
+### Known limits
+
+* **Threads.** Don't use one wallet handle from two threads at once. Adding, removing and freeing the same listener from two threads can race,
+  so a binding keeps one native listener per wallet. See [Thread Safety](README.md#thread-safety).
+* **Cancelling.** `monero_wallet_wait_for_next_block()` and `monero_daemon_wait_for_next_block_header()` can't be stopped, so use the
+  functions with a timeout.
+* **Errors.** A network failure and most of the validation errors of monero-cpp are `MONERO_ERROR_GENERIC`, since monero-cpp throws one
+  type for them. There is no code for "not supported".
+* **Secrets.** The JSON text and the parse tree of `monero_wallet_create()`, and the copies that monero-cpp and wallet2 keep, are not wiped.
+* **Nodes.** A node that answers with JSON nested thousands of levels deep can crash the client, because monero-cpp parses the answers with a
+  recursive parser. Connect to nodes that you trust.
+* **Memory.** `monero_wallet_open()` with a wrong password leaks about 200 KB, a query of txs that filters some out leaks about 190 KB
+  for 100 txs, and `monero_wallet_get_outputs()` with an `inputQuery` in its `txQuery` leaks about 1.5 KB. All three are in monero-cpp.
+* **Transactions.** The ring size of the config is ignored, and the ring is always 16. The multisig test goes as far as the exchange of keys,
+  and doesn't sign a multisig tx.
+* **Wallets.** A wallet that `monero_wallet_create()` connected to a daemon doesn't see, for tens of seconds, the blocks that the daemon
+  gets after that. `monero_wallet_get_multisig_info()` returns whatever the memory had in the threshold and the number of participants of a
+  wallet that is not multisig.
+* **Platforms.** Linux needs glibc 2.34 or newer. There is no musl, iOS or Linux ARM32, and the Android build is not in the package. On
+  Windows, the DLL exports about 1,100 symbols of Boost besides the C ABI, the paths of wallets with characters that are not ASCII are
+  not tested, and the build uses the MSYS2 libraries at the version that the repository has the day it builds.
+
+The open items are in [`TODO.md`](TODO.md).
 
 ## 0.1.0-alpha.1 (2026-10-16)
 
