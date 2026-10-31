@@ -157,7 +157,7 @@ MONERO_EXPORT void monero_utils_free_secret(char* secret);
 // version breaks callers, and the minor version grows when functions are added. The patch version
 // changes for fixes that leave the ABI as it is
 #define MONERO_C_ABI_VERSION_MAJOR 0
-#define MONERO_C_ABI_VERSION_MINOR 2
+#define MONERO_C_ABI_VERSION_MINOR 3
 #define MONERO_C_ABI_VERSION_PATCH 0
 
 /**

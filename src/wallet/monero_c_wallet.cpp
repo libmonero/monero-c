@@ -24,6 +24,7 @@
 #include "common/monero_c_common.h"
 #include "wallet/monero_wallet_full.h"
 #include "wallet/monero_wallet_keys.h"
+#include "wallet/monero_wallet_light.h"
 #include "wallet/monero_wallet_rpc.h"
 #include "utils/gen_utils.h"
 #include "utils/monero_utils.h"
@@ -579,6 +580,27 @@ monero::monero_wallet_rpc& as_rpc(::monero_wallet* wallet) {
   monero::monero_wallet_rpc* rpc = dynamic_cast<monero::monero_wallet_rpc*>(wallet->wallet.get());
   if (rpc == nullptr) throw std::invalid_argument("not an RPC wallet");
   return *rpc;
+}
+
+// the light wallet methods are only on monero_wallet_light, so the handle must hold a light wallet
+monero::monero_wallet_light& as_light(::monero_wallet* wallet) {
+  monero::monero_wallet_light* light = dynamic_cast<monero::monero_wallet_light*>(wallet->wallet.get());
+  if (light == nullptr) throw std::runtime_error("not a light wallet");
+  return *light;
+}
+
+// parses the config of a light wallet, which a seed and keys can't both initialize, and which has
+// no daemon: its server is the connection of the call, so a config that has one is a mistake. A
+// light wallet has no files and no multisig, so a seed is always a mnemonic
+std::shared_ptr<monero::monero_wallet_config> light_config_of(const char* json) {
+  std::shared_ptr<monero::monero_wallet_config> config = wallet_config_of(json);
+  if (config->m_server != nullptr) throw std::invalid_argument("Cannot provide server config for light wallet");
+  bool has_seed = config->m_seed != boost::none && !config->m_seed->empty();
+  bool has_keys = (config->m_primary_address != boost::none && !config->m_primary_address->empty()) || (config->m_private_view_key != boost::none && !config->m_private_view_key->empty()) ||
+                  (config->m_private_spend_key != boost::none && !config->m_private_spend_key->empty());
+  if (has_seed && has_keys) throw std::invalid_argument("Wallet may be initialized with a seed or keys but not both");
+  if (has_seed) check_mnemonic_length(*config->m_seed);
+  return config;
 }
 
 // a connection to a monero-wallet-rpc server, to open or create wallets on it
@@ -1729,6 +1751,42 @@ monero_result monero_wallet_rpc_set_daemon_connection(::monero_wallet* wallet, c
     if (ssl_options_json != nullptr && ssl_options_json[0] != '\0') options = *model_json<monero::ssl_options>(ssl_options_json, "ssl_options");
     as_rpc(wallet).set_daemon_connection(model_json<monero::monero_rpc_connection>(connection_json, "connection"), is_trusted, options);
   });
+}
+
+// -------------------------------- LIGHT WALLETS -------------------------------
+
+monero_result monero_wallet_light_create(const char* config_json, ::monero_rpc_connection* connection, ::monero_wallet** out_wallet) {
+  reset_out(out_wallet);
+  if (!require(config_json, "config_json") || !require(connection, "connection") || !require(out_wallet, "out_wallet")) return MONERO_ERROR;
+  return guard([&] {
+    std::shared_ptr<monero::monero_wallet_config> config = light_config_of(config_json);
+    std::unique_ptr<monero::monero_wallet> wallet(monero::monero_wallet_light::create_wallet(*config, monero_c::connection_of(connection)));
+    bool regtest = config->m_regtest != boost::none && *config->m_regtest;
+    *out_wallet = wrap(std::move(wallet), regtest ? MONERO_UTILS_NETWORK_REGTEST : static_cast<int32_t>(*config->m_network_type));
+  });
+}
+
+monero_result monero_wallet_light_open(const char* config_json, ::monero_rpc_connection* connection, ::monero_wallet** out_wallet) {
+  reset_out(out_wallet);
+  if (!require(config_json, "config_json") || !require(connection, "connection") || !require(out_wallet, "out_wallet")) return MONERO_ERROR;
+  return guard([&] {
+    std::shared_ptr<monero::monero_wallet_config> config = light_config_of(config_json);
+    std::unique_ptr<monero::monero_wallet> wallet(monero::monero_wallet_light::open_wallet(*config, monero_c::connection_of(connection)));
+    bool regtest = config->m_regtest != boost::none && *config->m_regtest;
+    *out_wallet = wrap(std::move(wallet), regtest ? MONERO_UTILS_NETWORK_REGTEST : static_cast<int32_t>(*config->m_network_type));
+  });
+}
+
+monero_result monero_wallet_light_wallet_exists(const char* config_json, ::monero_rpc_connection* connection, bool* out_exists) {
+  reset_out(out_exists);
+  if (!require(config_json, "config_json") || !require(connection, "connection") || !require(out_exists, "out_exists")) return MONERO_ERROR;
+  return guard([&] { *out_exists = monero::monero_wallet_light::wallet_exists(*light_config_of(config_json), monero_c::connection_of(connection)); });
+}
+
+monero_result monero_wallet_light_get_unrefined_spend_count(::monero_wallet* wallet, uint64_t* out_count) {
+  reset_out(out_count);
+  if (!require(wallet, "wallet") || !require(out_count, "out_count")) return MONERO_ERROR;
+  return guard([&] { *out_count = as_light(wallet).get_unrefined_spend_count(); });
 }
 
 } // extern "C"
