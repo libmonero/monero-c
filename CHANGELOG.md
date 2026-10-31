@@ -37,6 +37,9 @@ binding should ask for 0.2.x. The JSON is the one of 0.1.0-alpha.1.
 * `monero-native-jvm`, a JAR with `libmonero_c` and libusb for Linux (x86-64, ARM64), macOS (Intel, Apple silicon) and Windows, in folders named as
   the resource prefix of JNA, and the licenses. It has no classes. The draft release has it with its POM, and the CI loads the library from it
   and reads the ABI version. See [packaging/jvm](packaging/jvm/README.md).
+* `monero_native`, a Dart package with a build hook that bundles `libmonero_c` for Linux, macOS, Windows and Android. The hook downloads the archive
+  of the release of its version and checks its SHA-256 against the `checksums.txt` of the package. The draft release has the package as
+  `monero_native-<version>.tar.gz`, ready for `dart pub publish`. See [packaging/dart](packaging/dart/README.md).
 
 The functions go from 291 to 295.
 

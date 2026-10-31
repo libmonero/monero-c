@@ -61,6 +61,8 @@ jobs:
             # only the Linux build collects the notices, and they cover the components of every platform, as the NuGet package has them
             bash packaging/common/pack-archive.sh "$VERSION" "$platform" "artifacts/monero-c-$platform" artifacts/monero-c-linux-x86_64/licenses release
           done
+          # the Dart package has the checksums of the archives above, so it comes after them
+          bash packaging/dart/build.sh "$VERSION" release
           (cd release && sha256sum * > SHA256SUMS.txt && cat SHA256SUMS.txt)
 
       - name: Take the notes from the changelog

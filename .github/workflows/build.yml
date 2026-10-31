@@ -63,11 +63,18 @@ jobs:
       contents: read
     uses: ./.github/workflows/jvm.yml
 
+  dart:
+    name: Dart package
+    needs: [linux, macos, windows, android]
+    permissions:
+      contents: read
+    uses: ./.github/workflows/dart.yml
+
   release:
     name: Release
     # a tag v* ends in a draft release with the libraries and the packages; publishing the draft pushes the package to nuget.org
     if: github.ref_type == 'tag' && startsWith(github.ref_name, 'v')
-    needs: [linux, macos, windows, android, dotnet, android-aar, jvm]
+    needs: [linux, macos, windows, android, dotnet, android-aar, jvm, dart]
     permissions:
       contents: write
       actions: read

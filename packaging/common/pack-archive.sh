@@ -25,13 +25,23 @@ mkdir -p "$stage/$name/include"
 cp "$build"/lib* "$stage/$name/"
 cp -R "$licenses" "$stage/$name/licenses"
 # the public headers, in the layout that monero_c.h includes them in
-(cd "$root/src" && cp --parents $(cat "$root/packaging/common/headers.txt") "$stage/$name/include/")
+# tr drops the CR that a checkout on Windows can put at the end of the lines
+tr -d '\r' < "$root/packaging/common/headers.txt" | while read -r header; do
+  mkdir -p "$stage/$name/include/$(dirname "$header")"
+  cp "$root/src/$header" "$stage/$name/include/$header"
+done
 cp "$root/LICENSE" "$root/README.md" "$stage/$name/"
 
 mkdir -p "$out"
 out=$(cd "$out" && pwd)
 if [ "$platform" = windows ]; then
-  (cd "$stage" && zip -qr "$out/$name.zip" "$name")
+  if command -v zip > /dev/null; then
+    (cd "$stage" && zip -qr "$out/$name.zip" "$name")
+  else
+    # Git Bash on Windows has no zip, and Python has the module
+    python=$(command -v python3 || command -v python)
+    (cd "$stage" && "$python" -m zipfile -c "$out/$name.zip" "$name")
+  fi
   echo "$out/$name.zip"
 else
   tar -C "$stage" -czf "$out/$name.tar.gz" "$name"

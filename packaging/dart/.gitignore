@@ -1,0 +1,4 @@
+# Dart tool, and the output of the build hooks
+.dart_tool/
+pubspec.lock
+checksums.txt

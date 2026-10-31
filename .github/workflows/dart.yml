@@ -1,0 +1,142 @@
+# Called by build.yml after the builds. Makes the Dart package as the release does, from the archives of this run, and checks it: the version, the
+# analysis, the dry run of the publication, and a test on each system that downloads the library from a local server, checks its SHA-256 and loads it
+name: Dart package
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    name: Package
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Download the builds
+        uses: actions/download-artifact@v8
+        with:
+          pattern: monero-c-*
+          path: artifacts
+
+      - name: Read the package version
+        run: |
+          version=$(dotnet msbuild packaging/dotnet-core/monero.pkgproj -getProperty:MoneroNativeVersion)
+          test -n "$version" || { echo "no version in packaging/dotnet-core/Version.props"; exit 1; }
+          echo "PACKAGE_VERSION=$version" >> "$GITHUB_ENV"
+
+      - name: Check the tag matches the package version
+        if: github.ref_type == 'tag'
+        run: |
+          [ "${GITHUB_REF_NAME#v}" = "$PACKAGE_VERSION" ] || { echo "tag $GITHUB_REF_NAME does not match package version $PACKAGE_VERSION"; exit 1; }
+
+      - name: Pack the archives and the package
+        run: |
+          for platform in linux-x86_64 linux-arm64 mac-x86_64 mac-arm64 windows android-arm64 android-x86_64; do
+            bash packaging/common/pack-archive.sh "$PACKAGE_VERSION" "$platform" "artifacts/monero-c-$platform" artifacts/monero-c-linux-x86_64/licenses release
+          done
+          bash packaging/dart/build.sh "$PACKAGE_VERSION" release
+
+      - name: Set up Dart
+        uses: dart-lang/setup-dart@6afc89df92d6eb3834022f73cd65adc8cdfcb92d # v1.8.1
+
+      - name: Analyze and dry-run the publication
+        run: |
+          tar -xzf "release/monero_native-$PACKAGE_VERSION.tar.gz" -C release
+          cd release/monero_native
+          dart pub get
+          dart analyze
+          dart pub publish --dry-run
+
+  test:
+    name: Test on ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Linux
+            os: ubuntu-24.04
+            artifact: monero-c-linux-x86_64
+            platform: linux-x86_64
+            python: python3
+          - name: macOS
+            os: macos-15
+            artifact: monero-c-mac-arm64
+            platform: mac-arm64
+            python: python3
+          - name: Windows
+            os: windows-latest
+            artifact: monero-c-windows
+            platform: windows
+            python: python
+
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Download the build
+        uses: actions/download-artifact@v8
+        with:
+          name: ${{ matrix.artifact }}
+          path: build
+
+      - name: Set up Dart
+        uses: dart-lang/setup-dart@6afc89df92d6eb3834022f73cd65adc8cdfcb92d # v1.8.1
+
+      - name: Read the versions
+        run: |
+          version=$(dotnet msbuild packaging/dotnet-core/monero.pkgproj -getProperty:MoneroNativeVersion)
+          test -n "$version" || { echo "no version in packaging/dotnet-core/Version.props"; exit 1; }
+          echo "PACKAGE_VERSION=$version" >> "$GITHUB_ENV"
+          echo "MONERO_C_ABI_VERSION=$(awk '/#define MONERO_C_ABI_VERSION_(MAJOR|MINOR|PATCH)/ {printf "%s%s", sep, $3; sep="."}' src/utils/monero_c_utils.h)" >> "$GITHUB_ENV"
+
+      # the hook gets the archive and SHA256SUMS.txt from a server, as it does from a release
+      - name: Test with the library downloaded and checked
+        run: |
+          mkdir -p "serve/v$PACKAGE_VERSION" test stub-licenses
+          # the build of another system has the licenses, and what is tested is the library
+          echo "stub" > stub-licenses/README.txt
+          bash packaging/common/pack-archive.sh "$PACKAGE_VERSION" "${{ matrix.platform }}" build stub-licenses "serve/v$PACKAGE_VERSION"
+          # Git Bash on Windows has sha256sum and no shasum, and macOS has shasum and no sha256sum
+          if command -v sha256sum > /dev/null; then sum="sha256sum"; else sum="shasum -a 256"; fi
+          (cd "serve/v$PACKAGE_VERSION" && $sum monero-c-* > SHA256SUMS.txt && cat SHA256SUMS.txt)
+          cp -R packaging/dart test/download
+          printf 'hooks:\n  user_defines:\n    monero_native:\n      release_url: http://127.0.0.1:8000\n' >> test/download/pubspec.yaml
+          ${{ matrix.python }} -m http.server 8000 --bind 127.0.0.1 --directory serve &
+          server=$!
+          trap 'kill $server' EXIT
+          cd test/download
+          dart pub get
+          dart test
+
+      - name: Test with the library of a folder
+        run: |
+          mkdir -p test
+          cp -R packaging/dart test/folder
+          printf 'hooks:\n  user_defines:\n    monero_native:\n      library_dir: ../../build\n' >> test/folder/pubspec.yaml
+          cd test/folder
+          dart pub get
+          dart test
+
+      - name: Test that a wrong checksum is refused
+        run: |
+          cp -R packaging/dart test/refused
+          printf 'hooks:\n  user_defines:\n    monero_native:\n      release_url: http://127.0.0.1:8000\n' >> test/refused/pubspec.yaml
+          # the checksums of the package, which the hook reads before SHA256SUMS.txt, do not match the archive
+          echo "0000000000000000000000000000000000000000000000000000000000000000  monero-c-$PACKAGE_VERSION-${{ matrix.platform }}.$([ '${{ matrix.platform }}' = windows ] && echo zip || echo tar.gz)" > test/refused/checksums.txt
+          ${{ matrix.python }} -m http.server 8000 --bind 127.0.0.1 --directory serve &
+          server=$!
+          trap 'kill $server' EXIT
+          cd test/refused
+          dart pub get
+          if dart test; then echo "the hook accepted an archive with a wrong checksum"; exit 1; fi

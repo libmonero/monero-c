@@ -1,0 +1,22 @@
+name: monero_native
+description: The native runtime of monero-c for Dart and Flutter. A build hook that bundles libmonero_c for the target platform.
+version: 0.2.0-alpha.1
+repository: https://github.com/libmonero/monero-c/tree/main/packaging/dart
+issue_tracker: https://github.com/libmonero/monero-c/issues
+topics:
+  - monero
+  - ffi
+  - wallet
+
+environment:
+  sdk: ^3.10.0
+
+dependencies:
+  archive: ^4.0.0
+  code_assets: ^1.0.0
+  crypto: ^3.0.0
+  ffi: ^2.1.0
+  hooks: ^1.0.0
+
+dev_dependencies:
+  test: ^1.25.0
