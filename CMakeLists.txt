@@ -299,7 +299,7 @@ elseif (UNIX)
 endif()
 
 # $<TARGET_OBJECTS:...> doesn't propagate monero_c-obj's PUBLIC include dirs, so repeat them here.
-target_include_directories(monero_c PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
+target_include_directories(monero_c PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>)
 target_include_directories(monero_c-static PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
 # on Windows the headers declare the functions as imported from a DLL unless this is defined, and a program that links the static library
 # would look for symbols that it does not have
@@ -383,6 +383,15 @@ if (APPLE)
   file(GENERATE OUTPUT ${MONERO_C_EXPORT_LIST} CONTENT "${monero_c_exports}\n")
   set_property(TARGET monero_c APPEND PROPERTY LINK_DEPENDS ${MONERO_C_EXPORT_LIST})
   target_link_options(monero_c PRIVATE "-Wl,-exported_symbols_list,${MONERO_C_EXPORT_LIST}")
+endif()
+
+##############################################################################
+# install and packages
+##############################################################################
+
+option(MONERO_C_INSTALL "Add the rules that install the library, its headers and the files of find_package() and pkg-config" ON)
+if (MONERO_C_INSTALL)
+  include(${CMAKE_CURRENT_SOURCE_DIR}/packaging/cmake/install.cmake)
 endif()
 
 ##############################################################################

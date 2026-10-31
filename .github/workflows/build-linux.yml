@@ -193,6 +193,39 @@ jobs:
           if-no-files-found: error
           retention-days: 1
 
+      # the install rules: a program finds the installed library with CMake and with pkg-config, and the .deb has the library and what it needs.
+      # Only the paths of the install change, so the build is not compiled again
+      - name: Install the library and use it
+        run: |
+          multiarch=$(dpkg-architecture -qDEB_HOST_MULTIARCH)
+          abi=$(awk '/#define MONERO_C_ABI_VERSION_(MAJOR|MINOR|PATCH)/ {printf "%s%s", sep, $3; sep="."}' src/utils/monero_c_utils.h)
+          cmake -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_INSTALL_LIBDIR=lib/$multiarch -DMONERO_C_LICENSES_DIR="$PWD/dist/licenses" build
+          cmake --install build --prefix "$PWD/install-test"
+          cmake -S packaging/cmake/test -B build-consumer -DCMAKE_PREFIX_PATH="$PWD/install-test"
+          cmake --build build-consumer
+          ./build-consumer/consumer "$abi"
+          cc packaging/cmake/test/main.c $(PKG_CONFIG_PATH="$PWD/install-test/lib/$multiarch/pkgconfig" pkg-config --cflags --libs monero_c) -Wl,-rpath,"$PWD/install-test/lib/$multiarch" -o consumer-pc
+          ./consumer-pc "$abi"
+
+      - name: Make the .deb package
+        run: |
+          (cd build && cpack -G DEB)
+          deb=$(ls build/monero-c_*.deb)
+          dpkg-deb -I "$deb"
+          dpkg-deb -c "$deb"
+          # GitHub changes the ~ of a file name, and the checksums of the release list the name that the file has here
+          version=$(dpkg-deb -f "$deb" Version | tr '~' '-')
+          mkdir -p deb
+          cp "$deb" "deb/monero-c_${version}_$(dpkg --print-architecture).deb"
+
+      - name: Upload the .deb package
+        uses: actions/upload-artifact@v7
+        with:
+          name: monero-native-deb-${{ matrix.cpu }}
+          path: deb/
+          if-no-files-found: error
+          retention-days: 1
+
       - name: Build monero-c with coverage
         if: env.COVERAGE == 'true'
         run: |

@@ -1,0 +1,10 @@
+prefix=${pcfiledir}/@MONERO_C_PC_PREFIX@
+libdir=${prefix}/@CMAKE_INSTALL_LIBDIR@
+includedir=${prefix}/@CMAKE_INSTALL_INCLUDEDIR@/monero_c
+
+Name: monero_c
+Description: C ABI of monero-cpp for wallets and daemons of Monero
+URL: https://github.com/libmonero/monero-c
+Version: @MONERO_C_ABI_VERSION@
+Libs: -L${libdir} -lmonero_c
+Cflags: -I${includedir}

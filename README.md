@@ -119,6 +119,7 @@ Every call returns `MONERO_OK` or `MONERO_ERROR`, `monero_last_error()` gives th
 * [Android archive (AAR)](packaging/android/README.md)
 * [JVM archive (JAR)](packaging/jvm/README.md)
 * [Dart package](packaging/dart/README.md)
+* [CMake install, pkg-config and Linux packages](packaging/cmake/README.md)
 * [Changelog](CHANGELOG.md)
 
 ## Building monero-c from source

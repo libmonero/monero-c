@@ -40,6 +40,9 @@ binding should ask for 0.2.x. The JSON is the one of 0.1.0-alpha.1.
 * `monero_native`, a Dart package with a build hook that bundles `libmonero_c` for Linux, macOS, Windows and Android. The hook downloads the archive
   of the release of its version and checks its SHA-256 against the `checksums.txt` of the package. The draft release has the package as
   `monero_native-<version>.tar.gz`, ready for `dart pub publish`. See [packaging/dart](packaging/dart/README.md).
+* Install rules for CMake: `cmake --install` puts the shared library, the headers, `find_package(monero_c)` (the target `monero_c::monero_c`) and
+  `monero_c.pc` in a prefix, and CPack makes a `.deb` or an `.rpm`. The draft release has the `.deb` for x86-64 and ARM64. `MONERO_C_INSTALL=OFF`
+  leaves the rules out. See [packaging/cmake](packaging/cmake/README.md).
 
 The functions go from 291 to 295.
 
