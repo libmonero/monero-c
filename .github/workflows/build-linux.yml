@@ -199,18 +199,29 @@ jobs:
           cmake -S . -B build-coverage -DBUILD_TESTS=ON -DENABLE_COVERAGE=ON -DBOOST_ROOT=/usr/local -DBoost_NO_SYSTEM_PATHS=ON $CMAKE_CCACHE
           cmake --build build-coverage -j3
 
-      - name: Build monerod for the integration tests
+      # the node is the monerod of the image of docker-monero-rpc, a static binary, so it is not built here. skopeo reads the image without a
+      # docker daemon, which a container job does not have
+      - name: Get monerod for integration tests
         if: env.COVERAGE == 'true'
+        env:
+          # the tag of tests/c/integration/docker-compose.yml
+          MONERO_TAG: master
         run: |
-          cd external/monero-cpp/external/monero-project/build/release
-          make -j3 daemon
+          apt-get install -y skopeo jq zstd
+          skopeo copy "docker://ghcr.io/libmonero/monero-daemon-rpc:$MONERO_TAG" dir:node-image
+          mkdir node
+          for layer in $(jq -r '.layers[].digest' node-image/manifest.json | sed 's/^sha256://'); do
+            tar -xf "node-image/$layer" -C node --wildcards 'usr/local/bin/monerod' 2>/dev/null || true
+          done
+          test -x node/usr/local/bin/monerod
+          node/usr/local/bin/monerod --version
 
       - name: Run tests with coverage
         if: env.COVERAGE == 'true'
         run: |
           # regtest monerod with the same settings as tests/c/integration/docker-compose.yml
           mkdir -p "$RUNNER_TEMP/regtest"
-          external/monero-cpp/external/monero-project/build/release/bin/monerod --regtest --offline --fixed-difficulty=1 --non-interactive --log-level=0 --hide-my-port --no-zmq --rpc-bind-ip=127.0.0.1 --rpc-bind-port=18081 --rpc-access-control-origins=* --rpc-ssl=disabled --disable-rpc-ban --p2p-bind-port=18080 --no-igd --data-dir "$RUNNER_TEMP/regtest" &
+          node/usr/local/bin/monerod --regtest --offline --fixed-difficulty=1 --non-interactive --log-level=0 --hide-my-port --no-zmq --rpc-bind-ip=127.0.0.1 --rpc-bind-port=18081 --rpc-access-control-origins=* --rpc-ssl=disabled --disable-rpc-ban --p2p-bind-port=18080 --no-igd --data-dir "$RUNNER_TEMP/regtest" &
           node_pid=$!
           # stop the node, and wait until it has gone so that the next step finds the ports free, also when a test fails and the step exits
           trap 'kill "$node_pid" 2>/dev/null || true; wait "$node_pid" 2>/dev/null || true' EXIT
@@ -272,7 +283,7 @@ jobs:
         run: |
           # the regtest monerod of the coverage run, on a new data dir
           mkdir -p "$RUNNER_TEMP/regtest-sanitizers"
-          external/monero-cpp/external/monero-project/build/release/bin/monerod --regtest --offline --fixed-difficulty=1 --non-interactive --log-level=0 --hide-my-port --no-zmq --rpc-bind-ip=127.0.0.1 --rpc-bind-port=18081 --rpc-access-control-origins=* --rpc-ssl=disabled --disable-rpc-ban --p2p-bind-port=18080 --no-igd --data-dir "$RUNNER_TEMP/regtest-sanitizers" &
+          node/usr/local/bin/monerod --regtest --offline --fixed-difficulty=1 --non-interactive --log-level=0 --hide-my-port --no-zmq --rpc-bind-ip=127.0.0.1 --rpc-bind-port=18081 --rpc-access-control-origins=* --rpc-ssl=disabled --disable-rpc-ban --p2p-bind-port=18080 --no-igd --data-dir "$RUNNER_TEMP/regtest-sanitizers" &
           node_pid=$!
           # stop the node, and wait until it has gone so that the next step finds the ports free, also when a test fails and the step exits
           trap 'kill "$node_pid" 2>/dev/null || true; wait "$node_pid" 2>/dev/null || true' EXIT
