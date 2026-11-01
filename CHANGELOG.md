@@ -1,6 +1,30 @@
 # Changelog
 
-## 0.2.0-alpha.1 (not released yet)
+## 0.2.1-alpha.1 (2026-11-01)
+
+The first release with the packages for Android, the JVM, Dart, CMake and Linux, and Apple, besides the NuGet package. The library, the headers and
+the C ABI are those of 0.2.0-alpha.1, and `monero_utils_get_abi_version()` returns 0.2.1: the patch version follows the release, and no function, struct
+or enum changed. A binding that asks for 0.2.x keeps working.
+
+### Added
+
+* `monero-native-android`, an Android archive (AAR) with `libmonero_c.so` for `arm64-v8a` and `x86_64`, the headers as a Prefab package and the
+  licenses, built by `packaging/android`. The release has it with its POM, and the archives `monero-c-<version>-android-arm64` and
+  `-android-x86_64` with the library, the headers and the licenses. See [packaging/android](packaging/android/README.md).
+* `monero-native-jvm`, a JAR with `libmonero_c` and libusb for Linux (x86-64, ARM64), macOS (Intel, Apple silicon) and Windows, in folders named as
+  the resource prefix of JNA, and the licenses. It has no classes. The release has it with its POM, and the CI loads the library from it
+  and reads the ABI version. See [packaging/jvm](packaging/jvm/README.md).
+* `monero_native`, a Dart package with a build hook that bundles `libmonero_c` for Linux, macOS, Windows and Android. The hook downloads the archive
+  of the release of its version and checks its SHA-256 against the `checksums.txt` of the package. The release has the package as
+  `monero_native-<version>.tar.gz`, ready for `dart pub publish`. See [packaging/dart](packaging/dart/README.md).
+* Install rules for CMake: `cmake --install` puts the shared library, the headers, `find_package(monero_c)` (the target `monero_c::monero_c`) and
+  `monero_c.pc` in a prefix, and CPack makes a `.deb` or an `.rpm`. The release has the `.deb` for x86-64 and ARM64. `MONERO_C_INSTALL=OFF`
+  leaves the rules out. See [packaging/cmake](packaging/cmake/README.md).
+* `MoneroC.xcframework`, the macOS libraries as one universal XCFramework with the headers, a module map for `import MoneroC` and libusb next to
+  the library, zipped for a Swift `binaryTarget`. The CI builds a C and a Swift program against it. There is no iOS slice. See
+  [packaging/apple](packaging/apple/README.md).
+
+## 0.2.0-alpha.1 (2026-10-31)
 
 The second alpha of the C ABI, version 0.2.0, and of `Monero.Native`. It changes the ABI: a program built with the headers of 0.1.0 has to be
 rebuilt, and the callbacks of a wallet are delivered in another way. `monero_utils_get_abi_version()` tells which version a library has, and a
@@ -31,21 +55,6 @@ binding should ask for 0.2.x. The JSON is the one of 0.1.0-alpha.1.
   of milliseconds, from 1 to 2147483647. A timeout is a success with `out_timed_out` set, so a task that can be cancelled waits again.
 * `MONERO_C_STATIC`, to define before the headers when a program links `libmonero_c.a` on Windows, where they declare the functions as
   imported from a DLL otherwise. The target `monero_c-static` of CMake defines it. `monero_c_static_unit_tests` links the archive.
-* `monero-native-android`, an Android archive (AAR) with `libmonero_c.so` for `arm64-v8a` and `x86_64`, the headers as a Prefab package and the
-  licenses, built by `packaging/android`. The draft release has it with its POM, and the archives `monero-c-<version>-android-arm64` and
-  `-android-x86_64` with the library, the headers and the licenses. See [packaging/android](packaging/android/README.md).
-* `monero-native-jvm`, a JAR with `libmonero_c` and libusb for Linux (x86-64, ARM64), macOS (Intel, Apple silicon) and Windows, in folders named as
-  the resource prefix of JNA, and the licenses. It has no classes. The draft release has it with its POM, and the CI loads the library from it
-  and reads the ABI version. See [packaging/jvm](packaging/jvm/README.md).
-* `monero_native`, a Dart package with a build hook that bundles `libmonero_c` for Linux, macOS, Windows and Android. The hook downloads the archive
-  of the release of its version and checks its SHA-256 against the `checksums.txt` of the package. The draft release has the package as
-  `monero_native-<version>.tar.gz`, ready for `dart pub publish`. See [packaging/dart](packaging/dart/README.md).
-* Install rules for CMake: `cmake --install` puts the shared library, the headers, `find_package(monero_c)` (the target `monero_c::monero_c`) and
-  `monero_c.pc` in a prefix, and CPack makes a `.deb` or an `.rpm`. The draft release has the `.deb` for x86-64 and ARM64. `MONERO_C_INSTALL=OFF`
-  leaves the rules out. See [packaging/cmake](packaging/cmake/README.md).
-* `MoneroC.xcframework`, the macOS libraries as one universal XCFramework with the headers, a module map for `import MoneroC` and libusb next to
-  the library, zipped for a Swift `binaryTarget`. The CI builds a C and a Swift program against it. There is no iOS slice. See
-  [packaging/apple](packaging/apple/README.md).
 
 The functions go from 291 to 295.
 

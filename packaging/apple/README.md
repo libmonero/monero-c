@@ -61,7 +61,7 @@ The Build workflow makes the zip from the two macOS builds, and the release work
 
 ```sh
 packaging/apple/build-xcframework.sh <version> packaging/apple/packages <x86_64 folder> <arm64 folder>
-packaging/apple/check-xcframework.sh packaging/apple/packages/MoneroC-<version>.xcframework.zip 0.2.0
+packaging/apple/check-xcframework.sh packaging/apple/packages/MoneroC-<version>.xcframework.zip 0.2.1
 ```
 
 The version is the one of [`Version.props`](../dotnet-core/Version.props), and the last argument is the ABI version of the header. The licenses and the source archive of libusb must be in `packaging/common/licenses/`: the CI takes them from the Linux build.

@@ -52,7 +52,7 @@ packaging/jvm/build-jar.sh <version> packaging/jvm/packages \
   linux-x86-64=<folder> darwin-aarch64=<folder> win32-x86-64=<folder>
 packaging/jvm/check-jar.sh packaging/jvm/packages/monero-native-jvm-<version>.jar linux-x86-64 darwin-aarch64 win32-x86-64
 java --enable-preview --source 21 --enable-native-access=ALL-UNNAMED packaging/jvm/smoke/Smoke.java \
-  packaging/jvm/packages/monero-native-jvm-<version>.jar 0.2.0
+  packaging/jvm/packages/monero-native-jvm-<version>.jar 0.2.1
 ```
 
 The version is the one of [`Version.props`](../dotnet-core/Version.props), and the last argument of the smoke test is the ABI version of the header. Strip the Linux libraries first, as the CI does, because the JAR keeps them as they are. The licenses and the source archive of libusb must be in `packaging/common/licenses/`: the CI takes them from the Linux build.
