@@ -23,9 +23,8 @@ A C ABI for creating Monero applications using RPC and FFI bindings to [monero v
 ## Architecture
 
 <p align="center">
-	<img width="85%" height="auto" src="docs/architecture.png"/><br>
-	<i>Build
-     applications using FFI bindings to <a href="https://github.com/monero-project/monero">monero-project/monero</a>.  Wallet implementations are interchangeable by conforming to a common interface, <a href="https://woodser.github.io/monero-cpp/doxygen/classmonero_1_1monero__wallet.html">monero_wallet.h</a>.</i>
+	<img width="100%" height="auto" src="docs/architecture.png"/><br>
+	<i>Applications call monero-c through FFI bindings in their own language. monero-c exposes the wallet, the daemon, the RPC connection and the utilities of <a href="https://github.com/woodser/monero-cpp">monero-cpp</a> as a C ABI, with opaque handles, JSON data and listener callbacks, and monero-cpp reaches <a href="https://github.com/monero-project/monero">monero-project/monero</a>.  Wallet implementations are interchangeable by conforming to a common interface, <a href="https://woodser.github.io/monero-cpp/doxygen/classmonero_1_1monero__wallet.html">monero_wallet.h</a>.</i>
 </p>
 
 ## Sample code
