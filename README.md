@@ -15,7 +15,7 @@ A C ABI for creating Monero applications using RPC and FFI bindings to [monero v
 * Supports client-side wallets using native bindings.
 * Supports multisig, view-only, and offline wallets.
 * Wallet types are interchangeable behind a common interface.
-* Uses a clearly defined [data model and API specification](https://libmonero.github.io/monero-c/files.html) intended to be intuitive and robust.
+* Uses a clearly defined [data model and API specification](docs/monero-spec.pdf) intended to be intuitive and robust.
 * Query wallet transactions, transfers, and outputs by their properties.
 * Fetch and process binary data from the daemon (e.g. raw blocks).
 * Receive notifications when blocks are added to the chain or when wallets sync, send, or receive.
