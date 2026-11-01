@@ -1,6 +1,14 @@
 # Changelog
 
-## 0.2.0-alpha.1 (not released yet)
+## 0.3.0-alpha.1 (not released yet)
+
+The light wallet of monero-cpp behind the C ABI, which adds functions and changes none. The ABI version is 0.3.0.
+
+* `monero_wallet_light_create()`, `monero_wallet_light_open()` and `monero_wallet_light_wallet_exists()` take the JSON of a `monero_wallet_config` and a connection to a light wallet server (monero-lws). The wallet is made from a seed, from keys, or at random, and its address is registered with the server. It lives in memory: `monero_wallet_close()` with save fails.
+* `monero_wallet_light_get_unrefined_spend_count()` reads how many candidate spends the last sync of a view-only light wallet could not verify, so the totals are the ones of the server.
+* A light wallet implements the interface of `monero_wallet` in monero-cpp, so the `monero_wallet_*` functions work on its handle: it syncs from the light wallet server, and reads its height, its balances, its txs and its outputs from its cache.
+
+## 0.1.1-alpha.1 (not released yet)
 
 The second alpha of the C ABI, version 0.2.0, and of `Monero.Native`. It changes the ABI: a program built with the headers of 0.1.0 has to be
 rebuilt, and the callbacks of a wallet are delivered in another way. `monero_utils_get_abi_version()` tells which version a library has, and a
