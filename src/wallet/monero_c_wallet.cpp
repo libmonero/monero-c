@@ -2119,6 +2119,7 @@ monero_result monero_wallet_light_create(const char* config_json, ::monero_rpc_c
   if (!require(config_json, "config_json") || !require(connection, "connection") || !require(out_wallet, "out_wallet")) return MONERO_ERROR;
   return guard([&] {
     std::shared_ptr<monero::monero_wallet_config> config = light_config_of(config_json);
+    config_wipe wipe_config(*config);
     std::unique_ptr<monero::monero_wallet> wallet(monero::monero_wallet_light::create_wallet(*config, monero_c::connection_of(connection)));
     bool regtest = config->m_regtest != boost::none && *config->m_regtest;
     *out_wallet = wrap(std::move(wallet), regtest ? MONERO_UTILS_NETWORK_REGTEST : static_cast<int32_t>(*config->m_network_type));
@@ -2130,6 +2131,7 @@ monero_result monero_wallet_light_open(const char* config_json, ::monero_rpc_con
   if (!require(config_json, "config_json") || !require(connection, "connection") || !require(out_wallet, "out_wallet")) return MONERO_ERROR;
   return guard([&] {
     std::shared_ptr<monero::monero_wallet_config> config = light_config_of(config_json);
+    config_wipe wipe_config(*config);
     std::unique_ptr<monero::monero_wallet> wallet(monero::monero_wallet_light::open_wallet(*config, monero_c::connection_of(connection)));
     bool regtest = config->m_regtest != boost::none && *config->m_regtest;
     *out_wallet = wrap(std::move(wallet), regtest ? MONERO_UTILS_NETWORK_REGTEST : static_cast<int32_t>(*config->m_network_type));
