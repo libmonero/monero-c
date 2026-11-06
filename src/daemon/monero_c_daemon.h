@@ -98,7 +98,7 @@ typedef enum monero_key_image_spent_status {
 // ------------------------------ CONNECTION ----------------------------------
 
 /**
- * Create a daemon RPC client and checks the connection, which can take a while if the
+ * Create a daemon RPC client and check the connection, which can take a while if the
  * daemon is slow to answer. It still succeeds if the daemon is unreachable. The calls that
  * query the daemon report the failure.
  *
