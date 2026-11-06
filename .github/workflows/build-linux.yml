@@ -39,10 +39,12 @@ jobs:
             march: armv8-a
 
     steps:
-      - name: Install git
+      # actions/cache compresses with zstd when the job has it, and with gzip when it does not, and it looks a cache up by the compression that
+      # the job has at that moment. zstd is installed here, before the cache is restored, so that a cache is saved and restored with the same one
+      - name: Install git and zstd
         run: |
           apt-get update
-          apt-get install -y git ca-certificates
+          apt-get install -y git ca-certificates zstd
           git config --global --add safe.directory '*'
 
       - name: Checkout repository
