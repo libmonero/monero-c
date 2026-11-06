@@ -144,7 +144,18 @@ jobs:
           cmake --build build -j3
           cmake --install build
 
+      # Boost is the same on every run, and ccache only helps with its compilation, not with the download, the extraction and the installation of
+      # its headers. So it is installed in a directory of its own, which is cached, and then copied to the prefix of the dependencies.
+      # The key has what the compiler depends on, and its number is raised when the options of b2 change
+      - name: Restore boost
+        id: boost
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: boost-install
+          key: boost-1.85.0-${{ matrix.arch }}-api${{ matrix.api }}-ndk${{ env.NDK_VERSION }}-1
+
       - name: Install boost
+        if: steps.boost.outputs.cache-hit != 'true'
         run: |
           # PIC static boost, same version on all platforms (no distro boost so headers and archives match)
           wget --tries=5 --waitretry=5 --timeout=30 --retry-on-http-error=500,502,503,504 https://archives.boost.io/release/1.85.0/source/boost_1_85_0.tar.bz2
@@ -154,7 +165,18 @@ jobs:
           # b2 runs on the runner, so it is built with the compiler of the runner and not the one of the NDK
           CC=cc CXX=c++ ./bootstrap.sh --with-libraries=chrono,date_time,filesystem,locale,program_options,regex,serialization,system,thread
           echo "using clang : android : ccache $CXX : <archiver>$AR <ranlib>$RANLIB ;" > user-config.jam
-          ./b2 -j3 --user-config=user-config.jam --prefix="$PREFIX" toolset=clang-android target-os=android architecture=${{ matrix.boost_arch }} address-model=64 cxxflags=-fPIC cflags=-fPIC link=static runtime-link=shared boost.locale.icu=off install
+          ./b2 -j3 --user-config=user-config.jam --prefix="$GITHUB_WORKSPACE/boost-install" toolset=clang-android target-os=android architecture=${{ matrix.boost_arch }} address-model=64 cxxflags=-fPIC cflags=-fPIC link=static runtime-link=shared boost.locale.icu=off install
+
+      # only main saves, as it does for ccache. The cache is saved here and not at the end, so that a later failure does not lose it
+      - name: Save boost
+        if: ${{ steps.boost.outputs.cache-hit != 'true' && github.ref == 'refs/heads/main' }}
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: boost-install
+          key: boost-1.85.0-${{ matrix.arch }}-api${{ matrix.api }}-ndk${{ env.NDK_VERSION }}-1
+
+      - name: Put boost in the prefix
+        run: cp -R boost-install/. "$PREFIX/"
 
       - name: Build monero-project
         run: |
