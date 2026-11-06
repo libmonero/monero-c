@@ -289,7 +289,8 @@ MONERO_EXPORT monero_result monero_wallet_keys_create_from_keys(int32_t network_
 MONERO_EXPORT monero_result monero_wallet_save(monero_wallet* wallet);
 
 /**
- * Close the wallet. Its methods fail afterwards, but the handle must still be freed.
+ * Close the wallet. Its methods fail afterwards, but the handle must still be freed. A keys wallet has no files, so
+ * closing it with save set fails and leaves it open.
  *
  * @param wallet is the wallet handle
  * @param save saves the wallet to disk before closing it
@@ -1040,7 +1041,8 @@ MONERO_EXPORT monero_result monero_wallet_stop_syncing(monero_wallet* wallet);
 MONERO_EXPORT monero_result monero_wallet_is_connected_to_daemon(monero_wallet* wallet, bool* out_connected);
 
 /**
- * Check if the daemon of the wallet is synced with the network.
+ * Check if the daemon of the wallet is synced with the network, which is when its height is at least the greatest
+ * height of its peers and more than 1. It fails if the daemon can not be reached.
  *
  * @param wallet is the wallet handle
  * @param out_synced receives true if the daemon is synced
@@ -1058,7 +1060,7 @@ MONERO_EXPORT monero_result monero_wallet_is_daemon_synced(monero_wallet* wallet
 MONERO_EXPORT monero_result monero_wallet_is_synced(monero_wallet* wallet, bool* out_synced);
 
 /**
- * Get the height the daemon of the wallet is synced to.
+ * Get the height the daemon of the wallet is synced to. It fails if the daemon can not be reached.
  *
  * @param wallet is the wallet handle
  * @param out_height receives the height
@@ -1220,7 +1222,8 @@ MONERO_EXPORT monero_result monero_wallet_create_tx(monero_wallet* wallet, const
 
 /**
  * Create one or more transactions that transfer funds from the wallet. A view-only wallet
- * creates the unsigned hex that monero_wallet_sign_txs() takes, in the tx set.
+ * creates the unsigned hex that monero_wallet_sign_txs() takes, in the tx set. The config has to name the
+ * account to send from ("accountIndex"), or the call fails.
  *
  * @param wallet is the wallet handle
  * @param config_json is the JSON-serialized monero_tx_config
@@ -1480,7 +1483,8 @@ MONERO_EXPORT monero_result monero_wallet_check_reserve_proof(monero_wallet* wal
 MONERO_EXPORT monero_result monero_wallet_is_multisig_import_needed(monero_wallet* wallet, bool* out_needed);
 
 /**
- * Get the multisig info of the wallet.
+ * Get the multisig info of the wallet. Only "isMultisig" is set for a wallet that is not multisig: monero-cpp leaves
+ * "isReady", "threshold" and "numParticipants" as they are in memory, so read them only when "isMultisig" is true.
  *
  * @param wallet is the wallet handle
  * @param out_json receives the JSON-serialized monero_multisig_info. Free with monero_utils_free()
