@@ -91,7 +91,7 @@ The lists of values that have no parent stay plain arrays: the accounts, the sub
 
 ## Decisions
 
-They were taken as recommended, in the order of the steps. The decision 7 stays 0.1.0, because nothing was released.
+They were taken as recommended, in the order of the steps. The decision 7 kept 0.1.0, because nothing had been released, and this JSON shipped in 0.1.0-alpha.1.
 
 | | Question | Options | Recommendation |
 | --- | --- | --- | --- |
@@ -113,7 +113,7 @@ All done, one commit each, with its tests. Each step runs the unit tests with an
 4. The creations, the sweeps, `sign_txs` and `describe_tx_set` return tx sets. Done, with the decision 3 as recommended. The integration test makes a set with a view-only wallet, and `create_tx()` and `create_txs()` both give it its `unsignedTxHex`, which `create_tx()` didn't before. It signs the hex with an offline wallet and describes it with the full wallet.
 5. The payload of the listeners. Done, with the decision 4 as recommended. The integration test syncs a wallet with the keys of the one that sends, and checks the received output of a miner tx (height, hash, unlock time, locked flag, amount and indices) and the spent output of the tx that is mined (in `inputs`, with its hash).
 6. The daemon txs, with the fake server of `monero_c_rpc_connection_unit_tests` and the node. Done, with the decision 6 as recommended. monero-cpp reads the height and the timestamp into a block that each tx has for itself, so the txs of one block are put in one new block, and the txs of the pool in one block that has no height. The fake server serves three txs, two in the block 101 and one in the 102, and the test checks that there are two blocks, in the order that they appear, and that the pool has none.
-7. The docs of every changed function in the headers, the README, the package README and `TODO.md`, and the test that compares the full wallet with the RPC wallet, since both give the same JSON. The ABI version stays 0.1.0, because nothing was released.
+7. The docs of every changed function in the headers, the README, the package README and `TODO.md`, and the test that compares the full wallet with the RPC wallet, since both give the same JSON. The ABI version stayed 0.1.0, because nothing had been released.
 
 ## What was checked while implementing
 
