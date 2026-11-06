@@ -396,7 +396,8 @@ MONERO_EXPORT monero_result monero_utils_json_to_binary(const char* json, uint8_
 MONERO_EXPORT monero_result monero_utils_binary_to_json(const uint8_t* data, size_t len, char** out_json);
 
 /**
- * Decodes a get_blocks.bin-style response.
+ * Decodes a get_blocks_by_height.bin-style response. The JSON has "blocks" (each block as a JSON string), "txs" (the
+ * transactions of each block), "block_hashes", "status" and "untrusted".
  *
  * @param data is the binary-encoded buffer to decode
  * @param len is the length of the binary-encoded buffer
@@ -406,7 +407,8 @@ MONERO_EXPORT monero_result monero_utils_binary_to_json(const uint8_t* data, siz
 MONERO_EXPORT monero_result monero_utils_binary_blocks_to_json(const uint8_t* data, size_t len, char** out_json);
 
 /**
- * Decodes a get_blocks_by_height.bin-style response.
+ * Decodes a get_blocks.bin-style response. The JSON has what monero_utils_binary_blocks_to_json() gives, and
+ * "start_height" and "current_height" too.
  *
  * @param data is the binary-encoded buffer to decode
  * @param len is the length of the binary-encoded buffer
