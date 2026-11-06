@@ -132,7 +132,18 @@ jobs:
           cmake --build build
           cmake --install build
 
+      # Boost is the same on every run, and ccache only helps with its compilation, not with the download, the extraction and the installation of
+      # its headers. So it is installed in a directory of its own, which is cached, and then copied to /usr/local.
+      # The number of the key is raised when the options of b2 change
+      - name: Restore boost
+        id: boost
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: boost-install
+          key: boost-1.85.0-${{ matrix.arch }}-1
+
       - name: Install boost
+        if: steps.boost.outputs.cache-hit != 'true'
         run: |
           # ccache wraps gcc and g++, which the links in /usr/lib/ccache stand for
           export PATH=/usr/lib/ccache:$PATH
@@ -142,7 +153,21 @@ jobs:
           tar xf boost_1_85_0.tar.bz2
           cd boost_1_85_0
           ./bootstrap.sh --with-libraries=chrono,date_time,filesystem,locale,program_options,regex,serialization,system,thread
-          ./b2 -j3 cxxflags=-fPIC cflags=-fPIC link=static runtime-link=shared boost.locale.icu=off install
+          ./b2 -j3 --prefix="$GITHUB_WORKSPACE/boost-install" cxxflags=-fPIC cflags=-fPIC link=static runtime-link=shared boost.locale.icu=off install
+          # the license goes with the files, because the source is not extracted when they come from the cache
+          mkdir -p "$GITHUB_WORKSPACE/boost-install/share/doc/boost"
+          cp LICENSE_1_0.txt "$GITHUB_WORKSPACE/boost-install/share/doc/boost/"
+
+      # only main saves, as it does for ccache. The cache is saved here and not at the end, so that a later failure does not lose it
+      - name: Save boost
+        if: ${{ steps.boost.outputs.cache-hit != 'true' && github.ref == 'refs/heads/main' }}
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: boost-install
+          key: boost-1.85.0-${{ matrix.arch }}-1
+
+      - name: Put boost in /usr/local
+        run: cp -R boost-install/. /usr/local/
 
       - name: Build monero-project
         run: |
@@ -181,7 +206,7 @@ jobs:
           cp external/monero-cpp/external/monero-project/external/randomx/LICENSE dist/licenses/randomx-BSD-3-Clause.txt
           cp external/monero-cpp/external/monero-project/external/db_drivers/liblmdb/LICENSE dist/licenses/lmdb-OLDAP-2.8.txt
           cp external/monero-cpp/external/monero-project/external/rapidjson/license.txt dist/licenses/rapidjson-MIT.txt
-          cp boost_1_85_0/LICENSE_1_0.txt dist/licenses/boost-BSL-1.0.txt
+          cp boost-install/share/doc/boost/LICENSE_1_0.txt dist/licenses/boost-BSL-1.0.txt
           cp openssl-3.5.7/LICENSE.txt dist/licenses/openssl-Apache-2.0.txt
           cp expat-2.7.1/COPYING dist/licenses/expat-MIT.txt
           cp unbound-1.22.0/LICENSE dist/licenses/unbound-BSD-3-Clause.txt
