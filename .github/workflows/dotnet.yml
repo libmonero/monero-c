@@ -49,7 +49,7 @@ jobs:
         run: |
           ldd_out=$(ldd artifacts/linux-x64/libmonero_c.so)
           echo "$ldd_out"
-          if grep -q 'not found' <<< "$ldd_out"; then
+          if printf '%s\n' "$ldd_out" | grep -q 'not found'; then
             echo "$ldd_out"
             echo "missing runtime libraries above"; exit 1
           fi
@@ -59,7 +59,7 @@ jobs:
             echo "$unexpected"
             exit 1
           fi
-          grep -q 'libusb-1.0.so.0 =>' <<< "$ldd_out" || { echo "libusb is not resolved from the downloaded native artifact"; exit 1; }
+          printf '%s\n' "$ldd_out" | grep -q 'libusb-1.0.so.0 =>' || { echo "libusb is not resolved from the downloaded native artifact"; exit 1; }
 
       - name: Set up .NET
         uses: actions/setup-dotnet@v4

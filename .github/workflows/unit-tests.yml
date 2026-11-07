@@ -56,7 +56,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libsodium23 libunbound8
           ldd_out=$(ldd artifact/libmonero_c.so || true)
-          if grep -q 'not found' <<< "$ldd_out"; then
+          if printf '%s\n' "$ldd_out" | grep -q 'not found'; then
             echo "$ldd_out"
             echo "missing runtime libraries above"; exit 1
           fi
@@ -155,7 +155,7 @@ jobs:
         run: |
           # ntldd reports the Windows API sets and some system DLLs as not found, so only the MinGW libraries are checked
           ntldd_out=$(ntldd -R artifact/libmonero_c.dll || true)
-          if grep -qE '^[[:space:]]*lib[^[:space:]]*\.dll => not found' <<< "$ntldd_out"; then
+          if printf '%s\n' "$ntldd_out" | grep -qE '^[[:space:]]*lib[^[:space:]]*\.dll => not found'; then
             echo "$ntldd_out"
             echo "missing runtime libraries above"; exit 1
           fi
@@ -196,7 +196,7 @@ jobs:
         run: |
           chmod +x build-sanitizers/tests/c/unit/* build-sanitizers/tests/c/integration/*
           ldd_out=$(ldd build-sanitizers/libmonero_c.so || true)
-          if grep -q 'not found' <<< "$ldd_out"; then
+          if printf '%s\n' "$ldd_out" | grep -q 'not found'; then
             echo "$ldd_out"
             echo "missing runtime libraries above"; exit 1
           fi
