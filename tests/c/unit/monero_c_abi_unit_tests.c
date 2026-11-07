@@ -102,9 +102,6 @@ static void test_abi_version(void) {
   CHECK(MONERO_C_ABI_VERSION_MAJOR == 0);
   CHECK(MONERO_C_ABI_VERSION_MINOR == 4);
   CHECK(MONERO_C_ABI_VERSION_PATCH == 0);
-
-=======
->>>>>>> 8d3d717 (version: bump the ABI and Monero.Native to 0.3.0-alpha.1)
 }
 
 int main(void) {

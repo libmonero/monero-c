@@ -779,7 +779,7 @@ monero::monero_wallet_rpc& as_rpc(::monero_wallet* wallet) {
 // the light wallet methods are only on monero_wallet_light, so the handle must hold a light wallet
 monero::monero_wallet_light& as_light(::monero_wallet* wallet) {
   monero::monero_wallet_light* light = dynamic_cast<monero::monero_wallet_light*>(wallet->wallet.get());
-  if (light == nullptr) throw std::runtime_error("not a light wallet");
+  if (light == nullptr) throw std::invalid_argument("wallet is not a light wallet");
   return *light;
 }
 
