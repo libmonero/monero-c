@@ -23,21 +23,9 @@ The Build workflow packages `linux-x64`, `linux-arm64`, `win-x64`, `osx-x64` and
 
 For native CMake support in Rider, open the repository's [`CMakeLists.txt`](../CMakeLists.txt).
 
-## Publish a prerelease
+## Publish a release
 
-The version of the package is in [`Version.props`](../packaging/dotnet-core/Version.props), and the package project and the test projects read it from there. To release:
-
-1. Set `MoneroNativeVersion` in `Version.props` and merge the change.
-2. Tag the commit as `v` plus the version, for example `v0.1.0-alpha.2`. CI fails if the tag and the version differ.
-3. After CI passes for the tag, download the `monero-native-nuget` artifact of that run and push it to NuGet.org:
-
-```sh
-dotnet nuget push Monero.Native.<version>.nupkg \
-  --api-key "$NUGET_API_KEY" \
-  --source https://api.nuget.org/v3/index.json
-```
-
-Create the API key on NuGet.org and keep it out of the repository. Each package version can only be published once.
+[`RELEASING.md`](../RELEASING.md) describes it: the version in [`Version.props`](../packaging/dotnet-core/Version.props), the tag, the draft GitHub release that CI makes with the package, and the push of the package to nuget.org and to GitHub Packages when the draft is published. No API key is created or stored.
 
 ## Install from GitHub Packages
 

@@ -1,6 +1,6 @@
 # JSON shapes of the results
 
-Status: implemented. The wallet returns its txs, transfers and outputs in `{"blocks":[...]}`, the calls that make txs return `{"txSets":[...]}`, the queries of transfers and outputs take a `txQuery`, the listeners get the output in its tx and its block, and the daemon returns its txs in blocks. This document stays as the reference of the shapes and of the reasons for them, and the item of [`TODO.md`](../TODO.md) that it came from is done. Nothing has been released, so the JSON of the ABI could change before the first release.
+Status: implemented. The wallet returns its txs, transfers and outputs in `{"blocks":[...]}`, the calls that make txs return `{"txSets":[...]}`, the queries of transfers and outputs take a `txQuery`, the listeners get the output in its tx and its block, and the daemon returns its txs in blocks. This document stays as the reference of the shapes and of the reasons for them, and the item of [`TODO.md`](../TODO.md) that it came from is done. This JSON shipped in 0.1.0-alpha.1. While the major version of the ABI is 0, a change of it bumps the minor version.
 
 ## The problem
 
