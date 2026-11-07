@@ -1,5 +1,5 @@
-# The library against a real regtest node and a monero-wallet-rpc server, on the artifacts of the Build run of the same commit, and again with the
-# sanitizers against a node of its own. The tests that need no daemon are in unit-tests.yml
+# The library against a real regtest node and a monero-wallet-rpc server, and collects coverage from the unit and integration tests. It also runs
+# the integration tests with sanitizers against a node of its own. The tests that need no daemon are in unit-tests.yml
 name: Integration tests
 
 on:
@@ -21,7 +21,7 @@ jobs:
     name: Pending
     uses: ./.github/workflows/wait-build.yml
     with:
-      artifacts: monero-c-linux-x86_64 build-sanitizers-linux-x86_64
+      artifacts: monero-c-linux-x86_64 build-sanitizers-linux-x86_64 build-coverage-linux-x86_64
 
   integration:
     name: Linux x86_64 (regtest node)
@@ -93,6 +93,92 @@ jobs:
       - name: Stop regtest monerod and monero-wallet-rpc
         if: always()
         run: docker compose -f tests/c/integration/docker-compose.yml down -v
+
+  coverage:
+    name: Coverage (Linux x86_64)
+    needs: wait-build
+    runs-on: ubuntu-24.04
+    # gcov must match the compiler in the build artifact. This container has no docker daemon, so use the static monerod from docker-monero-rpc.
+    container: debian:12
+    timeout-minutes: 60
+
+    steps:
+      - name: Install git and the libraries of the build
+        run: |
+          apt-get update
+          apt-get install -y git ca-certificates curl make gcc lcov skopeo jq zstd libzmq3-dev libunbound-dev libsodium-dev libunwind-dev liblzma-dev libreadline-dev libexpat1-dev libpgm-dev libhidapi-dev libusb-1.0-0-dev libprotobuf-dev libudev-dev nettle-dev libevent-dev
+          git config --global --add safe.directory '*'
+
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Download the coverage build
+        uses: actions/download-artifact@v8
+        with:
+          name: build-coverage-linux-x86_64
+          path: .
+          run-id: ${{ needs.wait-build.outputs.run-id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      # gcov warns when a source file is newer than its notes, and the checkout is newer than the build
+      - name: Check runtime dependencies
+        run: |
+          chmod +x build-coverage/tests/c/unit/* build-coverage/tests/c/integration/*
+          find build-coverage -name '*.gcno' -exec touch {} +
+          ldd_out=$(ldd build-coverage/libmonero_c.so || true)
+          if grep -q 'not found' <<< "$ldd_out"; then
+            echo "$ldd_out"
+            echo "missing runtime libraries above"; exit 1
+          fi
+
+      - name: Get monerod
+        env:
+          # the tag of tests/c/integration/docker-compose.yml
+          MONERO_TAG: master
+        run: |
+          skopeo copy "docker://ghcr.io/libmonero/monero-daemon-rpc:$MONERO_TAG" dir:node-image
+          mkdir node
+          for layer in $(jq -r '.layers[].digest' node-image/manifest.json | sed 's/^sha256://'); do
+            tar -xf "node-image/$layer" -C node --wildcards 'usr/local/bin/monerod' 2>/dev/null || true
+          done
+          test -x node/usr/local/bin/monerod
+          node/usr/local/bin/monerod --version
+
+      - name: Run tests with coverage
+        env:
+          LD_LIBRARY_PATH: ${{ github.workspace }}/build-coverage
+        run: |
+          # regtest monerod with the same settings as tests/c/integration/docker-compose.yml
+          mkdir -p "$RUNNER_TEMP/regtest"
+          node/usr/local/bin/monerod --regtest --offline --fixed-difficulty=1 --non-interactive --log-level=0 --hide-my-port --no-zmq --rpc-bind-ip=127.0.0.1 --rpc-bind-port=18081 --rpc-access-control-origins=* --rpc-ssl=disabled --disable-rpc-ban --p2p-bind-port=18080 --no-igd --data-dir "$RUNNER_TEMP/regtest" &
+          node_pid=$!
+          # stop the node, and wait until it has gone, also when a test fails and the step exits
+          trap 'kill "$node_pid" 2>/dev/null || true; wait "$node_pid" 2>/dev/null || true' EXIT
+          for _ in $(seq 1 60); do
+            if curl -fsS -m 5 -X POST http://127.0.0.1:18081/json_rpc -d '{"jsonrpc":"2.0","id":"0","method":"get_block_count"}' | grep -q '"count"'; then break; fi
+            sleep 2
+          done
+          make unit-test TEST_DIR=build-coverage
+          make integration-test TEST_DIR=build-coverage DAEMON_URI=http://127.0.0.1:18081
+
+      - name: Generate coverage report
+        run: |
+          make coverage-report COVERAGE_TITLE="monero-c coverage @ $(printf '%.7s' "$GITHUB_SHA")"
+          sed -i "s|$GITHUB_WORKSPACE/||g" build-coverage/coverage.info
+
+      - name: Stage coverage report
+        run: |
+          mkdir -p coverage-report
+          cp build-coverage/coverage.info coverage-report/
+          cp -r build-coverage/coverage_html coverage-report/
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v7
+        with:
+          name: coverage-reports
+          path: coverage-report/
+          if-no-files-found: error
+          retention-days: 7
 
   integration-sanitizers:
     name: Linux x86_64 (sanitizers, regtest node)

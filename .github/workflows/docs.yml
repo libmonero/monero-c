@@ -1,21 +1,30 @@
 name: Docs
 
-# Called from coverage.yml. Builds the docs on pull requests, and publishes them with the coverage report from main only.
+# Builds the docs after integration tests, and publishes them with the coverage report from main only.
 on:
-  workflow_call:
+  workflow_run:
+    workflows:
+      - Integration tests
+    types:
+      - completed
   workflow_dispatch:
 
 permissions:
   contents: read
-  pages: write
-  id-token: write
+  actions: read
 
 jobs:
   build:
+    if: github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && (github.event.workflow_run.event == 'pull_request' || (github.event.workflow_run.event == 'push' && github.event.workflow_run.head_branch == 'main')))
     runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      actions: read
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
 
       - name: Install Doxygen
         run: |
@@ -32,7 +41,6 @@ jobs:
           cp docs/architecture.png docs/monero-spec.pdf docs/html/docs/
           cp donate.png docs/html/
 
-      # only when called from coverage.yml. A manual run publishes the docs without coverage.
       - name: Download coverage report
         id: coverage
         continue-on-error: true
@@ -40,15 +48,14 @@ jobs:
         with:
           name: coverage-reports
           path: coverage-reports
+          github-token: ${{ github.token }}
+          run-id: ${{ github.event.workflow_run.id || github.run_id }}
 
       - name: Add coverage report to the docs
         if: steps.coverage.outcome == 'success'
         run: |
           mkdir -p docs/html/coverage
           cp -r coverage-reports/coverage_html/. docs/html/coverage/
-
-      - name: Setup Pages
-        uses: actions/configure-pages@v5
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
@@ -57,8 +64,13 @@ jobs:
 
   deploy:
     needs: build
-    if: github.ref == 'refs/heads/main'
+    if: (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_run' && github.event.workflow_run.event == 'push' && github.event.workflow_run.head_branch == 'main')
     runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      actions: read
+      pages: write
+      id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
@@ -66,6 +78,9 @@ jobs:
       group: pages
       cancel-in-progress: false
     steps:
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4

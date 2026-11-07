@@ -3,7 +3,7 @@ name: Codacy Coverage Reporter
 on:
   workflow_run:
     workflows:
-      - Coverage
+      - Integration tests
     types:
       - completed
 

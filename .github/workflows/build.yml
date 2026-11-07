@@ -1,6 +1,6 @@
 # Builds the library for each platform in its own workflow, build-linux.yml, build-macos.yml,
 # build-windows.yml and build-android.yml, checks what the libraries link against and export, and packages the result.
-# The tests that run the libraries are in unit-tests.yml, integration-tests.yml and coverage.yml
+# The tests that run the libraries are in unit-tests.yml and integration-tests.yml
 name: Build
 
 on:

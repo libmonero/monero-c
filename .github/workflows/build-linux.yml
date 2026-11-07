@@ -1,5 +1,5 @@
 # The Linux build of the library. Called by build.yml. Pull requests and main also build the variants with coverage and with the sanitizers, which
-# coverage.yml, unit-tests.yml and integration-tests.yml run
+# unit-tests.yml and integration-tests.yml run
 name: Build Linux
 
 on:
