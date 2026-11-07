@@ -16,7 +16,8 @@ There are two versions, and a release changes both. The package version is also 
 * **ABI version.** `MONERO_C_ABI_VERSION_MAJOR`, `MINOR` and `PATCH` in [`src/utils/monero_c_utils.h`](src/utils/monero_c_utils.h), which
   `monero_utils_get_abi_version()` returns. While the major version is 0, a change of the minor version can break callers. The patch version is
   for fixes that leave the ABI as it is. The numbers are pinned in `tests/c/unit/monero_c_abi_unit_tests.c` and in `MoneroUtilsTests.cs` of the
-  C# tests, so a change of the ABI version is always deliberate.
+  C# tests, so a change of the ABI version is always deliberate. The badge `C ABI` at the top of [`README.md`](README.md) shows the major
+  and minor version, so set it with the others when the minor version changes.
 
 So far the ABI version has been the package version without the prerelease suffix. A change of a function, a layout or an enum value
 bumps the minor version until 1.0, and a fix that leaves them as they are bumps the patch version.
