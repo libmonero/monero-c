@@ -81,7 +81,7 @@ With these items, the public API of monero-cpp is exposed, except the methods le
 
 - [x] **monero-c: update the monero-cpp submodule.** The pin is `750fe70` (`wallet: persist random wallet restore height at creation`), the head of `master`, and monero-project moved with it to `09e1b2b` (`wallet2: fix outgoing totals and pool refresh recovery`). The archives of the old pin had to be rebuilt (`make wallet cryptonote_protocol` in monero-project, then monero-cpp, then monero-c: a few minutes with one job). After it the unit tests pass with and without the sanitizers, and so do the daemon and wallet integration tests on a regtest node, also under the sanitizers, with no report. What the update gives: a random wallet created with a connection takes the daemon height as its restore height and keeps it in the keys file (a testnet wallet that had a regtest node as its server had 418, the height of the node, after the creation and after a reopen). CI has no cache of the submodules, so it builds the new pin as it is.
 
-- [x] **monero-c: check the coverage upload of pull requests after the merge.** `codacy.yml` runs after Build with `workflow_run`, so pull requests from forks get the token too. PR #8 got its diff coverage from it.
+- [x] **monero-c: check the coverage upload of pull requests after the merge.** `codacy.yml` runs after Coverage with `workflow_run`, so pull requests from forks get the token too. PR #8 got its diff coverage from it.
 
 - [x] **monero-c: Codacy coverage upload on `main`.** The uploads from `codacy.yml` on `main` pass since the merge of the wallet PR, and the README has the coverage badge.
 

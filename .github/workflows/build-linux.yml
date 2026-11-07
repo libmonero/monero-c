@@ -1,5 +1,5 @@
-# The Linux build of the library. Called by build.yml. Pull requests and main also run the coverage, and build the variant with the sanitizers,
-# which unit-tests.yml and integration-tests.yml run
+# The Linux build of the library. Called by build.yml. Pull requests and main also build the variants with coverage and with the sanitizers, which
+# coverage.yml, unit-tests.yml and integration-tests.yml run
 name: Build Linux
 
 on:
@@ -15,8 +15,8 @@ jobs:
     # debian:12 provides a supported build environment. The library needs glibc 2.34, see the unbound step
     container: ${{ matrix.container }}
     env:
-      # coverage runs on pull requests and on main
-      COVERAGE: ${{ matrix.arch == 'linux-x86_64' && (github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/main')) }}
+      # the variants with coverage and with the sanitizers are built on pull requests and on main
+      INSTRUMENTED: ${{ matrix.arch == 'linux-x86_64' && (github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/main')) }}
       # the job runs as root in the container, and github.workspace is not the path of the workspace in it
       CCACHE_DIR: /root/.ccache
       # every project gets ccache as the compiler launcher, and monero-project's own detection of it is turned off, so that it is not wrapped twice
@@ -264,71 +264,32 @@ jobs:
           if-no-files-found: error
           retention-days: 1
 
+      # the tests of these variants run in other workflows, in the same image and at the same paths as here, which the notes of gcov and the
+      # RUNPATH of the tests need. Only what they run is staged
       - name: Build monero-c with coverage
-        if: env.COVERAGE == 'true'
+        if: env.INSTRUMENTED == 'true'
         run: |
           cmake -S . -B build-coverage -DBUILD_TESTS=ON -DENABLE_COVERAGE=ON -DBOOST_ROOT=/usr/local -DBoost_NO_SYSTEM_PATHS=ON $CMAKE_CCACHE
           cmake --build build-coverage -j3
 
-      # the node is the monerod of the image of docker-monero-rpc, a static binary, so it is not built here. skopeo reads the image without a
-      # docker daemon, which a container job does not have
-      - name: Get monerod for integration tests
-        if: env.COVERAGE == 'true'
-        env:
-          # the tag of tests/c/integration/docker-compose.yml
-          MONERO_TAG: master
+      - name: Stage the coverage build
+        if: env.INSTRUMENTED == 'true'
         run: |
-          apt-get install -y skopeo jq zstd
-          skopeo copy "docker://ghcr.io/libmonero/monero-daemon-rpc:$MONERO_TAG" dir:node-image
-          mkdir node
-          for layer in $(jq -r '.layers[].digest' node-image/manifest.json | sed 's/^sha256://'); do
-            tar -xf "node-image/$layer" -C node --wildcards 'usr/local/bin/monerod' 2>/dev/null || true
-          done
-          test -x node/usr/local/bin/monerod
-          node/usr/local/bin/monerod --version
+          mkdir stage-coverage
+          find build-coverage -type f \( -name '*.gcno' -o -name libmonero_c.so -o -name 'monero_c_*_unit_tests' -o -name 'monero_c_*_integration_tests' \) ! -name monero_c_static_unit_tests -exec cp --parents {} stage-coverage/ \;
 
-      - name: Run tests with coverage
-        if: env.COVERAGE == 'true'
-        run: |
-          # regtest monerod with the same settings as tests/c/integration/docker-compose.yml
-          mkdir -p "$RUNNER_TEMP/regtest"
-          node/usr/local/bin/monerod --regtest --offline --fixed-difficulty=1 --non-interactive --log-level=0 --hide-my-port --no-zmq --rpc-bind-ip=127.0.0.1 --rpc-bind-port=18081 --rpc-access-control-origins=* --rpc-ssl=disabled --disable-rpc-ban --p2p-bind-port=18080 --no-igd --data-dir "$RUNNER_TEMP/regtest" &
-          node_pid=$!
-          # stop the node, and wait until it has gone so that the next step finds the ports free, also when a test fails and the step exits
-          trap 'kill "$node_pid" 2>/dev/null || true; wait "$node_pid" 2>/dev/null || true' EXIT
-          for _ in $(seq 1 60); do
-            if curl -fsS -m 5 -X POST http://127.0.0.1:18081/json_rpc -d '{"jsonrpc":"2.0","id":"0","method":"get_block_count"}' | grep -q '"count"'; then break; fi
-            sleep 2
-          done
-          make unit-test TEST_DIR=build-coverage
-          make integration-test TEST_DIR=build-coverage DAEMON_URI=http://127.0.0.1:18081
-
-      - name: Generate coverage report
-        if: env.COVERAGE == 'true'
-        run: |
-          apt-get install -y lcov
-          make coverage-report COVERAGE_TITLE="monero-c coverage @ $(printf '%.7s' "$GITHUB_SHA")"
-          sed -i "s|$GITHUB_WORKSPACE/||g" build-coverage/coverage.info
-
-      - name: Stage coverage report
-        if: env.COVERAGE == 'true'
-        run: |
-          mkdir -p coverage-report
-          cp build-coverage/coverage.info coverage-report/
-          cp -r build-coverage/coverage_html coverage-report/
-
-      - name: Upload coverage report
-        if: env.COVERAGE == 'true'
+      - name: Upload the coverage build
+        if: env.INSTRUMENTED == 'true'
         uses: actions/upload-artifact@v7
         with:
-          name: coverage-reports
-          path: coverage-report/
+          name: build-coverage-linux-x86_64
+          path: stage-coverage/
           if-no-files-found: error
-          retention-days: 7
+          retention-days: 1
 
       # sanitizers on monero_c only, the static archives aren't instrumented
       - name: Build monero-c with sanitizers
-        if: env.COVERAGE == 'true'
+        if: env.INSTRUMENTED == 'true'
         run: |
           flags="-fsanitize=address,undefined -fno-omit-frame-pointer -fno-sanitize-recover=undefined"
           cmake -S . -B build-sanitizers -DBUILD_TESTS=ON -DCMAKE_BUILD_TYPE=Debug -DBOOST_ROOT=/usr/local -DBoost_NO_SYSTEM_PATHS=ON $CMAKE_CCACHE \
@@ -336,16 +297,14 @@ jobs:
             "-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=address,undefined" "-DCMAKE_SHARED_LINKER_FLAGS=-fsanitize=address,undefined"
           cmake --build build-sanitizers -j3
 
-      # unit-tests.yml and integration-tests.yml run this variant, in the same image and at the same path as here, which the RUNPATH of the tests
-      # needs. Only what they run is staged
       - name: Stage the sanitizers build
-        if: env.COVERAGE == 'true'
+        if: env.INSTRUMENTED == 'true'
         run: |
           mkdir stage-sanitizers
           find build-sanitizers -type f \( -name libmonero_c.so -o -name 'monero_c_*_unit_tests' -o -name 'monero_c_*_integration_tests' \) ! -name monero_c_static_unit_tests -exec cp --parents {} stage-sanitizers/ \;
 
       - name: Upload the sanitizers build
-        if: env.COVERAGE == 'true'
+        if: env.INSTRUMENTED == 'true'
         uses: actions/upload-artifact@v7
         with:
           name: build-sanitizers-linux-x86_64

@@ -1,6 +1,6 @@
 name: Docs
 
-# Called from build.yml. Builds the docs on pull requests, and publishes them with the coverage report from main only.
+# Called from coverage.yml. Builds the docs on pull requests, and publishes them with the coverage report from main only.
 on:
   workflow_call:
   workflow_dispatch:
@@ -32,7 +32,7 @@ jobs:
           cp docs/architecture.png docs/monero-spec.pdf docs/html/docs/
           cp donate.png docs/html/
 
-      # only when called from build.yml. A manual run publishes the docs without coverage.
+      # only when called from coverage.yml. A manual run publishes the docs without coverage.
       - name: Download coverage report
         id: coverage
         continue-on-error: true

@@ -1,6 +1,6 @@
 # Builds the library for each platform in its own workflow, build-linux.yml, build-macos.yml,
 # build-windows.yml and build-android.yml, checks what the libraries link against and export, and packages the result.
-# The tests that run the libraries are in unit-tests.yml and integration-tests.yml
+# The tests that run the libraries are in unit-tests.yml, integration-tests.yml and coverage.yml
 name: Build
 
 on:
@@ -36,17 +36,6 @@ jobs:
     name: Library checks
     needs: [linux, macos, windows]
     uses: ./.github/workflows/library-checks.yml
-
-  docs:
-    name: docs
-    # builds the docs on pull requests, publishes them with the coverage report from main only
-    if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
-    needs: linux
-    permissions:
-      contents: read
-      pages: write
-      id-token: write
-    uses: ./.github/workflows/docs.yml
 
   dotnet:
     name: .NET package

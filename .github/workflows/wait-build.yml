@@ -50,7 +50,7 @@ jobs:
           # is dropped, because it prints every job and step again at each refresh. A refresh makes four requests and the token has 1,000 an hour for the
           # repository, which every waiting workflow shares, so don't shorten the interval
           for _ in $(seq 1 10); do
-            gh run watch "$RUN_ID" --interval 120 > /dev/null && break
+            gh run watch "$RUN_ID" --interval 180 > /dev/null && break
             sleep 60
           done
           RESULT=$(gh run view "$RUN_ID" --json status,conclusion --jq 'if .status == "completed" then .conclusion else .status end')

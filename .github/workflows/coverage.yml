@@ -1,0 +1,121 @@
+# The coverage of the C tests of the library: the unit and the integration tests run on the build with gcov of the Build run of the same commit,
+# and make the report that codacy.yml sends to Codacy and that the API site shows, which this workflow builds and publishes
+name: Coverage
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: coverage-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  wait-build:
+    name: Pending
+    uses: ./.github/workflows/wait-build.yml
+    with:
+      artifacts: build-coverage-linux-x86_64
+
+  coverage:
+    name: Linux x86_64
+    needs: wait-build
+    runs-on: ubuntu-24.04
+    # the build was made in this image, at this path, and gcov has to be the one of its compiler to read the notes that it wrote. A container job
+    # has no docker daemon, so the node is the monerod of the image of docker-monero-rpc, a static binary, which skopeo reads without one
+    container: debian:12
+    timeout-minutes: 60
+
+    steps:
+      - name: Install git and the libraries of the build
+        run: |
+          apt-get update
+          apt-get install -y git ca-certificates curl make gcc lcov skopeo jq zstd libzmq3-dev libunbound-dev libsodium-dev libunwind-dev liblzma-dev libreadline-dev libexpat1-dev libpgm-dev libhidapi-dev libusb-1.0-0-dev libprotobuf-dev libudev-dev nettle-dev libevent-dev
+          git config --global --add safe.directory '*'
+
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Download the coverage build
+        uses: actions/download-artifact@v8
+        with:
+          name: build-coverage-linux-x86_64
+          path: .
+          run-id: ${{ needs.wait-build.outputs.run-id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      # gcov warns when a source file is newer than its notes, and the checkout of this job is newer than the build
+      - name: Check runtime dependencies
+        run: |
+          chmod +x build-coverage/tests/c/unit/* build-coverage/tests/c/integration/*
+          find build-coverage -name '*.gcno' -exec touch {} +
+          ldd_out=$(ldd build-coverage/libmonero_c.so || true)
+          if grep -q 'not found' <<< "$ldd_out"; then
+            echo "$ldd_out"
+            echo "missing runtime libraries above"; exit 1
+          fi
+
+      - name: Get monerod
+        env:
+          # the tag of tests/c/integration/docker-compose.yml
+          MONERO_TAG: master
+        run: |
+          skopeo copy "docker://ghcr.io/libmonero/monero-daemon-rpc:$MONERO_TAG" dir:node-image
+          mkdir node
+          for layer in $(jq -r '.layers[].digest' node-image/manifest.json | sed 's/^sha256://'); do
+            tar -xf "node-image/$layer" -C node --wildcards 'usr/local/bin/monerod' 2>/dev/null || true
+          done
+          test -x node/usr/local/bin/monerod
+          node/usr/local/bin/monerod --version
+
+      - name: Run tests with coverage
+        env:
+          LD_LIBRARY_PATH: ${{ github.workspace }}/build-coverage
+        run: |
+          # regtest monerod with the same settings as tests/c/integration/docker-compose.yml
+          mkdir -p "$RUNNER_TEMP/regtest"
+          node/usr/local/bin/monerod --regtest --offline --fixed-difficulty=1 --non-interactive --log-level=0 --hide-my-port --no-zmq --rpc-bind-ip=127.0.0.1 --rpc-bind-port=18081 --rpc-access-control-origins=* --rpc-ssl=disabled --disable-rpc-ban --p2p-bind-port=18080 --no-igd --data-dir "$RUNNER_TEMP/regtest" &
+          node_pid=$!
+          # stop the node, and wait until it has gone, also when a test fails and the step exits
+          trap 'kill "$node_pid" 2>/dev/null || true; wait "$node_pid" 2>/dev/null || true' EXIT
+          for _ in $(seq 1 60); do
+            if curl -fsS -m 5 -X POST http://127.0.0.1:18081/json_rpc -d '{"jsonrpc":"2.0","id":"0","method":"get_block_count"}' | grep -q '"count"'; then break; fi
+            sleep 2
+          done
+          make unit-test TEST_DIR=build-coverage
+          make integration-test TEST_DIR=build-coverage DAEMON_URI=http://127.0.0.1:18081
+
+      - name: Generate coverage report
+        run: |
+          make coverage-report COVERAGE_TITLE="monero-c coverage @ $(printf '%.7s' "$GITHUB_SHA")"
+          sed -i "s|$GITHUB_WORKSPACE/||g" build-coverage/coverage.info
+
+      - name: Stage coverage report
+        run: |
+          mkdir -p coverage-report
+          cp build-coverage/coverage.info coverage-report/
+          cp -r build-coverage/coverage_html coverage-report/
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v7
+        with:
+          name: coverage-reports
+          path: coverage-report/
+          if-no-files-found: error
+          retention-days: 7
+
+  docs:
+    name: docs
+    # builds the docs on pull requests, publishes them with the coverage report from main only
+    needs: coverage
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    uses: ./.github/workflows/docs.yml
