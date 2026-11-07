@@ -6,7 +6,7 @@ The install rules of monero-c, for C and C++ programs that use the shared librar
 
 | Path | What |
 | --- | --- |
-| `lib/libmonero_c.so` (`monero_c.dll` in `bin/` on Windows) | The shared library |
+| `lib/libmonero_c.so` (`libmonero_c.dll` in `bin/` on Windows) | The shared library |
 | `include/monero_c/` | The public headers, listed in [`headers.txt`](../common/headers.txt) |
 | `lib/cmake/monero_c/` | `find_package(monero_c)` |
 | `lib/pkgconfig/monero_c.pc` | `pkg-config monero_c` |

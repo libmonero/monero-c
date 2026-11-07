@@ -149,14 +149,25 @@ Flags are cached in `./build/CMakeCache.txt`, so pass them on every build to cha
 3. Update packages: `pacman -Syu` and confirm at prompts.
 4. Relaunch MSYS2 (if necessary) and install dependencies:
    ```
-   pacman -S mingw-w64-x86_64-toolchain mingw-w64-x86_64-cmake mingw-w64-x86_64-openssl mingw-w64-x86_64-zeromq mingw-w64-x86_64-libsodium mingw-w64-x86_64-hidapi mingw-w64-x86_64-unbound mingw-w64-x86_64-protobuf mingw-w64-x86_64-libusb mingw-w64-x86_64-expat mingw-w64-x86_64-ntldd git make gettext base-devel wget
+   pacman -S mingw-w64-x86_64-toolchain mingw-w64-x86_64-cmake mingw-w64-x86_64-openssl mingw-w64-x86_64-zeromq mingw-w64-x86_64-libsodium mingw-w64-x86_64-unbound mingw-w64-x86_64-protobuf mingw-w64-x86_64-expat mingw-w64-x86_64-ntldd git make gettext base-devel autoconf automake libtool wget
    wget https://repo.msys2.org/mingw/mingw64/mingw-w64-x86_64-icu-76.1-1-any.pkg.tar.zst
    pacman -U mingw-w64-x86_64-icu-76.1-1-any.pkg.tar.zst
    wget https://repo.msys2.org/mingw/mingw64/mingw-w64-x86_64-boost-1.87.0-3-any.pkg.tar.zst
-   pacman -U mingw-w64-x86_64-boost-1.87.0-3-any.pkg.tar.zst
+   wget https://repo.msys2.org/mingw/mingw64/mingw-w64-x86_64-boost-libs-1.87.0-3-any.pkg.tar.zst
+   pacman -U mingw-w64-x86_64-boost-libs-1.87.0-3-any.pkg.tar.zst mingw-w64-x86_64-boost-1.87.0-3-any.pkg.tar.zst
    ```
-5. Clone the repo: `git clone --recurse-submodules https://github.com/libmonero/monero-c.git`
-6. Build monero-project, monero-cpp and monero-c. Extra arguments are passed to cmake, e.g. `-DBUILD_TESTS=ON`:
+   Install boost and boost-libs together from files: boost depends on boost-libs without a version, so `pacman` would take the newest boost-libs otherwise.
+5. Build hidapi 0.14.0, which the MINGW64 repository of MSYS2 doesn't have anymore, and libusb 1.0.27:
+   ```
+   wget https://github.com/libusb/hidapi/archive/refs/tags/hidapi-0.14.0.tar.gz
+   tar xzf hidapi-0.14.0.tar.gz
+   (cd hidapi-hidapi-0.14.0 && cmake -G "MSYS Makefiles" -B build -DBUILD_SHARED_LIBS=OFF -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX="$MINGW_PREFIX" -DCMAKE_POLICY_VERSION_MINIMUM=3.5 . && cmake --build build && cmake --install build)
+   wget https://github.com/libusb/libusb/releases/download/v1.0.27/libusb-1.0.27.tar.bz2
+   tar -xf libusb-1.0.27.tar.bz2
+   (cd libusb-1.0.27 && ./configure --prefix="$MINGW_PREFIX" --disable-static --enable-shared && make && make install)
+   ```
+6. Clone the repo: `git clone --recurse-submodules https://github.com/libmonero/monero-c.git`
+7. Build monero-project, monero-cpp and monero-c. Extra arguments are passed to cmake, e.g. `-DBUILD_TESTS=ON`:
    ```
    cd monero-c
    ./bin/build_libmonero_c.sh -DBUILD_TESTS=ON
@@ -164,7 +175,7 @@ Flags are cached in `./build/CMakeCache.txt`, so pass them on every build to cha
 
 ## Linking the static library
 
-The build makes the shared library (`libmonero_c.so`, `libmonero_c.dylib` or `monero_c.dll`) and the static library `libmonero_c.a`. A CMake project that links the target `monero_c-static` gets the include path, the `MONERO_C_STATIC` define and the libraries of the closure. A program that links the archive some other way defines `MONERO_C_STATIC` before it includes the headers: on Windows they declare the functions as imported from a DLL otherwise, and the link fails with undefined `__imp_` symbols. The archive holds the objects of the DLL, so a program that links it on Windows also exports the functions. `monero_c_static_unit_tests` links the archive and calls the library, on every platform.
+The build makes the shared library (`libmonero_c.so`, `libmonero_c.dylib` or `libmonero_c.dll`) and the static library `libmonero_c.a`. A CMake project that links the target `monero_c-static` gets the include path, the `MONERO_C_STATIC` define and the libraries of the closure. A program that links the archive some other way defines `MONERO_C_STATIC` before it includes the headers: on Windows they declare the functions as imported from a DLL otherwise, and the link fails with undefined `__imp_` symbols. The archive holds the objects of the DLL, so a program that links it on Windows also exports the functions. `monero_c_static_unit_tests` links the archive and calls the library, on every platform.
 
 ## Running tests
 
