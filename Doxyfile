@@ -987,6 +987,7 @@ INPUT_FILE_ENCODING    =
 
 # Headers for the public API (the .cpp implementation has no doc comments of
 # its own, see src/utils/monero_c_utils.cpp); *.md for README.md as the main page.
+# The headers in EXCLUDE are internal helpers that the .cpp files include.
 FILE_PATTERNS          = *.h \
                          *.md
 
@@ -1003,7 +1004,11 @@ RECURSIVE              = YES
 # Note that relative paths are relative to the directory from which doxygen is
 # run.
 
-EXCLUDE                = src/common/monero_c_common.h
+EXCLUDE                = src/common/monero_c_callbacks.h \
+                         src/common/monero_c_common.h \
+                         src/common/monero_c_event_queue.h \
+                         src/common/monero_c_secret.h \
+                         src/common/monero_c_tls.h
 
 # The EXCLUDE_SYMLINKS tag can be used to select whether or not files or
 # directories that are symbolic links (a Unix file system feature) are excluded

@@ -114,13 +114,13 @@ Every call that can fail returns `MONERO_OK` or `MONERO_ERROR`, `monero_last_err
 
 * [API documentation](https://libmonero.github.io/monero-c/)
 * [Coverage report](https://libmonero.github.io/monero-c/coverage/)
-* [.NET bindings and NuGet package](docs/dotnet.md)
-* [Android archive (AAR)](packaging/android/README.md)
-* [JVM archive (JAR)](packaging/jvm/README.md)
-* [Dart package](packaging/dart/README.md)
-* [CMake install, pkg-config and Linux packages](packaging/cmake/README.md)
-* [Apple XCFramework](packaging/apple/README.md)
-* [Changelog](CHANGELOG.md)
+* [.NET bindings and NuGet package](https://github.com/libmonero/monero-c/blob/main/docs/dotnet.md)
+* [Android archive (AAR)](https://github.com/libmonero/monero-c/blob/main/packaging/android/README.md)
+* [JVM archive (JAR)](https://github.com/libmonero/monero-c/blob/main/packaging/jvm/README.md)
+* [Dart package](https://github.com/libmonero/monero-c/blob/main/packaging/dart/README.md)
+* [CMake install, pkg-config and Linux packages](https://github.com/libmonero/monero-c/blob/main/packaging/cmake/README.md)
+* [Apple XCFramework](https://github.com/libmonero/monero-c/blob/main/packaging/apple/README.md)
+* [Changelog](https://github.com/libmonero/monero-c/blob/main/CHANGELOG.md)
 
 ## Building monero-c from source
 
@@ -136,7 +136,7 @@ Every call that can fail returns `MONERO_OK` or `MONERO_ERROR`, `monero_last_err
    ./bin/build_libmonero_c.sh -DBUILD_TESTS=ON
    ```
 
-From Rider or Visual Studio, open `monero-c.sln`, right-click the project `Monero.Native` and choose Build: it runs the same script (see [native/Monero.Native.csproj](native/Monero.Native.csproj) for the arguments and the MSYS2 path on Windows). Building the solution builds it too, except where `CI` or `GITHUB_ACTIONS` is `true` (pass `-p:MoneroCSkipNative=true` to skip it elsewhere), so the C# tests of CI don't start a native build. The next builds are incremental: `make` only rebuilds what changed.
+From Rider or Visual Studio, open `monero-c.sln`, right-click the project `Monero.Native` and choose Build: it runs the same script (see [native/Monero.Native.csproj](https://github.com/libmonero/monero-c/blob/main/native/Monero.Native.csproj) for the arguments and the MSYS2 path on Windows). Building the solution builds it too, except where `CI` or `GITHUB_ACTIONS` is `true` (pass `-p:MoneroCSkipNative=true` to skip it elsewhere), so the C# tests of CI don't start a native build. The next builds are incremental: `make` only rebuilds what changed.
 
 The project `Monero.Native.CTests` lists the tests of CTest in the test runner of the IDE, one test for each, and runs them from the build directory (`MONERO_C_BUILD_DIR` changes it), so build `Monero.Native` first (Build Solution does, in this order). The tests are skipped where CI or `GITHUB_ACTIONS` is true, because the CI jobs run the C tests on their own.
 
@@ -172,7 +172,7 @@ The build makes the shared library (`libmonero_c.so`, `libmonero_c.dylib` or `mo
 ctest --test-dir build --output-on-failure
 ```
 
-The native unit tests in [tests/c/unit](tests/c/unit/) need nothing else. The native integration tests in [tests/c/integration](tests/c/integration/) call a regtest `monerod` and a `monero-wallet-rpc` server, so they are skipped unless `MONERO_C_TEST_DAEMON_URI` and `MONERO_C_TEST_WALLET_RPC_URI` point at them. The compose file starts both, with the same image that monero-python uses:
+The native unit tests in [tests/c/unit](https://github.com/libmonero/monero-c/tree/main/tests/c/unit) need nothing else. The native integration tests in [tests/c/integration](https://github.com/libmonero/monero-c/tree/main/tests/c/integration) call a regtest `monerod` and a `monero-wallet-rpc` server, so they are skipped unless `MONERO_C_TEST_DAEMON_URI` and `MONERO_C_TEST_WALLET_RPC_URI` point at them. The compose file starts both, with the same image that monero-python uses:
 
 ```
 docker compose -f tests/c/integration/docker-compose.yml up -d
@@ -192,11 +192,11 @@ Some of the unit tests look for crashes and leaks instead of checking a feature,
 
 ## Memory Ownership
 
-Any `out_*` parameter that receives a string, a byte buffer or an array (`char**`, `uint8_t**`, `uint64_t**`) is heap-allocated by monero_c and must be freed by the caller with `monero_utils_free()`, as shown above -- the calls of `monero_utils_free()` in the sample are not optional. Fixed-size out-params (e.g. `uint8_t out_payment_id[32]`) write into a buffer the caller already owns, so there's nothing to free. The strings that hold a secret, from `monero_wallet_get_seed()`, `monero_wallet_get_private_view_key()`, `monero_wallet_get_private_spend_key()` and `monero_wallet_get_tx_key()`, are freed with `monero_utils_free_secret()`, which overwrites them first. monero_c wipes the copies of those secrets that it makes, and the passwords, seeds and keys that it copies from its arguments. The wallet of monero-project and the JSON of a wallet config keep their own copies. See [src/utils/monero_c_utils.h](src/utils/monero_c_utils.h) for the one exception (`monero_last_error()`). Handles are released with their matching `*_free()` function: `monero_daemon_free()`, `monero_wallet_free()`, `monero_rpc_connection_free()` and the listener functions. A daemon or RPC wallet created from a `monero_rpc_connection` keeps the connection, so the connection handle can be freed right after. To save a full wallet, close it with `monero_wallet_close(wallet, true)` before freeing it. After a failed call, the string, buffer, array and handle outputs are NULL and the counts are 0, even when the failure was a NULL argument, so there is nothing to free. A thread that makes or opens a wallet, or gives it a new password, gets a scratchpad of 2 MB for the password hash, as monero-project allocates it, and monero_c frees it when the thread ends, so a thread pool costs less than a new thread for each call.
+Any `out_*` parameter that receives a string, a byte buffer or an array (`char**`, `uint8_t**`, `uint64_t**`) is heap-allocated by monero_c and must be freed by the caller with `monero_utils_free()`, as shown above -- the calls of `monero_utils_free()` in the sample are not optional. Fixed-size out-params (e.g. `uint8_t out_payment_id[32]`) write into a buffer the caller already owns, so there's nothing to free. The strings that hold a secret, from `monero_wallet_get_seed()`, `monero_wallet_get_private_view_key()`, `monero_wallet_get_private_spend_key()` and `monero_wallet_get_tx_key()`, are freed with `monero_utils_free_secret()`, which overwrites them first. monero_c wipes the copies of those secrets that it makes, and the passwords, seeds and keys that it copies from its arguments. The wallet of monero-project and the JSON of a wallet config keep their own copies. See [src/utils/monero_c_utils.h](https://github.com/libmonero/monero-c/blob/main/src/utils/monero_c_utils.h) for the one exception (`monero_last_error()`). Handles are released with their matching `*_free()` function: `monero_daemon_free()`, `monero_wallet_free()`, `monero_rpc_connection_free()` and the listener functions. A daemon or RPC wallet created from a `monero_rpc_connection` keeps the connection, so the connection handle can be freed right after. To save a full wallet, close it with `monero_wallet_close(wallet, true)` before freeing it. After a failed call, the string, buffer, array and handle outputs are NULL and the counts are 0, even when the failure was a NULL argument, so there is nothing to free. A thread that makes or opens a wallet, or gives it a new password, gets a scratchpad of 2 MB for the password hash, as monero-project allocates it, and monero_c frees it when the thread ends, so a thread pool costs less than a new thread for each call.
 
 ## Results with context
 
-The results come with the parents that their models have, so a transfer is in its tx and a tx in its block, as in monero-java. The shapes are in [docs/json-shapes.md](docs/json-shapes.md), and the docs of each function in `src/wallet/monero_c_wallet.h` and `src/daemon/monero_c_daemon.h` say which one it returns.
+The results come with the parents that their models have, so a transfer is in its tx and a tx in its block, as in monero-java. The shapes are in [docs/json-shapes.md](https://github.com/libmonero/monero-c/blob/main/docs/json-shapes.md), and the docs of each function in `src/wallet/monero_c_wallet.h` and `src/daemon/monero_c_daemon.h` say which one it returns.
 
 - `monero_wallet_get_txs()`, `monero_wallet_get_transfers()` and `monero_wallet_get_outputs()` return `{"blocks":[...]}`, for a full wallet and an RPC wallet alike. A block has its `height` and its `timestamp`, and its `txs`, and a tx has the `incomingTransfers`, the `outgoingTransfer` or the `outputs` of the result. The txs that no block holds yet, in the pool or not relayed, are in one block that has no `height`.
 - `monero_daemon_get_tx()`, `monero_daemon_get_txs()` and `monero_daemon_get_tx_pool()` return the same, with the txs of one block in one block.

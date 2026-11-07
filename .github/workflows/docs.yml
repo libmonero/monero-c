@@ -25,6 +25,13 @@ jobs:
       - name: Build docs
         run: doxygen Doxyfile
 
+      # the README is the main page and refers to these files, which Doxygen does not copy
+      - name: Copy the files that the README refers to
+        run: |
+          mkdir -p docs/html/docs
+          cp docs/architecture.png docs/monero-spec.pdf docs/html/docs/
+          cp donate.png docs/html/
+
       # only when called from build.yml. A manual run publishes the docs without coverage.
       - name: Download coverage report
         id: coverage
