@@ -794,6 +794,7 @@ std::shared_ptr<monero::monero_wallet_config> light_config_of(const char* json) 
                   (config->m_private_spend_key != boost::none && !config->m_private_spend_key->empty());
   if (has_seed && has_keys) throw std::invalid_argument("Wallet may be initialized with a seed or keys but not both");
   if (has_seed) check_mnemonic_length(*config->m_seed);
+  if (config->m_is_multisig != boost::none && *config->m_is_multisig) throw std::invalid_argument("A light wallet is not multisig");
   return config;
 }
 
