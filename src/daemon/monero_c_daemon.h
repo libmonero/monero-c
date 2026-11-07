@@ -153,7 +153,7 @@ MONERO_EXPORT monero_result monero_daemon_set_poll_period(monero_daemon* daemon,
 /**
  * Create a listener that forwards the daemon's notifications to the callbacks.
  *
- * @param callbacks are the callbacks to call. They are copied.
+ * @param callbacks are the callbacks to call. They are copied
  * @param out_listener receives the new listener, released with monero_daemon_listener_free()
  * @return MONERO_OK on success, or MONERO_ERROR (see monero_last_error())
  */
@@ -216,7 +216,7 @@ MONERO_EXPORT monero_result monero_daemon_remove_listeners(monero_daemon* daemon
 MONERO_EXPORT monero_result monero_daemon_get_version(monero_daemon* daemon, char** out_json);
 
 /**
- * Indicates if the daemon is trusted or untrusted.
+ * Check if the daemon is trusted.
  *
  * @param daemon is the handle returned by monero_daemon_connect()
  * @param out_trusted receives true if the daemon is trusted, false otherwise
@@ -884,7 +884,7 @@ MONERO_EXPORT monero_result monero_daemon_get_known_peers(monero_daemon* daemon,
 MONERO_EXPORT monero_result monero_daemon_get_public_peers(monero_daemon* daemon, bool include_offline, char** out_json);
 
 /**
- * Limits the number of outgoing peers.
+ * Limit the number of outgoing peers.
  *
  * @param daemon is the handle returned by monero_daemon_connect()
  * @param limit is the maximum number of outgoing peers
@@ -893,7 +893,7 @@ MONERO_EXPORT monero_result monero_daemon_get_public_peers(monero_daemon* daemon
 MONERO_EXPORT monero_result monero_daemon_set_outgoing_peer_limit(monero_daemon* daemon, int32_t limit);
 
 /**
- * Limits the number of incoming peers.
+ * Limit the number of incoming peers.
  *
  * @param daemon is the handle returned by monero_daemon_connect()
  * @param limit is the maximum number of incoming peers
@@ -911,7 +911,7 @@ MONERO_EXPORT monero_result monero_daemon_set_incoming_peer_limit(monero_daemon*
 MONERO_EXPORT monero_result monero_daemon_get_peer_bans(monero_daemon* daemon, char** out_json);
 
 /**
- * Bans peer nodes.
+ * Ban peer nodes.
  *
  * @param daemon is the handle returned by monero_daemon_connect()
  * @param bans_json is a JSON array of monero_ban to apply
@@ -920,7 +920,7 @@ MONERO_EXPORT monero_result monero_daemon_get_peer_bans(monero_daemon* daemon, c
 MONERO_EXPORT monero_result monero_daemon_set_peer_bans(monero_daemon* daemon, const char* bans_json);
 
 /**
- * Bans a peer node.
+ * Ban a peer node.
  *
  * @param daemon is the handle returned by monero_daemon_connect()
  * @param ban_json is a JSON-serialized monero_ban to apply
@@ -941,7 +941,7 @@ MONERO_EXPORT monero_result monero_daemon_get_peer_ban(monero_daemon* daemon, co
 // ---------------------------------- ADMIN -----------------------------------
 
 /**
- * Prunes the blockchain.
+ * Prune the blockchain.
  *
  * @param daemon is the handle returned by monero_daemon_connect()
  * @param check specifies if the pruning is checked
@@ -951,7 +951,7 @@ MONERO_EXPORT monero_result monero_daemon_get_peer_ban(monero_daemon* daemon, co
 MONERO_EXPORT monero_result monero_daemon_prune_blockchain(monero_daemon* daemon, bool check, char** out_json);
 
 /**
- * Saves (flushes) the blockchain to disk.
+ * Save (flush) the blockchain to disk.
  *
  * @param daemon is the handle returned by monero_daemon_connect()
  * @return MONERO_OK on success, or MONERO_ERROR (see monero_last_error())
@@ -959,7 +959,7 @@ MONERO_EXPORT monero_result monero_daemon_prune_blockchain(monero_daemon* daemon
 MONERO_EXPORT monero_result monero_daemon_save_blockchain(monero_daemon* daemon);
 
 /**
- * Pops (removes) blocks from the top of the blockchain.
+ * Pop (remove) blocks from the top of the blockchain.
  *
  * @param daemon is the handle returned by monero_daemon_connect()
  * @param num_blocks is the number of blocks to pop
@@ -990,7 +990,7 @@ MONERO_EXPORT monero_result monero_daemon_flush_cache(monero_daemon* daemon, boo
 MONERO_EXPORT monero_result monero_daemon_set_bootstrap_daemon(monero_daemon* daemon, const char* address, const char* username, const char* password, const char* proxy);
 
 /**
- * Disables the bootstrap daemon, so the node no longer falls back to it.
+ * Disable the bootstrap daemon, so the node no longer falls back to it.
  *
  * @param daemon is the handle returned by monero_daemon_connect()
  * @return MONERO_OK on success, or MONERO_ERROR (see monero_last_error())
@@ -1036,7 +1036,7 @@ MONERO_EXPORT monero_result monero_daemon_set_log_categories(monero_daemon* daem
 MONERO_EXPORT monero_result monero_daemon_check_for_update(monero_daemon* daemon, char** out_json);
 
 /**
- * Downloads an update.
+ * Download an update.
  *
  * @param daemon is the handle returned by monero_daemon_connect()
  * @param path is the path to download the update to, or "" for the daemon's default
@@ -1046,7 +1046,7 @@ MONERO_EXPORT monero_result monero_daemon_check_for_update(monero_daemon* daemon
 MONERO_EXPORT monero_result monero_daemon_download_update(monero_daemon* daemon, const char* path, char** out_json);
 
 /**
- * Safely disconnects from and shuts down the daemon.
+ * Safely disconnect from and shut down the daemon.
  *
  * @param daemon is the handle returned by monero_daemon_connect()
  * @return MONERO_OK on success, or MONERO_ERROR (see monero_last_error())

@@ -146,7 +146,7 @@ MONERO_EXPORT monero_error_code monero_last_error_code(void);
 MONERO_EXPORT void monero_utils_free(void* ptr);
 
 /**
- * Overwrites a secret with zeros and frees it, so it doesn't stay in freed memory. Use it instead of
+ * Overwrite a secret with zeros and free it, so it doesn't stay in freed memory. Use it instead of
  * monero_utils_free() for the strings that hold a seed or a private key: monero_wallet_get_seed(),
  * monero_wallet_get_private_view_key(), monero_wallet_get_private_spend_key() and monero_wallet_get_tx_key().
  * The copies that the caller made of the secret are the caller's to overwrite.
@@ -201,7 +201,7 @@ MONERO_EXPORT void monero_utils_set_log_level(int32_t level);
 MONERO_EXPORT void monero_utils_set_log_categories(const char* categories);
 
 /**
- * Configures where log output is written.
+ * Configure where log output is written.
  *
  * @param path is the log file's base path
  * @param console is whether to also write log output to the console
@@ -270,7 +270,7 @@ MONERO_EXPORT bool monero_utils_is_valid_payment_id(const char* payment_id);
 MONERO_EXPORT bool monero_utils_is_valid_mnemonic(const char* mnemonic, const char* language);
 
 /**
- * Indicates if the given language is valid.
+ * Check whether a seed language is valid.
  *
  * @param language is the language to validate (case-sensitive, e.g. "English")
  * @return true if the language is valid, false otherwise
@@ -350,7 +350,7 @@ MONERO_EXPORT monero_result monero_utils_validate_mnemonic(const char* mnemonic,
 // doesn't need to mirror every C++ model struct field by field
 
 /**
- * Builds an integrated address from a standard address and payment id.
+ * Build an integrated address from a standard address and payment id.
  *
  * @param network_type is the network to validate the address against
  * @param standard_address is the base address to integrate the payment id into
@@ -405,7 +405,7 @@ MONERO_EXPORT monero_result monero_utils_json_to_binary(const char* json, uint8_
 MONERO_EXPORT monero_result monero_utils_binary_to_json(const uint8_t* data, size_t len, char** out_json);
 
 /**
- * Decodes a get_blocks_by_height.bin-style response. The JSON has "blocks" (each block as a JSON string), "txs" (the
+ * Decode a get_blocks_by_height.bin-style response. The JSON has "blocks" (each block as a JSON string), "txs" (the
  * transactions of each block), "block_hashes", "status" and "untrusted".
  *
  * @param data is the binary-encoded buffer to decode
@@ -416,7 +416,7 @@ MONERO_EXPORT monero_result monero_utils_binary_to_json(const uint8_t* data, siz
 MONERO_EXPORT monero_result monero_utils_binary_blocks_to_json(const uint8_t* data, size_t len, char** out_json);
 
 /**
- * Decodes a get_blocks.bin-style response. The JSON has what monero_utils_binary_blocks_to_json() gives, and
+ * Decode a get_blocks.bin-style response. The JSON has what monero_utils_binary_blocks_to_json() gives, and
  * "start_height" and "current_height" too.
  *
  * @param data is the binary-encoded buffer to decode
@@ -498,9 +498,9 @@ MONERO_EXPORT monero_result monero_utils_validate_payment_id_long(const char* pa
 MONERO_EXPORT monero_result monero_utils_validate_payment_id_short(const char* payment_id_str);
 
 /**
- * Return the network-enforced ring size.
+ * Get the ring size that the network enforces.
  *
- * @return the ring size (monero_utils::RING_SIZE)
+ * @return the ring size, 16 (monero_utils::RING_SIZE)
  */
 MONERO_EXPORT int32_t monero_utils_get_ring_size(void);
 
