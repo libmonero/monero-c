@@ -1,4 +1,5 @@
-# The Linux build of the library. Called by build.yml. Pull requests and main also run the coverage and the sanitizers
+# The Linux build of the library. Called by build.yml. Pull requests and main also run the coverage, and build the variant with the sanitizers,
+# which unit-tests.yml and integration-tests.yml run
 name: Build Linux
 
 on:
@@ -335,34 +336,22 @@ jobs:
             "-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=address,undefined" "-DCMAKE_SHARED_LINKER_FLAGS=-fsanitize=address,undefined"
           cmake --build build-sanitizers -j3
 
-      - name: Run unit tests with sanitizers
+      # unit-tests.yml and integration-tests.yml run this variant, in the same image and at the same path as here, which the RUNPATH of the tests
+      # needs. Only what they run is staged
+      - name: Stage the sanitizers build
         if: env.COVERAGE == 'true'
-        env:
-          ASAN_OPTIONS: detect_leaks=1:halt_on_error=1
-          LSAN_OPTIONS: suppressions=tests/c/sanitizers/lsan.supp
-          UBSAN_OPTIONS: print_stacktrace=1:halt_on_error=1
-        run: make unit-test TEST_DIR=build-sanitizers
-
-      # the unit tests need no node,so the leaks of the results that a node produces only show here
-      - name: Run integration tests with sanitizers
-        if: env.COVERAGE == 'true'
-        env:
-          ASAN_OPTIONS: detect_leaks=1:halt_on_error=1
-          LSAN_OPTIONS: suppressions=tests/c/sanitizers/lsan.supp
-          UBSAN_OPTIONS: print_stacktrace=1:halt_on_error=1
         run: |
-          # the regtest monerod of the coverage run, on a new data dir
-          mkdir -p "$RUNNER_TEMP/regtest-sanitizers"
-          node/usr/local/bin/monerod --regtest --offline --fixed-difficulty=1 --non-interactive --log-level=0 --hide-my-port --no-zmq --rpc-bind-ip=127.0.0.1 --rpc-bind-port=18081 --rpc-access-control-origins=* --rpc-ssl=disabled --disable-rpc-ban --p2p-bind-port=18080 --no-igd --data-dir "$RUNNER_TEMP/regtest-sanitizers" &
-          node_pid=$!
-          # stop the node, and wait until it has gone so that the next step finds the ports free, also when a test fails and the step exits
-          trap 'kill "$node_pid" 2>/dev/null || true; wait "$node_pid" 2>/dev/null || true' EXIT
-          for _ in $(seq 1 60); do
-            if curl -fsS -m 5 -X POST http://127.0.0.1:18081/json_rpc -d '{"jsonrpc":"2.0","id":"0","method":"get_block_count"}' | grep -q '"count"'; then break; fi
-            sleep 2
-          done
-          MONERO_C_TEST_DAEMON_URI=http://127.0.0.1:18081 build-sanitizers/tests/c/integration/monero_c_daemon_integration_tests
-          MONERO_C_TEST_DAEMON_URI=http://127.0.0.1:18081 build-sanitizers/tests/c/integration/monero_c_wallet_integration_tests
+          mkdir stage-sanitizers
+          find build-sanitizers -type f \( -name libmonero_c.so -o -name 'monero_c_*_unit_tests' -o -name 'monero_c_*_integration_tests' \) ! -name monero_c_static_unit_tests -exec cp --parents {} stage-sanitizers/ \;
+
+      - name: Upload the sanitizers build
+        if: env.COVERAGE == 'true'
+        uses: actions/upload-artifact@v7
+        with:
+          name: build-sanitizers-linux-x86_64
+          path: stage-sanitizers/
+          if-no-files-found: error
+          retention-days: 1
 
       - name: Show the ccache statistics
         if: ${{ !cancelled() }}

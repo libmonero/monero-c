@@ -1,5 +1,5 @@
-# The library against a real regtest node and a monero-wallet-rpc server, on the artifacts of the Build run of the same commit. The tests that need
-# no daemon are in unit-tests.yml
+# The library against a real regtest node and a monero-wallet-rpc server, on the artifacts of the Build run of the same commit, and again with the
+# sanitizers against a node of its own. The tests that need no daemon are in unit-tests.yml
 name: Integration tests
 
 on:
@@ -21,7 +21,7 @@ jobs:
     name: Pending
     uses: ./.github/workflows/wait-build.yml
     with:
-      artifacts: monero-c-linux-x86_64
+      artifacts: monero-c-linux-x86_64 build-sanitizers-linux-x86_64
 
   integration:
     name: Linux x86_64 (regtest node)
@@ -93,3 +93,72 @@ jobs:
       - name: Stop regtest monerod and monero-wallet-rpc
         if: always()
         run: docker compose -f tests/c/integration/docker-compose.yml down -v
+
+  integration-sanitizers:
+    name: Linux x86_64 (sanitizers, regtest node)
+    needs: wait-build
+    runs-on: ubuntu-24.04
+    # the build was made in this image, at this path, and the sanitizers need the libasan of its compiler. A container job has no docker daemon,
+    # so the node is the monerod of the image of docker-monero-rpc, a static binary, which skopeo reads without one
+    container: debian:12
+    timeout-minutes: 60
+
+    steps:
+      - name: Install git and the libraries of the build
+        run: |
+          apt-get update
+          apt-get install -y git ca-certificates curl make gcc skopeo jq zstd libzmq3-dev libunbound-dev libsodium-dev libunwind-dev liblzma-dev libreadline-dev libexpat1-dev libpgm-dev libhidapi-dev libusb-1.0-0-dev libprotobuf-dev libudev-dev nettle-dev libevent-dev
+          git config --global --add safe.directory '*'
+
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Download the sanitizers build
+        uses: actions/download-artifact@v8
+        with:
+          name: build-sanitizers-linux-x86_64
+          path: .
+          run-id: ${{ needs.wait-build.outputs.run-id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Check runtime dependencies
+        run: |
+          chmod +x build-sanitizers/tests/c/unit/* build-sanitizers/tests/c/integration/*
+          ldd_out=$(ldd build-sanitizers/libmonero_c.so || true)
+          if grep -q 'not found' <<< "$ldd_out"; then
+            echo "$ldd_out"
+            echo "missing runtime libraries above"; exit 1
+          fi
+
+      - name: Get monerod
+        env:
+          # the tag of tests/c/integration/docker-compose.yml
+          MONERO_TAG: master
+        run: |
+          skopeo copy "docker://ghcr.io/libmonero/monero-daemon-rpc:$MONERO_TAG" dir:node-image
+          mkdir node
+          for layer in $(jq -r '.layers[].digest' node-image/manifest.json | sed 's/^sha256://'); do
+            tar -xf "node-image/$layer" -C node --wildcards 'usr/local/bin/monerod' 2>/dev/null || true
+          done
+          test -x node/usr/local/bin/monerod
+          node/usr/local/bin/monerod --version
+
+      # the unit tests need no node, so the leaks of the results that a node produces only show here
+      - name: Run integration tests with sanitizers
+        env:
+          LD_LIBRARY_PATH: ${{ github.workspace }}/build-sanitizers
+          ASAN_OPTIONS: detect_leaks=1:halt_on_error=1
+          LSAN_OPTIONS: suppressions=tests/c/sanitizers/lsan.supp
+          UBSAN_OPTIONS: print_stacktrace=1:halt_on_error=1
+        run: |
+          # regtest monerod with the same settings as tests/c/integration/docker-compose.yml
+          mkdir -p "$RUNNER_TEMP/regtest-sanitizers"
+          node/usr/local/bin/monerod --regtest --offline --fixed-difficulty=1 --non-interactive --log-level=0 --hide-my-port --no-zmq --rpc-bind-ip=127.0.0.1 --rpc-bind-port=18081 --rpc-access-control-origins=* --rpc-ssl=disabled --disable-rpc-ban --p2p-bind-port=18080 --no-igd --data-dir "$RUNNER_TEMP/regtest-sanitizers" &
+          node_pid=$!
+          # stop the node, and wait until it has gone, also when a test fails and the step exits
+          trap 'kill "$node_pid" 2>/dev/null || true; wait "$node_pid" 2>/dev/null || true' EXIT
+          for _ in $(seq 1 60); do
+            if curl -fsS -m 5 -X POST http://127.0.0.1:18081/json_rpc -d '{"jsonrpc":"2.0","id":"0","method":"get_block_count"}' | grep -q '"count"'; then break; fi
+            sleep 2
+          done
+          make integration-test TEST_DIR=build-sanitizers

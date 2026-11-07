@@ -1,5 +1,5 @@
-# The tests that need no daemon, on the artifacts of the Build run of the same commit: the C unit tests of each platform, and the managed tests
-# of the NuGet package. The ones that need a regtest node are in integration-tests.yml
+# The tests that need no daemon, on the artifacts of the Build run of the same commit: the C unit tests of each platform, the ones of Linux again
+# with the sanitizers, and the managed tests of the NuGet package. The ones that need a regtest node are in integration-tests.yml
 name: Unit tests
 
 on:
@@ -24,7 +24,7 @@ jobs:
     name: Pending
     uses: ./.github/workflows/wait-build.yml
     with:
-      artifacts: monero-c-linux-x86_64 monero-c-linux-arm64 monero-c-mac-x86_64 monero-c-mac-arm64 monero-c-windows monero-native-nuget
+      artifacts: monero-c-linux-x86_64 monero-c-linux-arm64 monero-c-mac-x86_64 monero-c-mac-arm64 monero-c-windows monero-native-nuget build-sanitizers-linux-x86_64
 
   unit-linux:
     name: ${{ matrix.platform }}
@@ -165,6 +165,49 @@ jobs:
           for test in $UNIT_TESTS; do
             "artifact/monero_c_${test}_unit_tests.exe" || exit 1
           done
+
+  unit-sanitizers:
+    name: Linux x86_64 (sanitizers)
+    needs: wait-build
+    runs-on: ubuntu-24.04
+    # the build was made in this image, at this path, and the sanitizers need the libasan of its compiler
+    container: debian:12
+    timeout-minutes: 60
+
+    steps:
+      - name: Install git and the libraries of the build
+        run: |
+          apt-get update
+          apt-get install -y git ca-certificates make gcc libzmq3-dev libunbound-dev libsodium-dev libunwind-dev liblzma-dev libreadline-dev libexpat1-dev libpgm-dev libhidapi-dev libusb-1.0-0-dev libprotobuf-dev libudev-dev nettle-dev libevent-dev
+          git config --global --add safe.directory '*'
+
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Download the sanitizers build
+        uses: actions/download-artifact@v8
+        with:
+          name: build-sanitizers-linux-x86_64
+          path: .
+          run-id: ${{ needs.wait-build.outputs.run-id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Check runtime dependencies
+        run: |
+          chmod +x build-sanitizers/tests/c/unit/* build-sanitizers/tests/c/integration/*
+          ldd_out=$(ldd build-sanitizers/libmonero_c.so || true)
+          if grep -q 'not found' <<< "$ldd_out"; then
+            echo "$ldd_out"
+            echo "missing runtime libraries above"; exit 1
+          fi
+
+      - name: Run unit tests with sanitizers
+        env:
+          LD_LIBRARY_PATH: ${{ github.workspace }}/build-sanitizers
+          ASAN_OPTIONS: detect_leaks=1:halt_on_error=1
+          LSAN_OPTIONS: suppressions=tests/c/sanitizers/lsan.supp
+          UBSAN_OPTIONS: print_stacktrace=1:halt_on_error=1
+        run: make unit-test TEST_DIR=build-sanitizers
 
   dotnet:
     name: .NET tests
