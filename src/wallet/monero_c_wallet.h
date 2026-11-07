@@ -813,10 +813,10 @@ MONERO_EXPORT monero_result monero_wallet_set_restore_height(monero_wallet* wall
 MONERO_EXPORT monero_result monero_wallet_is_closed(monero_wallet* wallet, bool* out_closed);
 
 /**
- * Export the key images of the wallet.
+ * Export the signed key images of the wallet.
  *
  * @param wallet is the wallet handle
- * @param all is true to include the key images of the spent outputs
+ * @param all is true to export all the key images, and false to export the ones since the last export
  * @param out_json receives the JSON-serialized monero_key_image_export_result. Free with monero_utils_free()
  * @return MONERO_OK or MONERO_ERROR
  */
@@ -837,7 +837,7 @@ MONERO_EXPORT monero_result monero_wallet_import_key_images(monero_wallet* walle
  * Export the outputs of the wallet.
  *
  * @param wallet is the wallet handle
- * @param all is true to include the spent outputs
+ * @param all is true to export all the outputs, and false to export the ones since the last export
  * @param out_hex receives the outputs in hex. Free with monero_utils_free()
  * @return MONERO_OK or MONERO_ERROR
  */

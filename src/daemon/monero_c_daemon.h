@@ -417,11 +417,11 @@ MONERO_EXPORT monero_result monero_daemon_submit_blocks(monero_daemon* daemon, c
 MONERO_EXPORT monero_result monero_daemon_get_last_block_header(monero_daemon* daemon, char** out_json);
 
 /**
- * Get a block header by its hash.
+ * Get a block header by its hash. The call fails with MONERO_ERROR_RPC if the daemon has no such block.
  *
  * @param daemon is the handle returned by monero_daemon_connect()
  * @param block_hash is the hash of the block
- * @param out_json receives a JSON-serialized monero_block_header, or NULL if the daemon has no such block. Free with monero_utils_free()
+ * @param out_json receives a JSON-serialized monero_block_header, freed with monero_utils_free()
  * @return MONERO_OK on success, or MONERO_ERROR (see monero_last_error())
  */
 MONERO_EXPORT monero_result monero_daemon_get_block_header_by_hash(monero_daemon* daemon, const char* block_hash, char** out_json);
@@ -604,10 +604,10 @@ MONERO_EXPORT monero_result monero_daemon_get_tx_hex(monero_daemon* daemon, cons
 MONERO_EXPORT monero_result monero_daemon_get_tx_hexes(monero_daemon* daemon, const char* const* tx_hashes, size_t num_tx_hashes, bool prune, char** out_json);
 
 /**
- * Get the total emissions and fees from the genesis block up to the given height.
+ * Get the sum of the emissions and fees of a range of blocks.
  *
  * @param daemon is the handle returned by monero_daemon_connect()
- * @param height is the height to start the sum at
+ * @param height is the height of the first block of the sum
  * @param num_blocks is the number of blocks to include in the sum
  * @param out_json receives a JSON-serialized monero_miner_tx_sum, freed with monero_utils_free()
  * @return MONERO_OK on success, or MONERO_ERROR (see monero_last_error())
