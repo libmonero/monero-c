@@ -468,8 +468,8 @@ MONERO_EXPORT monero_result monero_wallet_get_subaddress_unlocked_balance(monero
  * Key that signs a message. Values match monero-cpp's monero_message_signature_type.
  */
 typedef enum monero_message_signature_type {
-  MONERO_MESSAGE_SIGN_WITH_SPEND_KEY = 0,
-  MONERO_MESSAGE_SIGN_WITH_VIEW_KEY = 1
+  MONERO_MESSAGE_SIGN_WITH_SPEND_KEY = 0,  /**< the spend key signs the message */
+  MONERO_MESSAGE_SIGN_WITH_VIEW_KEY = 1  /**< the view key signs the message */
 } monero_message_signature_type;
 
 /**
@@ -558,10 +558,10 @@ MONERO_EXPORT monero_result monero_wallet_verify_message(monero_wallet* wallet, 
  * Fee priority of a transaction. Values match monero-cpp's monero_tx_priority.
  */
 typedef enum monero_tx_priority {
-  MONERO_TX_PRIORITY_DEFAULT = 0,
-  MONERO_TX_PRIORITY_UNIMPORTANT = 1,
-  MONERO_TX_PRIORITY_NORMAL = 2,
-  MONERO_TX_PRIORITY_ELEVATED = 3
+  MONERO_TX_PRIORITY_DEFAULT = 0,  /**< the priority that the wallet uses by default */
+  MONERO_TX_PRIORITY_UNIMPORTANT = 1,  /**< the lowest fee */
+  MONERO_TX_PRIORITY_NORMAL = 2,  /**< a normal fee */
+  MONERO_TX_PRIORITY_ELEVATED = 3  /**< a higher fee */
 } monero_tx_priority;
 
 /**

@@ -90,9 +90,9 @@ typedef struct monero_daemon_listener_callbacks {
  * Spent status of a key image. The values match monero-cpp's monero_key_image_spent_status.
  */
 typedef enum monero_key_image_spent_status {
-  MONERO_KEY_IMAGE_NOT_SPENT = 0,
-  MONERO_KEY_IMAGE_CONFIRMED = 1,
-  MONERO_KEY_IMAGE_TX_POOL = 2
+  MONERO_KEY_IMAGE_NOT_SPENT = 0,  /**< no transaction spends the key image */
+  MONERO_KEY_IMAGE_CONFIRMED = 1,  /**< a transaction in the chain spends the key image */
+  MONERO_KEY_IMAGE_TX_POOL = 2  /**< a transaction in the pool spends the key image */
 } monero_key_image_spent_status;
 
 // ------------------------------ CONNECTION ----------------------------------

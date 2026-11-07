@@ -80,17 +80,21 @@ extern "C" {
 
 // ------------------------------- RESULT CODES -------------------------------
 
-// returned by every function that can fail. On MONERO_ERROR, call monero_last_error()
-// for a human-readable message. The pointer outputs of a failed call are set to NULL and the
-// counts to 0, even when the failure is a NULL argument. Scalar outputs are left unchanged
+/**
+ * Result of a call, returned by every function that can fail. On MONERO_ERROR, call monero_last_error()
+ * for a human-readable message. The pointer outputs of a failed call are set to NULL and the
+ * counts to 0, even when the failure is a NULL argument. Scalar outputs are left unchanged.
+ */
 typedef enum monero_result {
-  MONERO_OK = 0,
-  MONERO_ERROR = -1
+  MONERO_OK = 0,  /**< the call succeeded */
+  MONERO_ERROR = -1  /**< the call failed, see monero_last_error() and monero_last_error_code() */
 } monero_result;
 
-// the kind of failure that monero_last_error_code() reports. The kind comes from the type of the exception that ended the call, not
-// from its text, so a failure that monero-cpp reports with its generic exception is MONERO_ERROR_GENERIC. More kinds can be added
-// before 1.0, so treat a value that you don't know as MONERO_ERROR_GENERIC
+/**
+ * Kind of failure that monero_last_error_code() reports. The kind comes from the type of the exception that ended the call, not
+ * from its text, so a failure that monero-cpp reports with its generic exception is MONERO_ERROR_GENERIC. More kinds can be added
+ * before 1.0, so treat a value that you don't know as MONERO_ERROR_GENERIC.
+ */
 typedef enum monero_error_code {
   MONERO_ERROR_NONE = 0,              /**< no call has failed on this thread yet */
   MONERO_ERROR_GENERIC = 1,           /**< any other failure */
@@ -100,15 +104,16 @@ typedef enum monero_error_code {
   MONERO_ERROR_IO = 5                 /**< a file or a network operation failed */
 } monero_error_code;
 
-// mirrors monero_network_type in monero-cpp (daemon/monero_daemon_model.h):
-// values must stay numerically identical since they're cast directly across the bridge
-// REGTEST has no monero-cpp value. It maps to mainnet, whose address format a regtest node uses, and
-// the wallets on it are created with the regtest flag of monero-cpp
+/**
+ * Network of an address or a wallet. The values mirror monero_network_type in monero-cpp (daemon/monero_daemon_model.h) and must
+ * stay numerically identical, since they are cast directly across the bridge. REGTEST has no monero-cpp value. It maps to mainnet,
+ * whose address format a regtest node uses, and the wallets on it are created with the regtest flag of monero-cpp.
+ */
 typedef enum monero_utils_network_type {
-  MONERO_UTILS_NETWORK_MAINNET = 0,
-  MONERO_UTILS_NETWORK_TESTNET = 1,
-  MONERO_UTILS_NETWORK_STAGENET = 2,
-  MONERO_UTILS_NETWORK_REGTEST = 3
+  MONERO_UTILS_NETWORK_MAINNET = 0,  /**< the main network */
+  MONERO_UTILS_NETWORK_TESTNET = 1,  /**< the test network */
+  MONERO_UTILS_NETWORK_STAGENET = 2,  /**< the stage network */
+  MONERO_UTILS_NETWORK_REGTEST = 3  /**< a private regtest chain, with the addresses of mainnet */
 } monero_utils_network_type;
 
 // ---------------------------- ERROR / MEMORY --------------------------------
@@ -152,12 +157,16 @@ MONERO_EXPORT void monero_utils_free_secret(char* secret);
 
 // ---------------------------------- VERSION ---------------------------------
 
-// the version of the C ABI, as major.minor.patch like the releases of monero-cpp. While the major
-// version is 0, a change of the minor version can break callers. From 1, only a change of the major
-// version breaks callers, and the minor version grows when functions are added. The patch version
-// changes for fixes that leave the ABI as it is
+/**
+ * Major version of the C ABI. The version is major.minor.patch, like the releases of monero-cpp. While the major version is 0, a change
+ * of the minor version can break callers. From 1, only a change of the major version breaks callers.
+ */
 #define MONERO_C_ABI_VERSION_MAJOR 0
+
+/** Minor version of the C ABI. It grows when functions are added, and before 1.0 when a change breaks callers. */
 #define MONERO_C_ABI_VERSION_MINOR 2
+
+/** Patch version of the C ABI. It changes for fixes that leave the ABI as it is. */
 #define MONERO_C_ABI_VERSION_PATCH 1
 
 /**
