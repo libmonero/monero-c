@@ -36,8 +36,8 @@ extern "C" {
 
 // ------------------------------- WALLET ------------------------------------
 // wraps the monero_wallet methods of the same name. A JSON argument can't nest deeper than 64
-// levels. On error the call returns MONERO_ERROR, monero_last_error() gives the message, string
-// outputs are NULL and scalar outputs are unchanged
+// levels. On error the call returns MONERO_ERROR, monero_last_error() gives the message, string,
+// array and handle outputs are NULL, counts are 0 and scalar outputs are unchanged
 
 /**
  * Opaque handle to a wallet. Full wallets come from monero_wallet_create_random(),
@@ -312,7 +312,7 @@ MONERO_EXPORT monero_result monero_wallet_request_shutdown(monero_wallet* wallet
 
 /**
  * Release a wallet handle. A wallet that is still open is closed without saving, so call
- * monero_wallet_save() first to keep the changes.
+ * monero_wallet_save() first to keep the changes. Passing NULL does nothing.
  *
  * @param wallet is the handle to release
  */
@@ -648,7 +648,7 @@ MONERO_EXPORT monero_result monero_wallet_create_subaddress(monero_wallet* walle
 MONERO_EXPORT monero_result monero_wallet_get_accounts(monero_wallet* wallet, bool include_subaddresses, char** out_json);
 
 /**
- * Get the subaddress of an address.
+ * Get the subaddress that an address belongs to, with its account and subaddress indices.
  *
  * @param wallet is the wallet handle
  * @param address is the address
@@ -967,6 +967,7 @@ MONERO_EXPORT monero_result monero_wallet_listener_create(const monero_wallet_li
 
 /**
  * Release a listener. If the listener is registered with a wallet, it is removed first.
+ * Passing NULL does nothing.
  *
  * @param listener is the listener to release
  */

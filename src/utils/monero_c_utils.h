@@ -118,8 +118,8 @@ typedef enum monero_utils_network_type {
  * monero_c function. A successful call doesn't clear it, so read it only after MONERO_ERROR.
  *
  * @return the error message, or "" if none. The pointer belongs to monero-c and stays valid
- *   until the next call that fails on this thread. Copy it to keep it. Unlike other
- *   monero_utils_* out params, don't pass it to monero_utils_free().
+ *   until the next call that fails on this thread. Copy it to keep it. Unlike the other
+ *   strings that monero_c returns, don't pass it to monero_utils_free().
  */
 MONERO_EXPORT const char* monero_last_error(void);
 
@@ -134,9 +134,9 @@ MONERO_EXPORT const char* monero_last_error(void);
 MONERO_EXPORT monero_error_code monero_last_error_code(void);
 
 /**
- * Frees a string or byte buffer returned by any monero_utils_* function.
+ * Free a string, a byte buffer or an array that a monero_c function returned. Passing NULL does nothing.
  *
- * @param ptr is the pointer previously returned by a monero_utils_* function
+ * @param ptr is the pointer that the function returned, or NULL
  */
 MONERO_EXPORT void monero_utils_free(void* ptr);
 

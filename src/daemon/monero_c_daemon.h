@@ -36,7 +36,7 @@ extern "C" {
 // each function wraps the monero_daemon method of the same name (monero-cpp's
 // monero_daemon interface). Results are JSON in monero-cpp's serializable_struct
 // format unless the parameter says otherwise. A JSON argument can't nest deeper than
-// 64 levels. On error, string and array outputs are set to NULL (counts to 0) and scalar
+// 64 levels. On error, string, array and handle outputs are set to NULL (counts to 0) and scalar
 // outputs are left unchanged. The thread safety rules are documented on monero_daemon and
 // monero_daemon_listener
 

@@ -35,8 +35,8 @@ extern "C" {
 
 // ----------------------------- RPC CONNECTION -------------------------------
 // each function wraps the monero_rpc_connection method of the same name. A JSON argument can't
-// nest deeper than 64 levels. On error, string and buffer outputs are set to NULL and scalar
-// outputs are left unchanged
+// nest deeper than 64 levels. On error, string and buffer outputs are set to NULL, counts to 0
+// and scalar outputs are left unchanged
 
 /**
  * Opaque handle to a connection to a monerod or monero-wallet-rpc server. Create it with
@@ -145,7 +145,7 @@ MONERO_EXPORT monero_result monero_rpc_connection_is_online(monero_rpc_connectio
  * Check if the server accepted the credentials at the last check_connection().
  *
  * @param connection is the connection handle
- * @param out_is_authenticated receives the status, also true if the server needs no credentials
+ * @param out_is_authenticated receives the status, also true if the server needs no credentials, MONERO_OPTIONAL_BOOL_UNSET before the first check
  * @return MONERO_OK or MONERO_ERROR
  */
 MONERO_EXPORT monero_result monero_rpc_connection_is_authenticated(monero_rpc_connection* connection, monero_optional_bool* out_is_authenticated);
