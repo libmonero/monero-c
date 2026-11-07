@@ -14,7 +14,7 @@ This is an alpha version. The C API can still change between versions.
 | `darwin-aarch64` | macOS, Apple silicon | macOS 15 | macOS 11.0 or newer |
 | `win32-x86-64` | Windows, x64 | GitHub `windows-latest` | Windows 8 or newer |
 
-The libraries are those of the NuGet package, which the Tests workflow runs on these systems. The CI loads the JAR itself on Ubuntu 24.04 x86-64 only. The folders are named as `Platform.RESOURCE_PREFIX` of [JNA](https://github.com/java-native-access/jna). Not supported: older glibc (Ubuntu 20.04 and Debian 11 have 2.31), musl (Alpine), 32-bit systems and Windows ARM64. For Android use [monero-native-android](../android/README.md).
+The libraries are those of the NuGet package, which the Unit tests workflow runs on these systems. The CI loads the JAR itself on Ubuntu 24.04 x86-64 only. The folders are named as `Platform.RESOURCE_PREFIX` of [JNA](https://github.com/java-native-access/jna). Not supported: older glibc (Ubuntu 20.04 and Debian 11 have 2.31), musl (Alpine), 32-bit systems and Windows ARM64. For Android use [monero-native-android](../android/README.md).
 
 Each folder has the same files as `runtimes/<rid>/native/` of the `Monero.Native` NuGet package: `libmonero_c.so` and `libusb-1.0.so.0` on Linux, `libmonero_c.dylib` and `libusb-1.0.0.dylib` on macOS, `monero_c.dll` and `libusb-1.0.dll` on Windows.
 

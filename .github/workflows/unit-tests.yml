@@ -1,23 +1,34 @@
+# The tests that need no daemon, on the artifacts of the Build run of the same commit: the C unit tests of each platform, and the managed tests
+# of the NuGet package. The ones that need a regtest node are in integration-tests.yml
 name: Unit tests
 
 on:
-  workflow_call:
-    inputs:
-      run-id:
-        description: the Build run whose artifacts are tested
-        required: true
-        type: string
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
 
 permissions:
   contents: read
   actions: read
 
+concurrency:
+  group: unit-tests-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 env:
   UNIT_TESTS: utils daemon wallet wallet_keys wallet_offline wallet_multisig rpc_connection abi arguments fuzz threads cpp
 
 jobs:
+  wait-build:
+    name: Pending
+    uses: ./.github/workflows/wait-build.yml
+    with:
+      artifacts: monero-c-linux-x86_64 monero-c-linux-arm64 monero-c-mac-x86_64 monero-c-mac-arm64 monero-c-windows monero-native-nuget
+
   unit-linux:
     name: ${{ matrix.platform }}
+    needs: wait-build
     runs-on: ${{ matrix.os }}
 
     strategy:
@@ -37,7 +48,7 @@ jobs:
         with:
           name: monero-c-${{ matrix.artifact }}
           path: artifact
-          run-id: ${{ inputs.run-id }}
+          run-id: ${{ needs.wait-build.outputs.run-id }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Install runtime libraries
@@ -61,6 +72,7 @@ jobs:
 
   unit-macos:
     name: ${{ matrix.platform }}
+    needs: wait-build
     runs-on: ${{ matrix.os }}
 
     strategy:
@@ -80,7 +92,7 @@ jobs:
         with:
           name: monero-c-${{ matrix.artifact }}
           path: artifact
-          run-id: ${{ inputs.run-id }}
+          run-id: ${{ needs.wait-build.outputs.run-id }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Install runtime libraries
@@ -109,6 +121,7 @@ jobs:
 
   unit-windows:
     name: Windows x86_64
+    needs: wait-build
     runs-on: windows-latest
 
     defaults:
@@ -121,7 +134,7 @@ jobs:
         with:
           name: monero-c-windows
           path: artifact
-          run-id: ${{ inputs.run-id }}
+          run-id: ${{ needs.wait-build.outputs.run-id }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
       # the MINGW64 packages that provide the DLLs monero_c.dll loads, the same ones the build job links. The package database is updated, as the build
@@ -152,3 +165,10 @@ jobs:
           for test in $UNIT_TESTS; do
             "artifact/monero_c_${test}_unit_tests.exe" || exit 1
           done
+
+  dotnet:
+    name: .NET tests
+    needs: wait-build
+    uses: ./.github/workflows/dotnet-tests.yml
+    with:
+      run-id: ${{ needs.wait-build.outputs.run-id }}

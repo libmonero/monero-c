@@ -30,15 +30,17 @@ jobs:
           echo "VERSION=$version" >> "$GITHUB_ENV"
           case "$version" in *-*) echo "PRERELEASE=--prerelease" >> "$GITHUB_ENV" ;; esac
 
-      # the tests don't run on tags: the commit has to be one of main whose Tests workflow passed
+      # the tests don't run on tags: the commit has to be one of main whose Unit tests and Integration tests workflows passed
       - name: Check that the commit is on main and its tests passed
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           state=$(gh api "repos/$GITHUB_REPOSITORY/compare/main...$GITHUB_SHA" --jq '.status')
           case "$state" in identical|behind) ;; *) echo "$GITHUB_SHA is not a commit of main ($state): tag a commit of main"; exit 1 ;; esac
-          passed=$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/test.yml/runs?head_sha=$GITHUB_SHA&event=push&branch=main&status=success&per_page=1" --jq '.total_count')
-          [ "$passed" -ge 1 ] || { echo "the Tests workflow has no successful run on main for $GITHUB_SHA: tag a commit whose tests passed"; exit 1; }
+          for workflow in unit-tests.yml integration-tests.yml; do
+            passed=$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/$workflow/runs?head_sha=$GITHUB_SHA&event=push&branch=main&status=success&per_page=1" --jq '.total_count')
+            [ "$passed" -ge 1 ] || { echo "$workflow has no successful run on main for $GITHUB_SHA: tag a commit whose tests passed"; exit 1; }
+          done
 
       - name: Download the builds
         uses: actions/download-artifact@v8

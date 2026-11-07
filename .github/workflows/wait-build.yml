@@ -1,0 +1,67 @@
+# Waits for the Build run of the commit that a test workflow checks, and gives its id, so the test workflow runs on the artifacts of that run. Build
+# can't start the test workflows: with workflow_run they would run on the code of a pull request with the token of main. They start on their own,
+# next to Build, and wait here
+name: Wait for Build
+
+on:
+  workflow_call:
+    inputs:
+      artifacts:
+        description: the artifacts of the Build run that the caller downloads, separated by spaces
+        required: true
+        type: string
+    outputs:
+      run-id:
+        description: the Build run to test, which has succeeded and has all the artifacts
+        value: ${{ jobs.wait.outputs.run-id }}
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  wait:
+    name: Wait for Build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 300
+
+    outputs:
+      run-id: ${{ steps.wait.outputs.run-id }}
+
+    steps:
+      - name: Wait for the Build run of this commit
+        id: wait
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          EVENT: ${{ github.event_name }}
+          ARTIFACTS: ${{ inputs.artifacts }}
+        run: |
+          RUN_ID=""
+          for _ in $(seq 1 30); do
+            RUN_ID=$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/build.yml/runs?head_sha=$SHA&event=$EVENT&per_page=1" --jq '.workflow_runs[0].id // empty' || true)
+            if [ -n "$RUN_ID" ]; then break; fi
+            sleep 20
+          done
+          if [ -z "$RUN_ID" ]; then echo "no Build run for $SHA"; exit 1; fi
+          echo "Waiting for $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$RUN_ID"
+          # gh run watch returns when the run is completed, or with an error when one of its requests fails, so it starts again after a pause. Its output
+          # is dropped, because it prints every job and step again at each refresh. A refresh makes four requests and the token has 1,000 an hour for the
+          # repository, which every waiting workflow shares, so don't shorten the interval
+          for _ in $(seq 1 10); do
+            gh run watch "$RUN_ID" --interval 120 > /dev/null && break
+            sleep 60
+          done
+          RESULT=$(gh run view "$RUN_ID" --json status,conclusion --jq 'if .status == "completed" then .conclusion else .status end')
+          if [ "$RESULT" != "success" ]; then
+            echo "Build run $RUN_ID did not succeed: $RESULT"; exit 1
+          fi
+          MISSING=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$RUN_ID/artifacts?per_page=100" --jq '[.artifacts[] | select(.expired | not) | .name]' |
+            jq -r --arg wanted "$ARTIFACTS" '. as $available | ($wanted | split(" ") | map(select(length > 0)))[] | select(. as $name | $available | index($name) == null)')
+          if [ -n "$MISSING" ]; then
+            echo "Build run $RUN_ID is missing required artifacts:"
+            echo "$MISSING"
+            exit 1
+          fi
+          echo "run-id=$RUN_ID" >> "$GITHUB_OUTPUT"

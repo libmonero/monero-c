@@ -26,8 +26,8 @@ bumps the minor version until 1.0, and a fix that leaves them as they are bumps 
 
 1. In a branch, set `MoneroNativeVersion` and `version` in `packaging/dart/pubspec.yaml`, set the ABI version in the three places above, and add a section `## <version> (<date>)` to
    [`CHANGELOG.md`](CHANGELOG.md). The release notes are that section, so write what a user of the library has to know.
-2. Merge the branch to `main` and wait for Build and Tests to pass on the merge commit. The release refuses a commit whose Tests workflow
-   has no successful run, because Tests doesn't run on tags.
+2. Merge the branch to `main` and wait for Build, Unit tests and Integration tests to pass on the merge commit. The release refuses a commit
+   whose Unit tests or Integration tests workflow has no successful run, because they don't run on tags.
 3. Tag that commit on `libmonero/monero-c` and push the tag:
 
    ```sh

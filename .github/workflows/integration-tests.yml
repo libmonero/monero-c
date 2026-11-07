@@ -1,21 +1,31 @@
-# The library against a real regtest node. Called by test.yml with the Build run to test
+# The library against a real regtest node and a monero-wallet-rpc server, on the artifacts of the Build run of the same commit. The tests that need
+# no daemon are in unit-tests.yml
 name: Integration tests
 
 on:
-  workflow_call:
-    inputs:
-      run-id:
-        description: the Build run whose artifacts are tested
-        required: true
-        type: string
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
 
 permissions:
   contents: read
   actions: read
 
+concurrency:
+  group: integration-tests-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
+  wait-build:
+    name: Pending
+    uses: ./.github/workflows/wait-build.yml
+    with:
+      artifacts: monero-c-linux-x86_64
+
   integration:
     name: Linux x86_64 (regtest node)
+    needs: wait-build
     runs-on: ubuntu-24.04
     timeout-minutes: 20
 
@@ -32,7 +42,7 @@ jobs:
         with:
           name: monero-c-linux-x86_64
           path: artifact
-          run-id: ${{ inputs.run-id }}
+          run-id: ${{ needs.wait-build.outputs.run-id }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Install runtime libraries

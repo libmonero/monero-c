@@ -1,17 +1,11 @@
-# What the built library links against and exports, on the artifacts of the Build run. Called by test.yml
+# What the built library links against and exports, on the artifacts of the platform builds of the same run. Called by build.yml
 name: Library checks
 
 on:
   workflow_call:
-    inputs:
-      run-id:
-        description: the Build run whose artifacts are checked
-        required: true
-        type: string
 
 permissions:
   contents: read
-  actions: read
 
 jobs:
   library-linux:
@@ -42,8 +36,6 @@ jobs:
         with:
           name: monero-c-${{ matrix.artifact }}
           path: artifact
-          run-id: ${{ inputs.run-id }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
 
       # 2.34 is the release that moved the pthread and dl functions into libc.so.6. A newer version means that a library of the build calls something newer, as unbound did with arc4random
       - name: Check runtime dependencies
@@ -100,8 +92,6 @@ jobs:
         with:
           name: monero-c-${{ matrix.artifact }}
           path: artifact
-          run-id: ${{ inputs.run-id }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Check runtime dependencies
         run: |
@@ -134,8 +124,6 @@ jobs:
         with:
           name: monero-c-windows
           path: artifact
-          run-id: ${{ inputs.run-id }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
 
       # the package database is updated, as the build job does: the one of the MSYS2 installer is weeks old, and a package that MSYS2 publishes again
       # under the same name fails its checksum
