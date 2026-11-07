@@ -2141,7 +2141,15 @@ monero_result monero_wallet_light_open(const char* config_json, ::monero_rpc_con
 monero_result monero_wallet_light_wallet_exists(const char* config_json, ::monero_rpc_connection* connection, bool* out_exists) {
   reset_out(out_exists);
   if (!require(config_json, "config_json") || !require(connection, "connection") || !require(out_exists, "out_exists")) return MONERO_ERROR;
-  return guard([&] { *out_exists = monero::monero_wallet_light::wallet_exists(*light_config_of(config_json), monero_c::connection_of(connection)); });
+  return guard([&] {
+    std::shared_ptr<monero::monero_wallet_config> config = light_config_of(config_json);
+
+    // a config with neither a seed nor keys has no address to ask the server about
+    if (config->m_seed == boost::none && config->m_primary_address == boost::none) {
+      throw std::invalid_argument("Wallet config must have a seed or keys to ask the server about");
+    }
+    *out_exists = monero::monero_wallet_light::wallet_exists(*config, monero_c::connection_of(connection));
+  });
 }
 
 monero_result monero_wallet_light_get_unrefined_spend_count(::monero_wallet* wallet, uint64_t* out_count) {
