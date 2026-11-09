@@ -247,6 +247,17 @@ static void test_two_of_three(void) {
   }
 }
 
+// fills the stack below the caller with a pattern, so that a function that returns a struct it didn't set gives the pattern and not a zero
+// that the stack happened to have
+#if defined(__GNUC__)
+__attribute__((noinline))
+#endif
+static void pollute_stack(void) {
+  volatile unsigned char buffer[32768];
+  size_t i;
+  for (i = 0; i < sizeof(buffer); i++) buffer[i] = 0xAB;
+}
+
 static void test_not_multisig(void) {
   const char* path = "monero_c_wallet_multisig_single";
   monero_wallet* wallet = create_random_wallet(path);
@@ -259,6 +270,16 @@ static void test_not_multisig(void) {
   bool multisig = true;
   EXPECT_OK(monero_wallet_is_multisig(wallet, &multisig));
   CHECK(!multisig);
+
+  // the info of a wallet that is not multisig has the three fields at zero. monero-cpp fills them for a multisig wallet only, and the
+  // memory that they had went to the caller, a threshold of 32764 for one. The stack is filled before each call so that no zero is a luck
+  for (int i = 0; i < 5; i++) {
+    char* info = NULL;
+    pollute_stack();
+    EXPECT_OK(monero_wallet_get_multisig_info(wallet, &info));
+    CHECK(info != NULL && strcmp(info, "{\"threshold\":0,\"numParticipants\":0,\"isMultisig\":false,\"isReady\":false}") == 0);
+    monero_utils_free(info);
+  }
 
   // only a multisig wallet has multisig info to export
   char* hex = NULL;

@@ -1640,7 +1640,16 @@ monero_result monero_wallet_is_multisig_import_needed(::monero_wallet* wallet, b
 monero_result monero_wallet_get_multisig_info(::monero_wallet* wallet, char** out_json) {
   reset_out(out_json);
   if (!require(wallet, "wallet") || !require(out_json, "out_json")) return MONERO_ERROR;
-  return guard([&] { *out_json = dup_string(wallet->wallet->get_multisig_info().serialize()); });
+  return guard([&] {
+    monero::monero_multisig_info info = wallet->wallet->get_multisig_info();
+    // monero-cpp sets the three other fields for a multisig wallet only, so the memory of a plain one would go to the caller
+    if (!info.m_is_multisig) {
+      info.m_is_ready = false;
+      info.m_threshold = 0;
+      info.m_num_participants = 0;
+    }
+    *out_json = dup_string(info.serialize());
+  });
 }
 
 monero_result monero_wallet_prepare_multisig(::monero_wallet* wallet, char** out_multisig_hex) {

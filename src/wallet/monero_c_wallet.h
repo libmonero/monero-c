@@ -1529,8 +1529,8 @@ MONERO_EXPORT monero_result monero_wallet_check_reserve_proof(monero_wallet* wal
 MONERO_EXPORT monero_result monero_wallet_is_multisig_import_needed(monero_wallet* wallet, bool* out_needed);
 
 /**
- * Get the multisig info of the wallet. Only "isMultisig" is set for a wallet that is not multisig: monero-cpp leaves
- * "isReady", "threshold" and "numParticipants" as they are in memory, so read them only when "isMultisig" is true.
+ * Get the multisig info of the wallet. "isReady", "threshold" and "numParticipants" are false and 0 for a wallet that is not
+ * multisig.
  *
  * @param wallet is the wallet handle
  * @param out_json receives the JSON-serialized monero_multisig_info. Free with monero_utils_free()
