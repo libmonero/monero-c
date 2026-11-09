@@ -1145,10 +1145,10 @@ MONERO_EXPORT monero_result monero_wallet_rescan_spent(monero_wallet* wallet);
 MONERO_EXPORT monero_result monero_wallet_get_height_by_date(monero_wallet* wallet, uint16_t year, uint8_t month, uint8_t day, uint64_t* out_height);
 
 /**
- * Start mining on the daemon. It needs a trusted daemon.
+ * Start mining on the daemon. It needs a trusted daemon. A full wallet and the wallet of a server start with the same defaults.
  *
  * @param wallet is the wallet handle
- * @param num_threads is the number of mining threads. NULL for one thread
+ * @param num_threads is the number of mining threads. NULL or 0 for one thread
  * @param background_mining is true to mine in the background. NULL for false
  * @param ignore_battery is true to mine on battery power. NULL for false
  * @return MONERO_OK or MONERO_ERROR

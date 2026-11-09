@@ -863,6 +863,23 @@ static void test_rpc(const char* daemon_uri, const char* rpc_uri) {
   EXPECT_OK(monero_wallet_rpc_set_daemon_connection(rpc, connection, true, NULL));
   EXPECT_OK(monero_wallet_rpc_set_daemon_connection(rpc, connection, true, ""));
 
+  // mining with no arguments starts with the defaults of the docs on the wallet of a server too, as it does on a full wallet: one thread,
+  // not in the background. monero-wallet-rpc refuses to start without a thread
+  monero_daemon* miner = NULL;
+  EXPECT_OK(monero_daemon_connect(daemon_uri, "", "", "", 10000, &miner));
+  CHECK(miner != NULL);
+  EXPECT_OK(monero_wallet_start_mining(rpc, NULL, NULL, NULL));
+  if (miner != NULL) {
+    EXPECT_OK(monero_daemon_get_mining_status(miner, &json));
+    CHECK(has(json, "\"isActive\":true") && has(json, "\"numThreads\":1") && has(json, "\"isBackground\":false") && has(json, address));
+    monero_utils_free(json);
+    json = NULL;
+  }
+  // the daemon takes a few seconds to start its miner thread, and stop_mining() waits for it
+  sleep(3);
+  EXPECT_OK(monero_wallet_stop_mining(rpc));
+  if (miner != NULL) monero_daemon_free(miner);
+
   // a wallet with the same name on the server, and the seed and keys wallets, switch the open wallet
   EXPECT_OK(monero_wallet_rpc_open(rpc_uri, "", "", "rpc_random", PASSWORD, &opened));
   CHECK(opened != NULL);

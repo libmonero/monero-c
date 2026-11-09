@@ -1310,7 +1310,12 @@ monero_result monero_wallet_get_height_by_date(::monero_wallet* wallet, uint16_t
 
 monero_result monero_wallet_start_mining(::monero_wallet* wallet, const uint64_t* num_threads, const bool* background_mining, const bool* ignore_battery) {
   if (!require(wallet, "wallet")) return MONERO_ERROR;
-  return guard([&] { wallet->wallet->start_mining(optional_of(num_threads), optional_of(background_mining), optional_of(ignore_battery)); });
+  return guard([&] {
+    // the defaults of the docs, for every kind of wallet: a full wallet sets them in monero-cpp, and the wallet of a server sends what it gets,
+    // which monero-wallet-rpc refuses without at least one thread
+    uint64_t threads = num_threads != nullptr && *num_threads != 0 ? *num_threads : 1;
+    wallet->wallet->start_mining(threads, background_mining != nullptr && *background_mining, ignore_battery != nullptr && *ignore_battery);
+  });
 }
 
 monero_result monero_wallet_stop_mining(::monero_wallet* wallet) {
