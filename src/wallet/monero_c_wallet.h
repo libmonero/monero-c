@@ -1100,7 +1100,8 @@ MONERO_EXPORT monero_result monero_wallet_is_connected_to_daemon(monero_wallet* 
 
 /**
  * Check if the daemon of the wallet is synced with the network, which is when its height is at least the greatest
- * height of its peers and more than 1. It fails if the daemon can not be reached.
+ * height of its peers and more than 1. It fails if the daemon can not be reached. It reads the two heights that wallet2 keeps for 30
+ * seconds, so it can be 30 seconds late.
  *
  * @param wallet is the wallet handle
  * @param out_synced receives true if the daemon is synced
@@ -1118,7 +1119,8 @@ MONERO_EXPORT monero_result monero_wallet_is_daemon_synced(monero_wallet* wallet
 MONERO_EXPORT monero_result monero_wallet_is_synced(monero_wallet* wallet, bool* out_synced);
 
 /**
- * Get the height the daemon of the wallet is synced to. It fails if the daemon can not be reached.
+ * Get the height the daemon of the wallet is synced to. It fails if the daemon can not be reached. wallet2 keeps the answer for 30
+ * seconds, so a block that was mined in that time may not be in it, while monero_wallet_sync() fetches the new blocks at once.
  *
  * @param wallet is the wallet handle
  * @param out_height receives the height
@@ -1127,7 +1129,8 @@ MONERO_EXPORT monero_result monero_wallet_is_synced(monero_wallet* wallet, bool*
 MONERO_EXPORT monero_result monero_wallet_get_daemon_height(monero_wallet* wallet, uint64_t* out_height);
 
 /**
- * Get the maximum height of the peers the daemon of the wallet is connected to.
+ * Get the maximum height of the peers the daemon of the wallet is connected to. wallet2 keeps the answer for 30 seconds, as it does
+ * for monero_wallet_get_daemon_height().
  *
  * @param wallet is the wallet handle
  * @param out_height receives the height
