@@ -261,6 +261,39 @@ static void test_get_ring_size(void) {
   CHECK(monero_utils_get_ring_size() == 16);
 }
 
+static int ends_with(const char* text, const char* suffix) {
+  size_t text_len = text == NULL ? 0 : strlen(text);
+  size_t suffix_len = strlen(suffix);
+  return text_len >= suffix_len && strcmp(text + text_len - suffix_len, suffix) == 0;
+}
+
+// the directory of the ring database of a network is .shared-ringdb, with the name of the network below it for the test networks, and
+// regtest gives the one of mainnet. The directory is not made, and the home of the user decides the rest of the path
+static void test_get_default_ringdb_path(void) {
+  char* mainnet = NULL;
+  char* testnet = NULL;
+  char* stagenet = NULL;
+  char* regtest = NULL;
+  EXPECT_OK(monero_utils_get_default_ringdb_path(MONERO_UTILS_NETWORK_MAINNET, &mainnet));
+  EXPECT_OK(monero_utils_get_default_ringdb_path(MONERO_UTILS_NETWORK_TESTNET, &testnet));
+  EXPECT_OK(monero_utils_get_default_ringdb_path(MONERO_UTILS_NETWORK_STAGENET, &stagenet));
+  EXPECT_OK(monero_utils_get_default_ringdb_path(MONERO_UTILS_NETWORK_REGTEST, &regtest));
+  CHECK(mainnet != NULL && ends_with(mainnet, ".shared-ringdb"));
+  CHECK(testnet != NULL && ends_with(testnet, "testnet") && strstr(testnet, ".shared-ringdb") != NULL);
+  CHECK(stagenet != NULL && ends_with(stagenet, "stagenet") && strstr(stagenet, ".shared-ringdb") != NULL);
+  CHECK(regtest != NULL && mainnet != NULL && strcmp(regtest, mainnet) == 0);
+  monero_utils_free(mainnet);
+  monero_utils_free(testnet);
+  monero_utils_free(stagenet);
+  monero_utils_free(regtest);
+
+  char* path = NULL;
+  EXPECT_ERR_MSG(monero_utils_get_default_ringdb_path(4, &path), "unknown network type");
+  CHECK(path == NULL && monero_last_error_code() == MONERO_ERROR_INVALID_ARGUMENT);
+  EXPECT_ERR(monero_utils_get_default_ringdb_path(MONERO_UTILS_NETWORK_MAINNET, NULL));
+  CHECK(monero_last_error_code() == MONERO_ERROR_INVALID_ARGUMENT);
+}
+
 static void test_get_abi_version(void) {
   uint32_t major = 99;
   uint32_t minor = 99;
@@ -615,6 +648,7 @@ int main(void) {
   test_xmr_to_atomic_units_invalid_amount();
   test_xmr_to_atomic_units_overflow();
   test_get_ring_size();
+  test_get_default_ringdb_path();
   test_get_abi_version();
   test_get_integrated_address();
   test_get_payment_uri();

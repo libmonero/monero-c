@@ -517,6 +517,20 @@ MONERO_EXPORT monero_result monero_utils_validate_payment_id_short(const char* p
  */
 MONERO_EXPORT int32_t monero_utils_get_ring_size(void);
 
+// ----------------------------------- PATHS ----------------------------------
+
+/**
+ * Get the default directory of the shared ring database of a network, where wallet2 keeps the rings of the key images that it
+ * spent. It is the .shared-ringdb directory next to the data directory of monerod (~/.shared-ringdb on Linux and macOS, with
+ * testnet or stagenet below it for those networks), as monero-wallet-cli and monero-wallet-rpc choose it. The path is built from
+ * the home of the user, and the directory is not made. Regtest gives the path of mainnet, since a regtest wallet is a mainnet one.
+ *
+ * @param network_type is the monero_utils_network_type of the wallet
+ * @param out_path receives the path, freed with monero_utils_free()
+ * @return MONERO_OK or MONERO_ERROR if network_type is not one of the enum
+ */
+MONERO_EXPORT monero_result monero_utils_get_default_ringdb_path(int32_t network_type, char** out_path);
+
 #ifdef __cplusplus
 }
 #endif

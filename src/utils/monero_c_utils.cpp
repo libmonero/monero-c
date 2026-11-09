@@ -65,6 +65,11 @@
 #include <stdexcept>
 #include <string>
 
+// get_default_ringdb_path() of monero-cpp is defined in monero_wallet_full.cpp, which exports it and has no header for it
+namespace monero {
+std::string get_default_ringdb_path(cryptonote::network_type nettype);
+}
+
 namespace {
 
 using monero_c::check_json_depth;
@@ -358,6 +363,17 @@ monero_result monero_utils_validate_payment_id_short(const char* payment_id_str)
 
 int32_t monero_utils_get_ring_size(void) {
   return monero_utils::RING_SIZE;
+}
+
+// ----------------------------------- PATHS ----------------------------------
+
+monero_result monero_utils_get_default_ringdb_path(int32_t network_type, char** out_path) {
+  reset_out(out_path);
+  if (!require(out_path, "out_path")) return MONERO_ERROR;
+  return guard([&] {
+    monero_network_type nt = network_of<monero_network_type>(network_type);
+    *out_path = dup_string(monero::get_default_ringdb_path(static_cast<cryptonote::network_type>(nt)));
+  });
 }
 
 } // extern "C"

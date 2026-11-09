@@ -117,6 +117,7 @@ monero_utils_configure_logging
 monero_utils_free
 monero_utils_free_secret
 monero_utils_get_abi_version
+monero_utils_get_default_ringdb_path
 monero_utils_get_integrated_address
 monero_utils_get_payment_uri
 monero_utils_get_ring_size
