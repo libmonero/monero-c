@@ -115,7 +115,7 @@ monero_wallet_listener_free(sync_listener);
 monero_daemon_free(daemon);
 ```
 
-Every call that can fail returns `MONERO_OK` or `MONERO_ERROR`, `monero_last_error()` gives the message and `monero_last_error_code()` the kind of the failure. The sample leaves the checks out. The structs of callbacks start with `struct_size`, which is the `sizeof` of the struct as the program was built with it: a later version can add callbacks at the end, and a program built with this header keeps working.
+Every call that can fail returns `MONERO_OK` or `MONERO_ERROR`, `monero_last_error()` gives the message, `monero_last_error_code()` the kind of the failure and `monero_last_error_rpc_code()` the code of an RPC error. The sample leaves the checks out. The structs of callbacks start with `struct_size`, which is the `sizeof` of the struct as the program was built with it: a later version can add callbacks at the end, and a program built with this header keeps working.
 
 ## Documentation
 

@@ -37,7 +37,7 @@ A JVM loads a library from a file, so a program extracts the files of its platfo
 * Strings are UTF-8. A string or buffer that a function returns in an `out_*` parameter is released with `monero_utils_free()`, and the seed, the private keys and the tx key with `monero_utils_free_secret()`.
 * A C `bool` is one byte.
 * Call `monero_utils_get_abi_version()` after loading the library and compare the major and minor versions with the ones your code was written for. While the major version is 0, a different minor version can break callers.
-* `monero_last_error()` and `monero_last_error_code()` are of the calling thread. A virtual thread can move to another carrier thread, so read them right after the failing call, without a blocking call in between.
+* `monero_last_error()`, `monero_last_error_code()` and `monero_last_error_rpc_code()` are of the calling thread. A virtual thread can move to another carrier thread, so read them right after the failing call, without a blocking call in between.
 * Callbacks run on threads of monero-c, which are not attached to the JVM. An upcall from native code attaches its thread by itself, and an exception that leaves one ends the process.
 * Don't use one handle from two threads at once, and keep one native listener per wallet. See [Thread Safety](../../docs/thread-safety.md) and the headers.
 * On Linux and macOS the library sets `SSL_CERT_FILE` and `SSL_CERT_DIR` in your process when it is loaded, to the CA certificates of the system, if neither is set and OpenSSL doesn't find them by itself.

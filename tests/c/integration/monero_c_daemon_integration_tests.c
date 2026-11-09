@@ -37,6 +37,10 @@
 
 #define ZERO_HASH "0000000000000000000000000000000000000000000000000000000000000000"
 
+// the codes of the JSON-RPC errors of monerod (core_rpc_server_error_codes.h and the JSON-RPC 2.0 specification)
+#define RPC_CODE_TOO_BIG_HEIGHT (-2)
+#define RPC_CODE_METHOD_NOT_FOUND (-32601)
+
 static const char* ADDRESS = "46BeWrHpwXmHDpDEUmZBWZfoQpdc6HaERCNmx1pEYL2rAcuwufPN9rXHHtyUA4QVy66qeFQkn6sfK8aHYjA3jk3o1Bv16em";
 static const char* const ZERO_HASHES[] = {ZERO_HASH};
 
@@ -568,6 +572,19 @@ static void test_admin(monero_daemon* daemon) {
 
 // ------------------------------- CONNECTION ---------------------------------
 
+// the code of an RPC error is the one that the node sent, and 0 for a failure of another kind
+static void test_rpc_error_code(monero_daemon* daemon) {
+  char* json = NULL;
+  EXPECT_ERR(monero_daemon_get_block_by_height(daemon, 1000000000ULL, &json));
+  CHECK(json == NULL);
+  CHECK(monero_last_error_code() == MONERO_ERROR_RPC);
+  CHECK(monero_last_error_rpc_code() == RPC_CODE_TOO_BIG_HEIGHT);
+
+  EXPECT_ERR(monero_daemon_get_block_by_height(daemon, 1000000000ULL, NULL));
+  CHECK(monero_last_error_code() == MONERO_ERROR_INVALID_ARGUMENT);
+  CHECK(monero_last_error_rpc_code() == 0);
+}
+
 static void test_rpc_connection(const char* uri) {
   char config[256];
   char* json = NULL;
@@ -606,6 +623,8 @@ static void test_rpc_connection(const char* uri) {
   json = NULL;
   EXPECT_ERR(monero_rpc_connection_send_json_request(connection, "no_such_method", NULL, NULL, &json));
   CHECK(json == NULL);
+  CHECK(monero_last_error_code() == MONERO_ERROR_RPC);
+  CHECK(monero_last_error_rpc_code() == RPC_CODE_METHOD_NOT_FOUND);
 
   EXPECT_OK(monero_rpc_connection_send_path_request(connection, "get_height", NULL, NULL, &json));
   CHECK(has_key(json, "height"));
@@ -667,6 +686,7 @@ int main(void) {
   test_wait_for_next_block_header(daemon);
   test_wait_for_next_block_header_timeout(daemon);
   test_admin(daemon);
+  test_rpc_error_code(daemon);
   test_rpc_connection(uri);
   // monero_daemon_stop() isn't called here, since it would shut the node down for the next run
 

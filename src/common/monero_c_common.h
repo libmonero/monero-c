@@ -78,6 +78,9 @@ const std::string& last_error();
 // returns the kind of the calling thread's last error, or MONERO_ERROR_NONE if there is none
 monero_error_code last_error_code();
 
+// returns the code of the RPC error that is the calling thread's last error, or 0 if that error is of another kind
+int32_t last_rpc_code();
+
 inline std::string safe_str(const char* s) {
   return s ? std::string(s) : std::string();
 }

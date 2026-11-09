@@ -141,6 +141,17 @@ MONERO_EXPORT const char* monero_last_error(void);
 MONERO_EXPORT monero_error_code monero_last_error_code(void);
 
 /**
+ * Return the code of the RPC error that is the most recent MONERO_ERROR result on the calling thread, from any monero_c function.
+ * The code is the one that the daemon or the wallet RPC server sent in its JSON-RPC error (for example -2 when a block height is
+ * too big for monerod), or the HTTP status when the server answered with a status that is not OK (401 for a login that it
+ * refuses). It is -1 when the error has no code. Like monero_last_error_code(), it is set with the message, so read it right after
+ * the failing call, before any other call on the thread, and only after MONERO_ERROR.
+ *
+ * @return the code of the RPC error, or 0 if the most recent failure on this thread is not MONERO_ERROR_RPC, or none has failed yet
+ */
+MONERO_EXPORT int32_t monero_last_error_rpc_code(void);
+
+/**
  * Free a string, a byte buffer or an array that a monero_c function returned. Passing NULL does nothing.
  *
  * @param ptr is the pointer that the function returned, or NULL

@@ -130,6 +130,10 @@ monero_error_code monero_last_error_code(void) {
   return monero_c::last_error_code();
 }
 
+int32_t monero_last_error_rpc_code(void) {
+  return monero_c::last_rpc_code();
+}
+
 void monero_utils_free(void* ptr) {
   std::free(ptr);
 }

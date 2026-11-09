@@ -486,12 +486,14 @@ static void* configure_logging_worker(void* arg) {
 
 static monero_error_code g_worker_first_code = MONERO_ERROR_GENERIC;
 static monero_error_code g_worker_code_after_failure = MONERO_ERROR_NONE;
+static int32_t g_worker_rpc_code = -2;
 
 static void* error_code_worker(void* unused) {
   (void) unused;
   g_worker_first_code = monero_last_error_code();
   monero_utils_get_abi_version(NULL, NULL, NULL);
   g_worker_code_after_failure = monero_last_error_code();
+  g_worker_rpc_code = monero_last_error_rpc_code();
   return NULL;
 }
 
@@ -505,6 +507,21 @@ static void test_last_error_code_is_per_thread(void) {
   CHECK(pthread_join(worker, NULL) == 0);
   CHECK(g_worker_first_code == MONERO_ERROR_NONE);
   CHECK(g_worker_code_after_failure == MONERO_ERROR_INVALID_ARGUMENT);
+}
+
+// the code of an RPC error is 0 for every other kind of failure, on a new thread too, and it stays 0 after the failure of another call.
+// The integration tests make the RPC errors that give it a value, since they need a server
+static void test_last_error_rpc_code_is_zero_for_other_errors(void) {
+  pthread_t worker;
+  EXPECT_ERR(monero_utils_validate_address("not an address", MONERO_UTILS_NETWORK_MAINNET));
+  CHECK(monero_last_error_code() == MONERO_ERROR_INVALID_ARGUMENT);
+  CHECK(monero_last_error_rpc_code() == 0);
+  EXPECT_ERR(monero_utils_get_abi_version(NULL, NULL, NULL));
+  CHECK(monero_last_error_rpc_code() == 0);
+
+  CHECK(pthread_create(&worker, NULL, error_code_worker, NULL) == 0);
+  CHECK(pthread_join(worker, NULL) == 0);
+  CHECK(g_worker_rpc_code == 0);
 }
 
 static void test_logging_from_several_threads(void) {
@@ -612,6 +629,7 @@ int main(void) {
 #if !defined(_WIN32)
   test_logging_from_several_threads();
   test_last_error_code_is_per_thread();
+  test_last_error_rpc_code_is_zero_for_other_errors();
 #endif
 
   printf("%d/%d checks passed\n", g_checks - g_failures, g_checks);

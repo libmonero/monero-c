@@ -50,7 +50,7 @@ A program that is not a Swift package links the library in the folder of the sli
 ## Notes for callers
 
 * Strings are UTF-8. A string or buffer that a function returns in an `out_*` parameter is released with `monero_utils_free()`, and the seed, the private keys and the tx key with `monero_utils_free_secret()`.
-* `monero_last_error()` and `monero_last_error_code()` are of the calling thread. Read them right after the failing call, before an `await`, because the continuation can run on another thread.
+* `monero_last_error()`, `monero_last_error_code()` and `monero_last_error_rpc_code()` are of the calling thread. Read them right after the failing call, before an `await`, because the continuation can run on another thread.
 * Callbacks run on threads of monero-c. An exception or a Swift error that leaves a callback ends the process.
 * Don't use one handle from two threads at once, and keep one native listener per wallet. See [Thread Safety](../../docs/thread-safety.md) and the headers.
 * The library sets `SSL_CERT_FILE` and `SSL_CERT_DIR` in your process when it is loaded, to the CA certificates of the system, if neither is set and OpenSSL doesn't find them by itself.

@@ -46,6 +46,7 @@ namespace {
 
 thread_local std::string g_last_error;
 thread_local monero_error_code g_last_error_code = MONERO_ERROR_NONE;
+thread_local int32_t g_last_rpc_code = 0;
 
 struct slow_hash_state_owner {
   ~slow_hash_state_owner() { slow_hash_free_state(); }
@@ -60,11 +61,13 @@ void free_slow_hash_state_at_thread_exit() noexcept {
 
 void set_last_error(const char* msg, monero_error_code code) noexcept {
   g_last_error_code = code;
+  g_last_rpc_code = 0;
   try { g_last_error = msg; } catch (...) { g_last_error.clear(); }
 }
 
 void set_null_error(const char* name) noexcept {
   g_last_error_code = MONERO_ERROR_INVALID_ARGUMENT;
+  g_last_rpc_code = 0;
   try { g_last_error = std::string(name) + " must not be null"; } catch (...) { g_last_error.clear(); }
 }
 
@@ -77,6 +80,7 @@ void set_last_error_from_current_exception() noexcept {
     set_last_error(e.what(), MONERO_ERROR_INVALID_ARGUMENT);
   } catch (const monero::monero_rpc_error& e) {
     set_last_error(e.what(), MONERO_ERROR_RPC);
+    g_last_rpc_code = static_cast<int32_t>(e.code);
   } catch (const std::ios_base::failure& e) {
     set_last_error(e.what(), MONERO_ERROR_IO);
   } catch (const std::system_error& e) {
@@ -96,6 +100,10 @@ const std::string& last_error() {
 
 monero_error_code last_error_code() {
   return g_last_error_code;
+}
+
+int32_t last_rpc_code() {
+  return g_last_rpc_code;
 }
 
 void check_json_depth(const std::string& json) {
