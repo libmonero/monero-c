@@ -1134,6 +1134,81 @@ static void test_rpc_matches_full(const char* daemon_uri, const char* rpc_uri) {
   remove_files(path);
 }
 
+// the number that follows "numBlocksFetched" in the JSON of a sync, or UINT64_MAX if the JSON has none
+static uint64_t blocks_fetched(const char* json) {
+  static const char key[] = "\"numBlocksFetched\":";
+  const char* at = json == NULL ? NULL : strstr(json, key);
+  return at == NULL ? UINT64_MAX : strtoull(at + sizeof(key) - 1, NULL, 10);
+}
+
+// a sync from a start height fetches the blocks from there to the end of the chain, whatever the length of the chain. A regtest wallet has
+// the checkpoints of mainnet, and wallet2 anchored the refresh on the highest one below the start, which the node doesn't have. On a chain
+// of 1501 blocks a sync from 1200 fetched 500 blocks and not 301, and one from 1000 fetched 1400. The checkpoints don't apply below a
+// thousand blocks, and the chains of the tests above are shorter, so this test mines the rest and runs last
+static void test_sync_start_height(const char* daemon_uri) {
+  const uint64_t chain_blocks = 1300;
+  const char* path = "monero_c_wallet_integration_s";
+  char address[128] = "";
+  char* json = NULL;
+  bool trusted = true;
+  uint64_t chain = 0;
+  monero_wallet* wallet = NULL;
+  monero_daemon* daemon = NULL;
+  int attempts;
+  size_t i;
+
+  // 60 seconds for a request, since 50 blocks take a few seconds to mine
+  EXPECT_OK(monero_daemon_connect(daemon_uri, "", "", "", 60000, &daemon));
+  CHECK(daemon != NULL);
+  if (daemon == NULL) return;
+
+  remove_files(path);
+  EXPECT_OK(monero_wallet_create_random(path, PASSWORD, NETWORK, NULL, &wallet));
+  CHECK(wallet != NULL);
+  if (wallet == NULL) {
+    monero_daemon_free(daemon);
+    return;
+  }
+  EXPECT_OK(monero_wallet_get_primary_address(wallet, &json));
+  CHECK(json != NULL && snprintf(address, sizeof(address), "%s", json) > 0);
+  monero_utils_free(json);
+  json = NULL;
+  monero_wallet_free(wallet);
+  remove_files(path);
+
+  EXPECT_OK(monero_daemon_get_height(daemon, &chain));
+  for (attempts = 0; chain < chain_blocks && attempts < 100; attempts++) {
+    uint64_t missing = chain_blocks - chain;
+    mine(daemon, address, missing < 50 ? missing : 50);
+    EXPECT_OK(monero_daemon_get_height(daemon, &chain));
+  }
+  CHECK(chain >= chain_blocks);
+
+  // below the checkpoint of 1000, on it, above it, and near the end of the chain. Each start has a new wallet, since a wallet that has
+  // synced keeps its height
+  const uint64_t starts[] = {500, 1000, 1200, chain - 100};
+  for (i = 0; i < sizeof(starts) / sizeof(starts[0]); i++) {
+    uint64_t start = starts[i];
+    uint64_t fetched;
+    wallet = NULL;
+    remove_files(path);
+    EXPECT_OK(monero_wallet_create_random(path, PASSWORD, NETWORK, NULL, &wallet));
+    CHECK(wallet != NULL);
+    if (wallet == NULL) continue;
+    EXPECT_OK(monero_wallet_set_daemon_connection(wallet, daemon_uri, "", "", "", &trusted, false));
+    EXPECT_OK(monero_wallet_sync(wallet, &start, NULL, &json));
+    fetched = blocks_fetched(json);
+    if (fetched != chain - start) fprintf(stderr, "a sync from %llu on a chain of %llu blocks fetched %llu blocks, not %llu\n", (unsigned long long)start, (unsigned long long)chain, (unsigned long long)fetched, (unsigned long long)(chain - start));
+    CHECK(fetched == chain - start);
+    monero_utils_free(json);
+    json = NULL;
+    monero_wallet_free(wallet);
+    remove_files(path);
+  }
+
+  monero_daemon_free(daemon);
+}
+
 int main(void) {
   const char* daemon_uri = getenv("MONERO_C_TEST_DAEMON_URI");
   const char* rpc_uri = getenv("MONERO_C_TEST_WALLET_RPC_URI");
@@ -1146,6 +1221,7 @@ int main(void) {
   else printf("skipped: the daemon part needs MONERO_C_TEST_DAEMON_URI\n");
   if (rpc_uri != NULL && rpc_uri[0] != '\0') test_rpc(daemon_uri != NULL ? daemon_uri : "", rpc_uri);
   else printf("skipped: the RPC part needs MONERO_C_TEST_WALLET_RPC_URI\n");
+  if (daemon_uri != NULL && daemon_uri[0] != '\0') test_sync_start_height(daemon_uri);
 
   printf("%d/%d checks passed\n", g_checks - g_failures, g_checks);
   return g_failures == 0 ? EXIT_SUCCESS : EXIT_FAILURE;
