@@ -229,6 +229,23 @@ MONERO_EXPORT monero_result monero_wallet_create(const char* config_json, monero
 MONERO_EXPORT monero_result monero_wallet_open(const char* path, const char* password, int32_t network_type, monero_wallet** out_wallet);
 
 /**
+ * Open a full wallet from the contents of its keys file and of its cache file, which monero_wallet_get_keys_file_buffer() and
+ * monero_wallet_get_cache_file_buffer() give. The wallet has no files, so monero_wallet_save() does nothing, and the caller exports
+ * it again to keep what it did. It has no daemon connection either, as with monero_wallet_open(): give it one with
+ * monero_wallet_set_daemon_connection().
+ *
+ * @param password decrypts the keys file. NULL or "" for no password
+ * @param network_type is the monero_utils_network_type of the wallet
+ * @param keys_data is the contents of the keys file
+ * @param keys_len is the length of keys_data, which can't be 0
+ * @param cache_data is the contents of the cache file, or NULL for none: the wallet then scans from its restore height again
+ * @param cache_len is the length of cache_data, 0 when cache_data is NULL
+ * @param out_wallet receives the handle, released with monero_wallet_free()
+ * @return MONERO_OK or MONERO_ERROR, for the wrong password or contents that are not a keys file
+ */
+MONERO_EXPORT monero_result monero_wallet_open_data(const char* password, int32_t network_type, const uint8_t* keys_data, size_t keys_len, const uint8_t* cache_data, size_t cache_len, monero_wallet** out_wallet);
+
+/**
  * Check if a wallet exists at the given path. It looks for the keys file, path + ".keys".
  *
  * @param path is the path of the wallet file
@@ -288,6 +305,33 @@ MONERO_EXPORT monero_result monero_wallet_keys_create_from_keys(int32_t network_
  * @return MONERO_OK or MONERO_ERROR
  */
 MONERO_EXPORT monero_result monero_wallet_save(monero_wallet* wallet);
+
+/**
+ * Get the contents of the keys file of a full wallet, which monero_wallet_open_data() opens, without writing a file. The keys are
+ * encrypted with the password, so the buffer is as safe as the keys file, and it is freed with monero_utils_free() like any other
+ * buffer. A keys wallet and a wallet of a server fail with "not supported".
+ *
+ * @param wallet is the wallet handle
+ * @param password is the password of the wallet, which also encrypts the keys of the buffer. A different one fails. NULL or "" for
+ *   a wallet that has none
+ * @param view_only leaves the private spend key out, so the buffer opens a view-only wallet
+ * @param out_data receives the buffer, freed with monero_utils_free()
+ * @param out_len receives the length of the buffer
+ * @return MONERO_OK or MONERO_ERROR
+ */
+MONERO_EXPORT monero_result monero_wallet_get_keys_file_buffer(monero_wallet* wallet, const char* password, bool view_only, uint8_t** out_data, size_t* out_len);
+
+/**
+ * Get the contents of the cache file of a full wallet, which monero_wallet_open_data() opens: the transactions, the outputs and
+ * the notes that the wallet has, and the blocks that it has scanned, without writing a file. A keys wallet and a wallet of a server
+ * fail with "not supported".
+ *
+ * @param wallet is the wallet handle
+ * @param out_data receives the buffer, freed with monero_utils_free()
+ * @param out_len receives the length of the buffer
+ * @return MONERO_OK or MONERO_ERROR
+ */
+MONERO_EXPORT monero_result monero_wallet_get_cache_file_buffer(monero_wallet* wallet, uint8_t** out_data, size_t* out_len);
 
 /**
  * Close the wallet. Its methods fail afterwards, but the handle must still be freed. A keys wallet has no files, so

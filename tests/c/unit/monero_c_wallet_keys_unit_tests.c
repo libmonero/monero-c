@@ -92,6 +92,14 @@ static void test_create_random(void) {
   bool multisig = false;
   EXPECT_ERR_MSG(monero_wallet_is_multisig(wallet, &multisig), "get_multisig_info() not supported");
 
+  // and they have no files to export
+  uint8_t* buffer = NULL;
+  size_t buffer_len = 1;
+  EXPECT_ERR_MSG(monero_wallet_get_keys_file_buffer(wallet, "", false, &buffer, &buffer_len), "get_keys_file_buffer() not supported");
+  CHECK(buffer == NULL && buffer_len == 0);
+  EXPECT_ERR_MSG(monero_wallet_get_cache_file_buffer(wallet, &buffer, &buffer_len), "get_cache_file_buffer() not supported");
+  CHECK(buffer == NULL && buffer_len == 0);
+
   char* view_key = NULL;
   char* spend_key = NULL;
   EXPECT_OK(monero_wallet_get_private_view_key(wallet, &view_key));

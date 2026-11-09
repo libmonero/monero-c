@@ -49,6 +49,7 @@ using monero_c::check_json_depth;
 using monero_c::check_mnemonic_length;
 using monero_c::check_period_ms;
 using monero_c::check_timeout_ms;
+using monero_c::dup_buffer;
 using monero_c::dup_secret;
 using monero_c::dup_string;
 using monero_c::guard;
@@ -725,6 +726,19 @@ monero_result monero_wallet_open(const char* path, const char* password, int32_t
   });
 }
 
+monero_result monero_wallet_open_data(const char* password, int32_t network_type, const uint8_t* keys_data, size_t keys_len, const uint8_t* cache_data, size_t cache_len, ::monero_wallet** out_wallet) {
+  reset_out(out_wallet);
+  if (!require(keys_data, "keys_data") || !require(out_wallet, "out_wallet")) return MONERO_ERROR;
+  return guard([&] {
+    if (keys_len == 0) throw std::invalid_argument("keys_len must not be 0");
+    if (cache_data == nullptr && cache_len != 0) throw std::invalid_argument("cache_data must not be null when cache_len is not 0");
+    monero_c::secret_string wallet_password(password);
+    std::string keys(reinterpret_cast<const char*>(keys_data), keys_len);
+    std::string cache = cache_data == nullptr ? std::string() : std::string(reinterpret_cast<const char*>(cache_data), cache_len);
+    *out_wallet = wrap(std::unique_ptr<monero::monero_wallet_full>(monero::monero_wallet_full::open_wallet_data(wallet_password.get(), network_of<monero::monero_network_type>(network_type), keys, cache, std::make_shared<monero::monero_rpc_connection>(), nullptr, network_type == MONERO_UTILS_NETWORK_REGTEST)), network_type);
+  });
+}
+
 monero_result monero_wallet_exists(const char* path, bool* out_exists) {
   if (!require(path, "path") || !require(out_exists, "out_exists")) return MONERO_ERROR;
   return guard([&] { *out_exists = monero::monero_wallet_full::wallet_exists(std::string(path)); });
@@ -774,6 +788,34 @@ monero_result monero_wallet_keys_create_from_keys(int32_t network_type, const ch
 monero_result monero_wallet_save(::monero_wallet* wallet) {
   if (!require(wallet, "wallet")) return MONERO_ERROR;
   return guard([&] { wallet->wallet->save(); });
+}
+
+// the keys and the cache are only in the full wallet, which is the one that has files
+static monero::monero_wallet_full& full_wallet_of(::monero_wallet* wallet, const char* what) {
+  monero::monero_wallet_full* full = dynamic_cast<monero::monero_wallet_full*>(wallet->wallet.get());
+  if (full == nullptr) throw std::runtime_error(std::string(what) + " not supported");
+  return *full;
+}
+
+monero_result monero_wallet_get_keys_file_buffer(::monero_wallet* wallet, const char* password, bool view_only, uint8_t** out_data, size_t* out_len) {
+  reset_out(out_data);
+  reset_out(out_len);
+  if (!require(wallet, "wallet") || !require(out_data, "out_data") || !require(out_len, "out_len")) return MONERO_ERROR;
+  return guard([&] {
+    monero_c::secret_string wallet_password(password);
+    std::string buffer = full_wallet_of(wallet, "get_keys_file_buffer()").get_keys_file_buffer(epee::wipeable_string(wallet_password.get()), view_only);
+    *out_data = dup_buffer(buffer, out_len);
+  });
+}
+
+monero_result monero_wallet_get_cache_file_buffer(::monero_wallet* wallet, uint8_t** out_data, size_t* out_len) {
+  reset_out(out_data);
+  reset_out(out_len);
+  if (!require(wallet, "wallet") || !require(out_data, "out_data") || !require(out_len, "out_len")) return MONERO_ERROR;
+  return guard([&] {
+    std::string buffer = full_wallet_of(wallet, "get_cache_file_buffer()").get_cache_file_buffer();
+    *out_data = dup_buffer(buffer, out_len);
+  });
 }
 
 monero_result monero_wallet_close(::monero_wallet* wallet, bool save) {

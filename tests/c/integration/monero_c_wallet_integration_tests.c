@@ -323,6 +323,37 @@ static void test_daemon(const char* daemon_uri) {
   EXPECT_OK(monero_wallet_get_subaddress_unlocked_balance(a, 0, 0, &value));
   CHECK(value > 0);
 
+  // the keys and the cache of a synced wallet, in memory, open a wallet that has its height, its balance and its outputs, with no sync and no daemon
+  {
+    uint8_t* keys = NULL;
+    uint8_t* cache = NULL;
+    size_t keys_len = 0;
+    size_t cache_len = 0;
+    uint64_t height = 0;
+    uint64_t balance = 0;
+    uint64_t opened_height = 0;
+    uint64_t opened_balance = 0;
+    monero_wallet* opened = NULL;
+    EXPECT_OK(monero_wallet_get_height(a, &height));
+    EXPECT_OK(monero_wallet_get_balance(a, &balance));
+    EXPECT_OK(monero_wallet_get_keys_file_buffer(a, PASSWORD, false, &keys, &keys_len));
+    EXPECT_OK(monero_wallet_get_cache_file_buffer(a, &cache, &cache_len));
+    EXPECT_OK(monero_wallet_open_data(PASSWORD, NETWORK, keys, keys_len, cache, cache_len, &opened));
+    CHECK(opened != NULL);
+    if (opened != NULL) {
+      EXPECT_OK(monero_wallet_get_height(opened, &opened_height));
+      EXPECT_OK(monero_wallet_get_balance(opened, &opened_balance));
+      CHECK(opened_height == height && opened_balance == balance);
+      EXPECT_OK(monero_wallet_get_outputs(opened, NULL, &json));
+      CHECK(is_blocks(json) && has(json, "\"hash\":\"") && has(json, "\"outputs\":[{"));
+      monero_utils_free(json);
+      json = NULL;
+      monero_wallet_free(opened);
+    }
+    monero_utils_free(keys);
+    monero_utils_free(cache);
+  }
+
   // the history of the wallet comes in blocks, with each tx in its block and each transfer and output in its tx
   EXPECT_OK(monero_wallet_get_txs(a, NULL, &json));
   CHECK(is_blocks(json) && has(json, "{\"blocks\":[{\"height\":") && has(json, "\"timestamp\":") && has(json, "\"txs\":[{") && has(json, "\"hash\":\""));

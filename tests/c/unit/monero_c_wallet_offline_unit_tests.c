@@ -929,11 +929,100 @@ static void test_listener_one_wallet(void) {
   remove_files(path_b);
 }
 
+// the keys file and the cache file in memory: a wallet opens from the two buffers as the one on disk does, and the keys of a view-only
+// wallet open a view-only one. The cache is the one that has the address book, and it can be left out. The wallet has no files, so saving it does nothing
+static void test_wallet_files_in_memory(void) {
+  const char* path = "monero_c_wallet_offline_buffers";
+  monero_wallet* wallet = create_test_wallet(path);
+  if (wallet == NULL) {
+    remove_files(path);
+    return;
+  }
+
+  uint64_t index = 1;
+  EXPECT_OK(monero_wallet_add_address_book_entry(wallet, ADDRESS, "in the cache", &index));
+
+  uint8_t* keys = NULL;
+  size_t keys_len = 0;
+  uint8_t* cache = NULL;
+  size_t cache_len = 0;
+  EXPECT_OK(monero_wallet_get_keys_file_buffer(wallet, PASSWORD, false, &keys, &keys_len));
+  EXPECT_OK(monero_wallet_get_cache_file_buffer(wallet, &cache, &cache_len));
+  CHECK(keys != NULL && keys_len > 0 && cache != NULL && cache_len > 0);
+
+  monero_wallet* opened = NULL;
+  char* text = NULL;
+  bool flag = true;
+  EXPECT_OK(monero_wallet_open_data(PASSWORD, MAINNET, keys, keys_len, cache, cache_len, &opened));
+  CHECK(opened != NULL);
+  EXPECT_OK(monero_wallet_get_primary_address(opened, &text));
+  CHECK(text != NULL && strcmp(text, ADDRESS) == 0);
+  monero_utils_free(text);
+  text = NULL;
+  EXPECT_OK(monero_wallet_get_seed(opened, &text));
+  CHECK(text != NULL && strcmp(text, SEED) == 0);
+  monero_utils_free_secret(text);
+  text = NULL;
+  EXPECT_OK(monero_wallet_is_view_only(opened, &flag));
+  CHECK(!flag);
+  EXPECT_OK(monero_wallet_get_address_book_entries(opened, NULL, 0, &text));
+  CHECK(contains(text, "\"description\":\"in the cache\""));
+  monero_utils_free(text);
+  text = NULL;
+  EXPECT_OK(monero_wallet_save(opened));
+  monero_wallet_free(opened);
+
+  // without the cache the wallet has the keys and none of what it kept
+  opened = NULL;
+  EXPECT_OK(monero_wallet_open_data(PASSWORD, MAINNET, keys, keys_len, NULL, 0, &opened));
+  EXPECT_OK(monero_wallet_get_address_book_entries(opened, NULL, 0, &text));
+  CHECK(text != NULL && strcmp(text, "[]") == 0);
+  monero_utils_free(text);
+  text = NULL;
+  monero_wallet_free(opened);
+
+  // the wrong password, an empty keys file and a cache without its length are refused, and the outputs are reset
+  opened = NULL;
+  EXPECT_ERR(monero_wallet_open_data("wrong", MAINNET, keys, keys_len, cache, cache_len, &opened));
+  CHECK(opened == NULL);
+  EXPECT_ERR(monero_wallet_open_data(PASSWORD, MAINNET, keys, 0, cache, cache_len, &opened));
+  CHECK(monero_last_error_code() == MONERO_ERROR_INVALID_ARGUMENT && opened == NULL);
+  EXPECT_ERR(monero_wallet_open_data(PASSWORD, MAINNET, keys, keys_len, NULL, 1, &opened));
+  CHECK(monero_last_error_code() == MONERO_ERROR_INVALID_ARGUMENT && opened == NULL);
+  EXPECT_ERR(monero_wallet_open_data(PASSWORD, MAINNET, cache, cache_len, NULL, 0, &opened));
+  CHECK(opened == NULL);
+  monero_utils_free(keys);
+  monero_utils_free(cache);
+
+  // the password of the export is the one of the wallet, and the view-only keys open a wallet that has no spend key, with the same address
+  keys = NULL;
+  EXPECT_ERR(monero_wallet_get_keys_file_buffer(wallet, "wrong", true, &keys, &keys_len));
+  CHECK(keys == NULL && keys_len == 0);
+  EXPECT_OK(monero_wallet_get_keys_file_buffer(wallet, PASSWORD, true, &keys, &keys_len));
+  EXPECT_OK(monero_wallet_open_data(PASSWORD, MAINNET, keys, keys_len, NULL, 0, &opened));
+  EXPECT_OK(monero_wallet_is_view_only(opened, &flag));
+  CHECK(flag);
+  EXPECT_OK(monero_wallet_get_primary_address(opened, &text));
+  CHECK(text != NULL && strcmp(text, ADDRESS) == 0);
+  monero_utils_free(text);
+  monero_utils_free(keys);
+  monero_wallet_free(opened);
+
+  // the wallet that was exported is closed: it can't export any more
+  keys = NULL;
+  EXPECT_OK(monero_wallet_close(wallet, false));
+  EXPECT_ERR(monero_wallet_get_keys_file_buffer(wallet, PASSWORD, false, &keys, &keys_len));
+  CHECK(keys == NULL && keys_len == 0);
+  monero_wallet_free(wallet);
+  remove_files(path);
+}
+
 int main(void) {
   test_wait_for_next_block_timeout();
   test_address_book();
   test_accounts_and_subaddresses();
   test_change_password();
+  test_wallet_files_in_memory();
   test_regtest_network();
   test_regtest_random_restore_height();
   test_create_from_config();
