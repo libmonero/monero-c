@@ -903,12 +903,18 @@ static void test_rpc(const char* daemon_uri, const char* rpc_uri) {
   CHECK(json != NULL);
   monero_utils_free(json);
   json = NULL;
-  EXPECT_OK(monero_wallet_rpc_get_account(rpc, 0, true, false, &json));
-  CHECK(has(json, "\"index\":0"));
+
+  // skip_balances leaves the balances of the subaddresses out of the answer of the server, and keeps those of the account
+  EXPECT_OK(monero_wallet_get_account(rpc, 0, true, false, &json));
+  CHECK(has(json, "\"index\":0") && has(json, "\"numUnspentOutputs\":") && has(json, "\"numBlocksToUnlock\":"));
   monero_utils_free(json);
   json = NULL;
-  EXPECT_OK(monero_wallet_rpc_get_accounts(rpc, true, NULL, true, &json));
-  CHECK(is_list(json) && has(json, "\"index\":0"));
+  EXPECT_OK(monero_wallet_get_account(rpc, 0, true, true, &json));
+  CHECK(has(json, "\"index\":0") && has(json, "\"balance\":") && has(json, "\"subaddresses\":[{") && !has(json, "\"numUnspentOutputs\":") && !has(json, "\"numBlocksToUnlock\":"));
+  monero_utils_free(json);
+  json = NULL;
+  EXPECT_OK(monero_wallet_get_accounts(rpc, true, NULL, true, &json));
+  CHECK(is_list(json) && has(json, "\"index\":0") && has(json, "\"balance\":") && !has(json, "\"numUnspentOutputs\":"));
   monero_utils_free(json);
   json = NULL;
 
@@ -919,17 +925,21 @@ static void test_rpc(const char* daemon_uri, const char* rpc_uri) {
     monero_utils_free(json);
     json = NULL;
     EXPECT_OK(monero_wallet_tag_accounts(rpc, "family", tagged, 1));
-    EXPECT_OK(monero_wallet_get_accounts(rpc, false, "family", &json));
+    EXPECT_OK(monero_wallet_get_accounts(rpc, false, "family", false, &json));
     CHECK(is_list(json) && has(json, "\"index\":1") && !has(json, "\"index\":0"));
     monero_utils_free(json);
     json = NULL;
-    EXPECT_OK(monero_wallet_get_accounts(rpc, false, NULL, &json));
+    EXPECT_OK(monero_wallet_get_accounts(rpc, false, NULL, false, &json));
     CHECK(is_list(json) && has(json, "\"index\":0") && has(json, "\"index\":1"));
     monero_utils_free(json);
     json = NULL;
   }
-  EXPECT_OK(monero_wallet_rpc_get_subaddresses(rpc, 0, NULL, 0, true, &json));
-  CHECK(is_list(json) && has(json, "\"index\":0"));
+  EXPECT_OK(monero_wallet_get_subaddresses(rpc, 0, NULL, 0, false, &json));
+  CHECK(is_list(json) && has(json, "\"index\":0") && has(json, "\"numUnspentOutputs\":"));
+  monero_utils_free(json);
+  json = NULL;
+  EXPECT_OK(monero_wallet_get_subaddresses(rpc, 0, NULL, 0, true, &json));
+  CHECK(is_list(json) && has(json, "\"index\":0") && !has(json, "\"numUnspentOutputs\":"));
   monero_utils_free(json);
   json = NULL;
 

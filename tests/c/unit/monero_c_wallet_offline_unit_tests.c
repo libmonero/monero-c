@@ -134,19 +134,35 @@ static void test_accounts_and_subaddresses(void) {
   monero_utils_free(json);
 
   json = NULL;
-  EXPECT_OK(monero_wallet_get_accounts(wallet, false, NULL, &json));
+  EXPECT_OK(monero_wallet_get_accounts(wallet, false, NULL, false, &json));
   CHECK(contains(json, "\"index\":0") && contains(json, "\"index\":1") && !contains(json, "\"subaddresses\""));
   monero_utils_free(json);
 
+  // the full wallet has its balances in memory, so skip_balances changes nothing
+  char* skipped = NULL;
+  json = NULL;
+  EXPECT_OK(monero_wallet_get_accounts(wallet, true, NULL, false, &json));
+  EXPECT_OK(monero_wallet_get_accounts(wallet, true, NULL, true, &skipped));
+  CHECK(json != NULL && skipped != NULL && strcmp(json, skipped) == 0 && contains(json, "\"numUnspentOutputs\":"));
+  monero_utils_free(json);
+  monero_utils_free(skipped);
+  skipped = NULL;
+  json = NULL;
+  EXPECT_OK(monero_wallet_get_subaddresses(wallet, 0, NULL, 0, true, &skipped));
+  EXPECT_OK(monero_wallet_get_subaddresses(wallet, 0, NULL, 0, false, &json));
+  CHECK(json != NULL && skipped != NULL && strcmp(json, skipped) == 0);
+  monero_utils_free(json);
+  monero_utils_free(skipped);
+
   // the full wallet has no account tags and ignores the one that it gets, as monero-cpp does, so it lists every account
   json = NULL;
-  EXPECT_OK(monero_wallet_get_accounts(wallet, false, "family", &json));
+  EXPECT_OK(monero_wallet_get_accounts(wallet, false, "family", false, &json));
   CHECK(contains(json, "\"index\":0") && contains(json, "\"index\":1"));
   monero_utils_free(json);
 
   EXPECT_OK(monero_wallet_set_subaddress_label(wallet, 0, 1, "label2"));
   json = NULL;
-  EXPECT_OK(monero_wallet_get_accounts(wallet, true, "", &json));
+  EXPECT_OK(monero_wallet_get_accounts(wallet, true, "", false, &json));
   CHECK(contains(json, "\"label\":\"label2\""));
   monero_utils_free(json);
 
@@ -157,7 +173,7 @@ static void test_accounts_and_subaddresses(void) {
 
   // empty indices return every subaddress of the account
   json = NULL;
-  EXPECT_OK(monero_wallet_get_subaddresses(wallet, 0, NULL, 0, &json));
+  EXPECT_OK(monero_wallet_get_subaddresses(wallet, 0, NULL, 0, false, &json));
   CHECK(contains(json, "\"index\":0") && contains(json, "\"index\":1"));
   monero_utils_free(json);
 
@@ -459,7 +475,7 @@ static void test_null_arrays(void) {
   EXPECT_ERR_MSG(monero_wallet_get_address_book_entries(wallet, NULL, 1, &json), "indices must not be null");
   CHECK(json == NULL);
   json = POISON_PTR;
-  EXPECT_ERR_MSG(monero_wallet_get_subaddresses(wallet, 0, NULL, 1, &json), "subaddress_indices must not be null");
+  EXPECT_ERR_MSG(monero_wallet_get_subaddresses(wallet, 0, NULL, 1, false, &json), "subaddress_indices must not be null");
   CHECK(json == NULL);
   EXPECT_ERR_MSG(monero_wallet_untag_accounts(wallet, NULL, 1), "account_indices must not be null");
   EXPECT_ERR_MSG(monero_wallet_set_tx_notes(wallet, NULL, hashes, 1), "tx_hashes must not be null");

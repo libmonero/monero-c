@@ -550,28 +550,33 @@ MONERO_EXPORT monero_result monero_wallet_get_integrated_address(monero_wallet* 
 MONERO_EXPORT monero_result monero_wallet_decode_integrated_address(monero_wallet* wallet, const char* integrated_address, char** out_json);
 
 /**
- * Get an account, with or without its subaddresses.
+ * Get an account, with or without its subaddresses. See skip_balances for the wallet of a server.
  *
  * @param wallet is the wallet handle
  * @param account_idx is the account index
  * @param include_subaddresses is true to include the subaddresses of the account
+ * @param skip_balances is true to leave "balance", "unlockedBalance", "numUnspentOutputs" and "numBlocksToUnlock" out of the
+ *   subaddresses, which saves a request to the server of a wallet of a server. The balances of the account are always there. A full
+ *   wallet has them in memory and ignores it
  * @param out_json receives the JSON-serialized monero_account. Free with monero_utils_free()
  * @return MONERO_OK or MONERO_ERROR
  */
-MONERO_EXPORT monero_result monero_wallet_get_account(monero_wallet* wallet, uint32_t account_idx, bool include_subaddresses, char** out_json);
+MONERO_EXPORT monero_result monero_wallet_get_account(monero_wallet* wallet, uint32_t account_idx, bool include_subaddresses, bool skip_balances, char** out_json);
 
 /**
- * Get the subaddresses of an account. With no indices, a full wallet returns all of them. Keys-only
+ * Get the subaddresses of an account. With no indices, a full wallet and a wallet of a server return all of them. Keys-only
  * wallets can't enumerate their subaddresses, so they need the indices.
  *
  * @param wallet is the wallet handle
  * @param account_idx is the account index
  * @param subaddress_indices are the subaddress indices, or NULL for all of them
  * @param num_subaddress_indices is the number of elements in subaddress_indices, 0 for all of them
+ * @param skip_balances is true to leave "balance", "unlockedBalance", "numUnspentOutputs" and "numBlocksToUnlock" out, which saves a
+ *   request to the server of a wallet of a server. A full wallet has them in memory and ignores it
  * @param out_json receives a JSON array of monero_subaddress. Free with monero_utils_free()
  * @return MONERO_OK or MONERO_ERROR
  */
-MONERO_EXPORT monero_result monero_wallet_get_subaddresses(monero_wallet* wallet, uint32_t account_idx, const uint32_t* subaddress_indices, size_t num_subaddress_indices, char** out_json);
+MONERO_EXPORT monero_result monero_wallet_get_subaddresses(monero_wallet* wallet, uint32_t account_idx, const uint32_t* subaddress_indices, size_t num_subaddress_indices, bool skip_balances, char** out_json);
 
 /**
  * Sign a message with the spend key or the view key of an account and subaddress.
@@ -684,16 +689,18 @@ MONERO_EXPORT monero_result monero_wallet_create_subaddress(monero_wallet* walle
 
 /**
  * Get the accounts of the wallet, optionally only those with a tag. The wallet of a server filters by the tag, and the full wallet has
- * no account tags, so it ignores it, as monero-cpp does and monero-java too. An RPC wallet that doesn't want the balances uses
- * monero_wallet_rpc_get_accounts().
+ * no account tags, so it ignores it, as monero-cpp does and monero-java too.
  *
  * @param wallet is the wallet handle
  * @param include_subaddresses is true to include the subaddresses of each account
  * @param tag is the tag of the accounts. NULL or "" for all of them
+ * @param skip_balances is true to leave "balance", "unlockedBalance", "numUnspentOutputs" and "numBlocksToUnlock" out of the
+ *   subaddresses, which saves a request to the server of a wallet of a server. The balances of the accounts are always there. A full
+ *   wallet has them in memory and ignores it
  * @param out_json receives a JSON array of monero_account. Free with monero_utils_free()
  * @return MONERO_OK or MONERO_ERROR
  */
-MONERO_EXPORT monero_result monero_wallet_get_accounts(monero_wallet* wallet, bool include_subaddresses, const char* tag, char** out_json);
+MONERO_EXPORT monero_result monero_wallet_get_accounts(monero_wallet* wallet, bool include_subaddresses, const char* tag, bool skip_balances, char** out_json);
 
 /**
  * Get the subaddress that an address belongs to, with its account and subaddress indices.
@@ -1776,43 +1783,6 @@ MONERO_EXPORT monero_result monero_wallet_rpc_set_poll_period(monero_wallet* wal
  * @return MONERO_OK or MONERO_ERROR
  */
 MONERO_EXPORT monero_result monero_wallet_rpc_get_balances(monero_wallet* wallet, const uint32_t* account_idx, const uint32_t* subaddress_idx, char** out_json);
-
-/**
- * Get an account from the server, with or without its subaddresses and balances.
- *
- * @param wallet is the wallet handle of an RPC wallet
- * @param account_idx is the account index
- * @param include_subaddresses is true to include the subaddresses of the account
- * @param skip_balances is true to skip the balances, which is faster
- * @param out_json receives the JSON-serialized monero_account. Free with monero_utils_free()
- * @return MONERO_OK or MONERO_ERROR
- */
-MONERO_EXPORT monero_result monero_wallet_rpc_get_account(monero_wallet* wallet, uint32_t account_idx, bool include_subaddresses, bool skip_balances, char** out_json);
-
-/**
- * Get the accounts of the wallet from the server, optionally only those with a tag.
- *
- * @param wallet is the wallet handle of an RPC wallet
- * @param include_subaddresses is true to include the subaddresses of each account
- * @param tag is the tag of the accounts. NULL or "" for all of them
- * @param skip_balances is true to skip the balances, which is faster
- * @param out_json receives a JSON array of monero_account. Free with monero_utils_free()
- * @return MONERO_OK or MONERO_ERROR
- */
-MONERO_EXPORT monero_result monero_wallet_rpc_get_accounts(monero_wallet* wallet, bool include_subaddresses, const char* tag, bool skip_balances, char** out_json);
-
-/**
- * Get the subaddresses of an account from the server, with the given indices.
- *
- * @param wallet is the wallet handle of an RPC wallet
- * @param account_idx is the account index
- * @param subaddress_indices are the subaddress indices, or NULL for all of them
- * @param num_subaddress_indices is the number of elements in subaddress_indices, 0 for all of them
- * @param skip_balances is true to skip the balances, which is faster
- * @param out_json receives a JSON array of monero_subaddress. Free with monero_utils_free()
- * @return MONERO_OK or MONERO_ERROR
- */
-MONERO_EXPORT monero_result monero_wallet_rpc_get_subaddresses(monero_wallet* wallet, uint32_t account_idx, const uint32_t* subaddress_indices, size_t num_subaddress_indices, bool skip_balances, char** out_json);
 
 /**
  * Set the daemon connection of an RPC wallet, with the SSL options of the connection.

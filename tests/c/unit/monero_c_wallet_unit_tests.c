@@ -291,7 +291,7 @@ static void test_null_arguments_reset_outputs(void) {
   EXPECT_ERR(monero_wallet_get_seed(NULL, &json));
   CHECK(json == NULL);
   json = POISON_PTR;
-  EXPECT_ERR(monero_wallet_get_subaddresses(NULL, 0, NULL, 0, &json));
+  EXPECT_ERR(monero_wallet_get_subaddresses(NULL, 0, NULL, 0, false, &json));
   CHECK(json == NULL);
   json = POISON_PTR;
   EXPECT_ERR(monero_wallet_get_address_book_entries(NULL, NULL, 0, &json));
@@ -447,8 +447,8 @@ static void test_every_function_rejects_null_wallet(void) {
   EXPECT_ERR_MSG(monero_wallet_get_address(NULL, 0, 0, &json), "wallet must not be null");
   EXPECT_ERR_MSG(monero_wallet_get_integrated_address(NULL, "x", "x", &json), "wallet must not be null");
   EXPECT_ERR_MSG(monero_wallet_decode_integrated_address(NULL, "x", &json), "wallet must not be null");
-  EXPECT_ERR_MSG(monero_wallet_get_account(NULL, 0, false, &json), "wallet must not be null");
-  EXPECT_ERR_MSG(monero_wallet_get_subaddresses(NULL, 0, NULL, 0, &json), "wallet must not be null");
+  EXPECT_ERR_MSG(monero_wallet_get_account(NULL, 0, false, false, &json), "wallet must not be null");
+  EXPECT_ERR_MSG(monero_wallet_get_subaddresses(NULL, 0, NULL, 0, false, &json), "wallet must not be null");
   EXPECT_ERR_MSG(monero_wallet_sign_message(NULL, "x", MONERO_MESSAGE_SIGN_WITH_SPEND_KEY, 0, 0, &json), "wallet must not be null");
   EXPECT_ERR_MSG(monero_wallet_verify_message(NULL, "x", "x", "x", &json), "wallet must not be null");
   EXPECT_ERR_MSG(monero_wallet_add_address_book_entry(NULL, "x", "x", &number), "wallet must not be null");
@@ -458,7 +458,7 @@ static void test_every_function_rejects_null_wallet(void) {
   EXPECT_ERR_MSG(monero_wallet_change_password(NULL, "x", "x"), "wallet must not be null");
   EXPECT_ERR_MSG(monero_wallet_create_account(NULL, "x", &json), "wallet must not be null");
   EXPECT_ERR_MSG(monero_wallet_create_subaddress(NULL, 0, "x", &json), "wallet must not be null");
-  EXPECT_ERR_MSG(monero_wallet_get_accounts(NULL, false, NULL, &json), "wallet must not be null");
+  EXPECT_ERR_MSG(monero_wallet_get_accounts(NULL, false, NULL, false, &json), "wallet must not be null");
   EXPECT_ERR_MSG(monero_wallet_get_address_index(NULL, "x", &json), "wallet must not be null");
   EXPECT_ERR_MSG(monero_wallet_get_subaddress(NULL, 0, 0, &json), "wallet must not be null");
   EXPECT_ERR_MSG(monero_wallet_set_subaddress_label(NULL, 0, 0, "x"), "wallet must not be null");
@@ -565,9 +565,6 @@ static void test_every_function_rejects_null_wallet(void) {
   EXPECT_ERR_MSG(monero_wallet_rpc_get_connection(NULL, &json), "wallet must not be null");
   EXPECT_ERR_MSG(monero_wallet_rpc_set_poll_period(NULL, 0), "wallet must not be null");
   EXPECT_ERR_MSG(monero_wallet_rpc_get_balances(NULL, NULL, NULL, &json), "wallet must not be null");
-  EXPECT_ERR_MSG(monero_wallet_rpc_get_account(NULL, 0, false, false, &json), "wallet must not be null");
-  EXPECT_ERR_MSG(monero_wallet_rpc_get_accounts(NULL, false, "x", false, &json), "wallet must not be null");
-  EXPECT_ERR_MSG(monero_wallet_rpc_get_subaddresses(NULL, 0, NULL, 0, false, &json), "wallet must not be null");
   EXPECT_ERR_MSG(monero_wallet_rpc_set_daemon_connection(NULL, "x", false, "x"), "wallet must not be null");
 
   CHECK(json == NULL);

@@ -606,6 +606,11 @@ std::shared_ptr<monero::monero_output_query> output_query_of(const char* json) {
 }
 
 // the RPC methods are only on monero_wallet_rpc, so the handle must hold an RPC wallet
+// the RPC client behind a wallet handle, or null for another kind of wallet
+monero::monero_wallet_rpc* rpc_or_null(::monero_wallet* wallet) {
+  return dynamic_cast<monero::monero_wallet_rpc*>(wallet->wallet.get());
+}
+
 monero::monero_wallet_rpc& as_rpc(::monero_wallet* wallet) {
   monero::monero_wallet_rpc* rpc = dynamic_cast<monero::monero_wallet_rpc*>(wallet->wallet.get());
   if (rpc == nullptr) throw std::invalid_argument("not an RPC wallet");
@@ -943,18 +948,25 @@ monero_result monero_wallet_decode_integrated_address(::monero_wallet* wallet, c
   return guard([&] { *out_json = dup_string(wallet->wallet->decode_integrated_address(std::string(integrated_address)).serialize()); });
 }
 
-monero_result monero_wallet_get_account(::monero_wallet* wallet, uint32_t account_idx, bool include_subaddresses, char** out_json) {
+monero_result monero_wallet_get_account(::monero_wallet* wallet, uint32_t account_idx, bool include_subaddresses, bool skip_balances, char** out_json) {
   reset_out(out_json);
   if (!require(wallet, "wallet") || !require(out_json, "out_json")) return MONERO_ERROR;
-  return guard([&] { *out_json = dup_string(wallet->wallet->get_account(account_idx, include_subaddresses).serialize()); });
+  return guard([&] {
+    // only a wallet of a server can skip the balances of the subaddresses, which cost it a request
+    monero::monero_wallet_rpc* rpc = rpc_or_null(wallet);
+    monero::monero_account account = rpc != nullptr ? rpc->get_account(account_idx, include_subaddresses, skip_balances) : wallet->wallet->get_account(account_idx, include_subaddresses);
+    *out_json = dup_string(account.serialize());
+  });
 }
 
-monero_result monero_wallet_get_subaddresses(::monero_wallet* wallet, uint32_t account_idx, const uint32_t* subaddress_indices, size_t num_subaddress_indices, char** out_json) {
+monero_result monero_wallet_get_subaddresses(::monero_wallet* wallet, uint32_t account_idx, const uint32_t* subaddress_indices, size_t num_subaddress_indices, bool skip_balances, char** out_json) {
   reset_out(out_json);
   if (!require(wallet, "wallet") || !require(out_json, "out_json")) return MONERO_ERROR;
   return guard([&] {
     auto indices = array_of(subaddress_indices, num_subaddress_indices, "subaddress_indices");
-    *out_json = dup_string(json_of_list(wallet->wallet->get_subaddresses(account_idx, indices)));
+    monero::monero_wallet_rpc* rpc = rpc_or_null(wallet);
+    std::vector<monero::monero_subaddress> subaddresses = rpc != nullptr ? rpc->get_subaddresses(account_idx, indices, skip_balances) : wallet->wallet->get_subaddresses(account_idx, indices);
+    *out_json = dup_string(json_of_list(subaddresses));
   });
 }
 
@@ -1012,10 +1024,14 @@ monero_result monero_wallet_create_subaddress(::monero_wallet* wallet, uint32_t 
   return guard([&] { *out_json = dup_string(wallet->wallet->create_subaddress(account_idx, safe_str(label)).serialize()); });
 }
 
-monero_result monero_wallet_get_accounts(::monero_wallet* wallet, bool include_subaddresses, const char* tag, char** out_json) {
+monero_result monero_wallet_get_accounts(::monero_wallet* wallet, bool include_subaddresses, const char* tag, bool skip_balances, char** out_json) {
   reset_out(out_json);
   if (!require(wallet, "wallet") || !require(out_json, "out_json")) return MONERO_ERROR;
-  return guard([&] { *out_json = dup_string(json_of_list(wallet->wallet->get_accounts(include_subaddresses, safe_str(tag)))); });
+  return guard([&] {
+    monero::monero_wallet_rpc* rpc = rpc_or_null(wallet);
+    std::vector<monero::monero_account> accounts = rpc != nullptr ? rpc->get_accounts(include_subaddresses, safe_str(tag), skip_balances) : wallet->wallet->get_accounts(include_subaddresses, safe_str(tag));
+    *out_json = dup_string(json_of_list(accounts));
+  });
 }
 
 monero_result monero_wallet_get_address_index(::monero_wallet* wallet, const char* address, char** out_json) {
@@ -1815,27 +1831,6 @@ monero_result monero_wallet_rpc_get_balances(::monero_wallet* wallet, const uint
   return guard([&] {
     std::shared_ptr<monero::monero_subaddress> balances = as_rpc(wallet).get_balances(optional_of(account_idx), optional_of(subaddress_idx));
     *out_json = dup_string(balances ? balances->serialize() : std::string("null"));
-  });
-}
-
-monero_result monero_wallet_rpc_get_account(::monero_wallet* wallet, uint32_t account_idx, bool include_subaddresses, bool skip_balances, char** out_json) {
-  reset_out(out_json);
-  if (!require(wallet, "wallet") || !require(out_json, "out_json")) return MONERO_ERROR;
-  return guard([&] { *out_json = dup_string(as_rpc(wallet).get_account(account_idx, include_subaddresses, skip_balances).serialize()); });
-}
-
-monero_result monero_wallet_rpc_get_accounts(::monero_wallet* wallet, bool include_subaddresses, const char* tag, bool skip_balances, char** out_json) {
-  reset_out(out_json);
-  if (!require(wallet, "wallet") || !require(out_json, "out_json")) return MONERO_ERROR;
-  return guard([&] { *out_json = dup_string(json_of_list(as_rpc(wallet).get_accounts(include_subaddresses, safe_str(tag), skip_balances))); });
-}
-
-monero_result monero_wallet_rpc_get_subaddresses(::monero_wallet* wallet, uint32_t account_idx, const uint32_t* subaddress_indices, size_t num_subaddress_indices, bool skip_balances, char** out_json) {
-  reset_out(out_json);
-  if (!require(wallet, "wallet") || !require(out_json, "out_json")) return MONERO_ERROR;
-  return guard([&] {
-    auto indices = array_of(subaddress_indices, num_subaddress_indices, "subaddress_indices");
-    *out_json = dup_string(json_of_list(as_rpc(wallet).get_subaddresses(account_idx, indices, skip_balances)));
   });
 }
 

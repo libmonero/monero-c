@@ -179,11 +179,11 @@ static monero_result call_monero_wallet_export_multisig_hex(void** a) { return m
 static monero_result call_monero_wallet_export_outputs(void** a) { return monero_wallet_export_outputs((monero_wallet*) a[0], *(bool*) a[1], (char**) a[2]); }
 static monero_result call_monero_wallet_free(void** a) { (void) monero_wallet_free((monero_wallet*) a[0]); return MONERO_OK; }
 static monero_result call_monero_wallet_freeze_output(void** a) { return monero_wallet_freeze_output((monero_wallet*) a[0], (const char*) a[1]); }
-static monero_result call_monero_wallet_get_account(void** a) { return monero_wallet_get_account((monero_wallet*) a[0], *(uint32_t*) a[1], *(bool*) a[2], (char**) a[3]); }
+static monero_result call_monero_wallet_get_account(void** a) { return monero_wallet_get_account((monero_wallet*) a[0], *(uint32_t*) a[1], *(bool*) a[2], *(bool*) a[3], (char**) a[4]); }
 static monero_result call_monero_wallet_get_account_balance(void** a) { return monero_wallet_get_account_balance((monero_wallet*) a[0], *(uint32_t*) a[1], (uint64_t*) a[2]); }
 static monero_result call_monero_wallet_get_account_tags(void** a) { return monero_wallet_get_account_tags((monero_wallet*) a[0], (char**) a[1]); }
 static monero_result call_monero_wallet_get_account_unlocked_balance(void** a) { return monero_wallet_get_account_unlocked_balance((monero_wallet*) a[0], *(uint32_t*) a[1], (uint64_t*) a[2]); }
-static monero_result call_monero_wallet_get_accounts(void** a) { return monero_wallet_get_accounts((monero_wallet*) a[0], *(bool*) a[1], (const char*) a[2], (char**) a[3]); }
+static monero_result call_monero_wallet_get_accounts(void** a) { return monero_wallet_get_accounts((monero_wallet*) a[0], *(bool*) a[1], (const char*) a[2], *(bool*) a[3], (char**) a[4]); }
 static monero_result call_monero_wallet_get_address(void** a) { return monero_wallet_get_address((monero_wallet*) a[0], *(uint32_t*) a[1], *(uint32_t*) a[2], (char**) a[3]); }
 static monero_result call_monero_wallet_get_address_book_entries(void** a) { return monero_wallet_get_address_book_entries((monero_wallet*) a[0], (const uint64_t*) a[1], *(size_t*) a[2], (char**) a[3]); }
 static monero_result call_monero_wallet_get_address_index(void** a) { return monero_wallet_get_address_index((monero_wallet*) a[0], (const char*) a[1], (char**) a[2]); }
@@ -219,7 +219,7 @@ static monero_result call_monero_wallet_get_spend_proof(void** a) { return moner
 static monero_result call_monero_wallet_get_subaddress(void** a) { return monero_wallet_get_subaddress((monero_wallet*) a[0], *(uint32_t*) a[1], *(uint32_t*) a[2], (char**) a[3]); }
 static monero_result call_monero_wallet_get_subaddress_balance(void** a) { return monero_wallet_get_subaddress_balance((monero_wallet*) a[0], *(uint32_t*) a[1], *(uint32_t*) a[2], (uint64_t*) a[3]); }
 static monero_result call_monero_wallet_get_subaddress_unlocked_balance(void** a) { return monero_wallet_get_subaddress_unlocked_balance((monero_wallet*) a[0], *(uint32_t*) a[1], *(uint32_t*) a[2], (uint64_t*) a[3]); }
-static monero_result call_monero_wallet_get_subaddresses(void** a) { return monero_wallet_get_subaddresses((monero_wallet*) a[0], *(uint32_t*) a[1], (const uint32_t*) a[2], *(size_t*) a[3], (char**) a[4]); }
+static monero_result call_monero_wallet_get_subaddresses(void** a) { return monero_wallet_get_subaddresses((monero_wallet*) a[0], *(uint32_t*) a[1], (const uint32_t*) a[2], *(size_t*) a[3], *(bool*) a[4], (char**) a[5]); }
 static monero_result call_monero_wallet_get_transfers(void** a) { return monero_wallet_get_transfers((monero_wallet*) a[0], (const char*) a[1], (char**) a[2]); }
 static monero_result call_monero_wallet_get_tx_key(void** a) { return monero_wallet_get_tx_key((monero_wallet*) a[0], (const char*) a[1], (char**) a[2]); }
 static monero_result call_monero_wallet_get_tx_note(void** a) { return monero_wallet_get_tx_note((monero_wallet*) a[0], (const char*) a[1], (char**) a[2]); }
@@ -265,12 +265,9 @@ static monero_result call_monero_wallet_rpc_create_from_keys(void** a) { return 
 static monero_result call_monero_wallet_rpc_create_from_seed(void** a) { return monero_wallet_rpc_create_from_seed((const char*) a[0], (const char*) a[1], (const char*) a[2], (const char*) a[3], (const char*) a[4], (const char*) a[5], (const char*) a[6], *(uint64_t*) a[7], (const char*) a[8], (monero_wallet**) a[9]); }
 static monero_result call_monero_wallet_rpc_create_random(void** a) { return monero_wallet_rpc_create_random((const char*) a[0], (const char*) a[1], (const char*) a[2], (const char*) a[3], (const char*) a[4], (const char*) a[5], (monero_wallet**) a[6]); }
 static monero_result call_monero_wallet_rpc_create_wallet(void** a) { return monero_wallet_rpc_create_wallet((monero_wallet*) a[0], (const char*) a[1]); }
-static monero_result call_monero_wallet_rpc_get_account(void** a) { return monero_wallet_rpc_get_account((monero_wallet*) a[0], *(uint32_t*) a[1], *(bool*) a[2], *(bool*) a[3], (char**) a[4]); }
-static monero_result call_monero_wallet_rpc_get_accounts(void** a) { return monero_wallet_rpc_get_accounts((monero_wallet*) a[0], *(bool*) a[1], (const char*) a[2], *(bool*) a[3], (char**) a[4]); }
 static monero_result call_monero_wallet_rpc_get_balances(void** a) { return monero_wallet_rpc_get_balances((monero_wallet*) a[0], (const uint32_t*) a[1], (const uint32_t*) a[2], (char**) a[3]); }
 static monero_result call_monero_wallet_rpc_get_connection(void** a) { return monero_wallet_rpc_get_connection((monero_wallet*) a[0], (char**) a[1]); }
 static monero_result call_monero_wallet_rpc_get_seed_languages(void** a) { return monero_wallet_rpc_get_seed_languages((monero_wallet*) a[0], (char**) a[1]); }
-static monero_result call_monero_wallet_rpc_get_subaddresses(void** a) { return monero_wallet_rpc_get_subaddresses((monero_wallet*) a[0], *(uint32_t*) a[1], (const uint32_t*) a[2], *(size_t*) a[3], *(bool*) a[4], (char**) a[5]); }
 static monero_result call_monero_wallet_rpc_open(void** a) { return monero_wallet_rpc_open((const char*) a[0], (const char*) a[1], (const char*) a[2], (const char*) a[3], (const char*) a[4], (monero_wallet**) a[5]); }
 static monero_result call_monero_wallet_rpc_open_wallet(void** a) { return monero_wallet_rpc_open_wallet((monero_wallet*) a[0], (const char*) a[1], (const char*) a[2]); }
 static monero_result call_monero_wallet_rpc_set_daemon_connection(void** a) { return monero_wallet_rpc_set_daemon_connection((monero_wallet*) a[0], (const char*) a[1], *(bool*) a[2], (const char*) a[3]); }
@@ -483,11 +480,11 @@ static const arg_function g_functions[] = {
   {"monero_wallet_export_outputs", call_monero_wallet_export_outputs, 3, {K_WALLET, K_BOOL, K_OUT_STR}, {"wallet", "all", "out_hex"}, 0x5, RET_RESULT},
   {"monero_wallet_free", call_monero_wallet_free, 1, {K_WALLET}, {"wallet"}, 0x0, RET_OTHER},
   {"monero_wallet_freeze_output", call_monero_wallet_freeze_output, 2, {K_WALLET, K_STR}, {"wallet", "key_image"}, 0x3, RET_RESULT},
-  {"monero_wallet_get_account", call_monero_wallet_get_account, 4, {K_WALLET, K_U32, K_BOOL, K_OUT_STR}, {"wallet", "account_idx", "include_subaddresses", "out_json"}, 0x9, RET_RESULT},
+  {"monero_wallet_get_account", call_monero_wallet_get_account, 5, {K_WALLET, K_U32, K_BOOL, K_BOOL, K_OUT_STR}, {"wallet", "account_idx", "include_subaddresses", "skip_balances", "out_json"}, 0x11, RET_RESULT},
   {"monero_wallet_get_account_balance", call_monero_wallet_get_account_balance, 3, {K_WALLET, K_U32, K_OUT_U64}, {"wallet", "account_idx", "out_balance"}, 0x5, RET_RESULT},
   {"monero_wallet_get_account_tags", call_monero_wallet_get_account_tags, 2, {K_WALLET, K_OUT_STR}, {"wallet", "out_json"}, 0x3, RET_RESULT},
   {"monero_wallet_get_account_unlocked_balance", call_monero_wallet_get_account_unlocked_balance, 3, {K_WALLET, K_U32, K_OUT_U64}, {"wallet", "account_idx", "out_balance"}, 0x5, RET_RESULT},
-  {"monero_wallet_get_accounts", call_monero_wallet_get_accounts, 4, {K_WALLET, K_BOOL, K_STR, K_OUT_STR}, {"wallet", "include_subaddresses", "tag", "out_json"}, 0x9, RET_RESULT},
+  {"monero_wallet_get_accounts", call_monero_wallet_get_accounts, 5, {K_WALLET, K_BOOL, K_STR, K_BOOL, K_OUT_STR}, {"wallet", "include_subaddresses", "tag", "skip_balances", "out_json"}, 0x11, RET_RESULT},
   {"monero_wallet_get_address", call_monero_wallet_get_address, 4, {K_WALLET, K_U32, K_U32, K_OUT_STR}, {"wallet", "account_idx", "subaddress_idx", "out_address"}, 0x9, RET_RESULT},
   {"monero_wallet_get_address_book_entries", call_monero_wallet_get_address_book_entries, 4, {K_WALLET, K_PU64, K_SIZE, K_OUT_STR}, {"wallet", "indices", "num_indices", "out_json"}, 0xb, RET_RESULT},
   {"monero_wallet_get_address_index", call_monero_wallet_get_address_index, 3, {K_WALLET, K_STR, K_OUT_STR}, {"wallet", "address", "out_json"}, 0x7, RET_RESULT},
@@ -523,7 +520,7 @@ static const arg_function g_functions[] = {
   {"monero_wallet_get_subaddress", call_monero_wallet_get_subaddress, 4, {K_WALLET, K_U32, K_U32, K_OUT_STR}, {"wallet", "account_idx", "subaddress_idx", "out_json"}, 0x9, RET_RESULT},
   {"monero_wallet_get_subaddress_balance", call_monero_wallet_get_subaddress_balance, 4, {K_WALLET, K_U32, K_U32, K_OUT_U64}, {"wallet", "account_idx", "subaddress_idx", "out_balance"}, 0x9, RET_RESULT},
   {"monero_wallet_get_subaddress_unlocked_balance", call_monero_wallet_get_subaddress_unlocked_balance, 4, {K_WALLET, K_U32, K_U32, K_OUT_U64}, {"wallet", "account_idx", "subaddress_idx", "out_balance"}, 0x9, RET_RESULT},
-  {"monero_wallet_get_subaddresses", call_monero_wallet_get_subaddresses, 5, {K_WALLET, K_U32, K_PU32, K_SIZE, K_OUT_STR}, {"wallet", "account_idx", "subaddress_indices", "num_subaddress_indices", "out_json"}, 0x15, RET_RESULT},
+  {"monero_wallet_get_subaddresses", call_monero_wallet_get_subaddresses, 6, {K_WALLET, K_U32, K_PU32, K_SIZE, K_BOOL, K_OUT_STR}, {"wallet", "account_idx", "subaddress_indices", "num_subaddress_indices", "skip_balances", "out_json"}, 0x25, RET_RESULT},
   {"monero_wallet_get_transfers", call_monero_wallet_get_transfers, 3, {K_WALLET, K_STR, K_OUT_STR}, {"wallet", "query_json", "out_json"}, 0x5, RET_RESULT},
   {"monero_wallet_get_tx_key", call_monero_wallet_get_tx_key, 3, {K_WALLET, K_STR, K_OUT_STR}, {"wallet", "tx_hash", "out_key"}, 0x7, RET_RESULT},
   {"monero_wallet_get_tx_note", call_monero_wallet_get_tx_note, 3, {K_WALLET, K_STR, K_OUT_STR}, {"wallet", "tx_hash", "out_note"}, 0x7, RET_RESULT},
@@ -569,12 +566,9 @@ static const arg_function g_functions[] = {
   {"monero_wallet_rpc_create_from_seed", call_monero_wallet_rpc_create_from_seed, 10, {K_STR, K_STR, K_STR, K_STR, K_STR, K_STR, K_STR, K_U64, K_STR, K_OUT_WALLET}, {"uri", "username", "password", "name", "wallet_password", "seed", "seed_offset", "restore_height", "language", "out_wallet"}, 0x229, RET_RESULT},
   {"monero_wallet_rpc_create_random", call_monero_wallet_rpc_create_random, 7, {K_STR, K_STR, K_STR, K_STR, K_STR, K_STR, K_OUT_WALLET}, {"uri", "username", "password", "name", "wallet_password", "language", "out_wallet"}, 0x49, RET_RESULT},
   {"monero_wallet_rpc_create_wallet", call_monero_wallet_rpc_create_wallet, 2, {K_WALLET, K_STR}, {"wallet", "config_json"}, 0x3, RET_RESULT},
-  {"monero_wallet_rpc_get_account", call_monero_wallet_rpc_get_account, 5, {K_WALLET, K_U32, K_BOOL, K_BOOL, K_OUT_STR}, {"wallet", "account_idx", "include_subaddresses", "skip_balances", "out_json"}, 0x11, RET_RESULT},
-  {"monero_wallet_rpc_get_accounts", call_monero_wallet_rpc_get_accounts, 5, {K_WALLET, K_BOOL, K_STR, K_BOOL, K_OUT_STR}, {"wallet", "include_subaddresses", "tag", "skip_balances", "out_json"}, 0x11, RET_RESULT},
   {"monero_wallet_rpc_get_balances", call_monero_wallet_rpc_get_balances, 4, {K_WALLET, K_PU32, K_PU32, K_OUT_STR}, {"wallet", "account_idx", "subaddress_idx", "out_json"}, 0x9, RET_RESULT},
   {"monero_wallet_rpc_get_connection", call_monero_wallet_rpc_get_connection, 2, {K_WALLET, K_OUT_STR}, {"wallet", "out_json"}, 0x3, RET_RESULT},
   {"monero_wallet_rpc_get_seed_languages", call_monero_wallet_rpc_get_seed_languages, 2, {K_WALLET, K_OUT_STR}, {"wallet", "out_json"}, 0x3, RET_RESULT},
-  {"monero_wallet_rpc_get_subaddresses", call_monero_wallet_rpc_get_subaddresses, 6, {K_WALLET, K_U32, K_PU32, K_SIZE, K_BOOL, K_OUT_STR}, {"wallet", "account_idx", "subaddress_indices", "num_subaddress_indices", "skip_balances", "out_json"}, 0x25, RET_RESULT},
   {"monero_wallet_rpc_open", call_monero_wallet_rpc_open, 6, {K_STR, K_STR, K_STR, K_STR, K_STR, K_OUT_WALLET}, {"uri", "username", "password", "name", "wallet_password", "out_wallet"}, 0x29, RET_RESULT},
   {"monero_wallet_rpc_open_wallet", call_monero_wallet_rpc_open_wallet, 3, {K_WALLET, K_STR, K_STR}, {"wallet", "name", "wallet_password"}, 0x3, RET_RESULT},
   {"monero_wallet_rpc_set_daemon_connection", call_monero_wallet_rpc_set_daemon_connection, 4, {K_WALLET, K_STR, K_BOOL, K_STR}, {"wallet", "connection_json", "is_trusted", "ssl_options_json"}, 0x3, RET_RESULT},

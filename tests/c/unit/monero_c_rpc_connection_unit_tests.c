@@ -215,7 +215,7 @@ static void test_rpc_wallet_from_connection(void) {
 
   // the array is checked before any request, and a config that nests too deeply before the parser
   json = POISON_PTR;
-  EXPECT_ERR_MSG(monero_wallet_rpc_get_subaddresses(wallet, 0, NULL, 1, false, &json), "subaddress_indices must not be null");
+  EXPECT_ERR_MSG(monero_wallet_get_subaddresses(wallet, 0, NULL, 1, false, &json), "subaddress_indices must not be null");
   CHECK(json == NULL);
   char* deep = nested_json_object(100000);
   EXPECT_ERR_MSG(monero_wallet_rpc_create_wallet(wallet, deep), "JSON is nested deeper than 64 levels");

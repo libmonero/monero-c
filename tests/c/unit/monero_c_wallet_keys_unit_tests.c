@@ -280,7 +280,7 @@ static void test_subaddresses_json(void) {
 
   uint32_t indices[2] = {1, 2};
   char* json = NULL;
-  EXPECT_OK(monero_wallet_get_subaddresses(wallet, 0, indices, 2, &json));
+  EXPECT_OK(monero_wallet_get_subaddresses(wallet, 0, indices, 2, false, &json));
   CHECK(json != NULL && sub1 != NULL && strstr(json, sub1) != NULL);
   CHECK(json != NULL && sub2 != NULL && strstr(json, sub2) != NULL);
   CHECK(json != NULL && strstr(json, "\"accountIndex\":0") != NULL);
@@ -288,7 +288,7 @@ static void test_subaddresses_json(void) {
 
   // a keys-only wallet can't enumerate its subaddresses, so the indices are required
   json = NULL;
-  EXPECT_ERR(monero_wallet_get_subaddresses(wallet, 0, NULL, 0, &json));
+  EXPECT_ERR(monero_wallet_get_subaddresses(wallet, 0, NULL, 0, false, &json));
   CHECK(json == NULL);
 
   monero_utils_free(sub1);
@@ -303,12 +303,12 @@ static void test_account_json(void) {
   if (wallet == NULL) return;
 
   char* json = NULL;
-  EXPECT_OK(monero_wallet_get_account(wallet, 0, false, &json));
+  EXPECT_OK(monero_wallet_get_account(wallet, 0, false, false, &json));
   CHECK(json != NULL && strstr(json, "\"primaryAddress\":\"" ADDRESS "\"") != NULL);
   monero_utils_free(json);
 
   json = NULL;
-  EXPECT_OK(monero_wallet_get_account(wallet, 1, false, &json));
+  EXPECT_OK(monero_wallet_get_account(wallet, 1, false, false, &json));
   CHECK(json != NULL && strstr(json, "\"index\":1") != NULL);
   monero_utils_free(json);
 
