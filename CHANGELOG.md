@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.2.2-alpha.1 (2026-11-09)
+
+Fixes of the wallet that monero-kotlin found with its tests, and the corrected docs of the ABI. The library, the headers and the C ABI are those of
+0.2.1-alpha.1, and `monero_utils_get_abi_version()` returns 0.2.2: the patch version follows the release, and no function, struct or enum changed. A
+binding that asks for 0.2.x keeps working.
+
+### Fixed
+
+* `monero_wallet_scan_txs()` and `monero_wallet_rescan_blockchain()` return after the callbacks they caused have returned, as `monero_wallet_sync()`
+  and `monero_wallet_close()` do. A rescan notifies the outputs that the wallet finds again, and no block or progress.
+* The JSON that a wallet listener gets for an output keeps the `extra` and the `isMinerTx` of its transaction, which monero-cpp has for an output
+  that the wallet receives or spends. The transaction of an output that unlocks still has neither its version nor its extra.
+* `monero_wallet_start_mining()` gives the defaults of its docs to the wallet of a server too: one thread for NULL or 0, no mining in the
+  background and none on battery. monero-wallet-rpc refused to start without a thread.
+
+### Changed
+
+* The docs of the C ABI: the docstrings that did not match the code are fixed, they open with an imperative verb, and they say what the functions
+  do with NULL and with the outputs of a failed call. The enums and the version macros are documented, and `monero_wallet_rescan_blockchain()`
+  says that it keeps the tx keys and the tx notes, and loses the destinations of the transactions that the wallet sent.
+
 ## 0.2.1-alpha.1 (2026-11-01)
 
 The first release with the packages for Android, the JVM, Dart, CMake and Linux, and Apple, besides the NuGet package. The library, the headers and
