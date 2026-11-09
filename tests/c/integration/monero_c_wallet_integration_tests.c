@@ -911,6 +911,23 @@ static void test_rpc(const char* daemon_uri, const char* rpc_uri) {
   CHECK(is_list(json) && has(json, "\"index\":0"));
   monero_utils_free(json);
   json = NULL;
+
+  // the generic call filters by the tag on the server, and lists every account without one
+  {
+    const uint32_t tagged[] = {1};
+    EXPECT_OK(monero_wallet_create_account(rpc, "tagged", &json));
+    monero_utils_free(json);
+    json = NULL;
+    EXPECT_OK(monero_wallet_tag_accounts(rpc, "family", tagged, 1));
+    EXPECT_OK(monero_wallet_get_accounts(rpc, false, "family", &json));
+    CHECK(is_list(json) && has(json, "\"index\":1") && !has(json, "\"index\":0"));
+    monero_utils_free(json);
+    json = NULL;
+    EXPECT_OK(monero_wallet_get_accounts(rpc, false, NULL, &json));
+    CHECK(is_list(json) && has(json, "\"index\":0") && has(json, "\"index\":1"));
+    monero_utils_free(json);
+    json = NULL;
+  }
   EXPECT_OK(monero_wallet_rpc_get_subaddresses(rpc, 0, NULL, 0, true, &json));
   CHECK(is_list(json) && has(json, "\"index\":0"));
   monero_utils_free(json);

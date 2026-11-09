@@ -197,7 +197,7 @@ static void* wallet_worker(void* arg) {
     WORKER_CHECK(w, monero_wallet_create_subaddress(full, 0, "label", &text) == MONERO_OK && text != NULL);
     monero_utils_free(text);
     text = NULL;
-    WORKER_CHECK(w, monero_wallet_get_accounts(full, true, &text) == MONERO_OK && text != NULL && strstr(text, "\"label\":\"label\"") != NULL);
+    WORKER_CHECK(w, monero_wallet_get_accounts(full, true, NULL, &text) == MONERO_OK && text != NULL && strstr(text, "\"label\":\"label\"") != NULL);
     monero_utils_free(text);
     text = NULL;
     // the others fail the same way, and only for this thread

@@ -134,13 +134,19 @@ static void test_accounts_and_subaddresses(void) {
   monero_utils_free(json);
 
   json = NULL;
-  EXPECT_OK(monero_wallet_get_accounts(wallet, false, &json));
+  EXPECT_OK(monero_wallet_get_accounts(wallet, false, NULL, &json));
   CHECK(contains(json, "\"index\":0") && contains(json, "\"index\":1") && !contains(json, "\"subaddresses\""));
+  monero_utils_free(json);
+
+  // the full wallet has no account tags and ignores the one that it gets, as monero-cpp does, so it lists every account
+  json = NULL;
+  EXPECT_OK(monero_wallet_get_accounts(wallet, false, "family", &json));
+  CHECK(contains(json, "\"index\":0") && contains(json, "\"index\":1"));
   monero_utils_free(json);
 
   EXPECT_OK(monero_wallet_set_subaddress_label(wallet, 0, 1, "label2"));
   json = NULL;
-  EXPECT_OK(monero_wallet_get_accounts(wallet, true, &json));
+  EXPECT_OK(monero_wallet_get_accounts(wallet, true, "", &json));
   CHECK(contains(json, "\"label\":\"label2\""));
   monero_utils_free(json);
 

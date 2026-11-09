@@ -458,7 +458,7 @@ static void test_every_function_rejects_null_wallet(void) {
   EXPECT_ERR_MSG(monero_wallet_change_password(NULL, "x", "x"), "wallet must not be null");
   EXPECT_ERR_MSG(monero_wallet_create_account(NULL, "x", &json), "wallet must not be null");
   EXPECT_ERR_MSG(monero_wallet_create_subaddress(NULL, 0, "x", &json), "wallet must not be null");
-  EXPECT_ERR_MSG(monero_wallet_get_accounts(NULL, false, &json), "wallet must not be null");
+  EXPECT_ERR_MSG(monero_wallet_get_accounts(NULL, false, NULL, &json), "wallet must not be null");
   EXPECT_ERR_MSG(monero_wallet_get_address_index(NULL, "x", &json), "wallet must not be null");
   EXPECT_ERR_MSG(monero_wallet_get_subaddress(NULL, 0, 0, &json), "wallet must not be null");
   EXPECT_ERR_MSG(monero_wallet_set_subaddress_label(NULL, 0, 0, "x"), "wallet must not be null");

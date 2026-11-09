@@ -1012,10 +1012,10 @@ monero_result monero_wallet_create_subaddress(::monero_wallet* wallet, uint32_t 
   return guard([&] { *out_json = dup_string(wallet->wallet->create_subaddress(account_idx, safe_str(label)).serialize()); });
 }
 
-monero_result monero_wallet_get_accounts(::monero_wallet* wallet, bool include_subaddresses, char** out_json) {
+monero_result monero_wallet_get_accounts(::monero_wallet* wallet, bool include_subaddresses, const char* tag, char** out_json) {
   reset_out(out_json);
   if (!require(wallet, "wallet") || !require(out_json, "out_json")) return MONERO_ERROR;
-  return guard([&] { *out_json = dup_string(json_of_list(wallet->wallet->get_accounts(include_subaddresses))); });
+  return guard([&] { *out_json = dup_string(json_of_list(wallet->wallet->get_accounts(include_subaddresses, safe_str(tag)))); });
 }
 
 monero_result monero_wallet_get_address_index(::monero_wallet* wallet, const char* address, char** out_json) {

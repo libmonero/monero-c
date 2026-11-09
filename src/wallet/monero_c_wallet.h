@@ -683,14 +683,17 @@ MONERO_EXPORT monero_result monero_wallet_create_account(monero_wallet* wallet, 
 MONERO_EXPORT monero_result monero_wallet_create_subaddress(monero_wallet* wallet, uint32_t account_idx, const char* label, char** out_json);
 
 /**
- * Get the accounts of the wallet.
+ * Get the accounts of the wallet, optionally only those with a tag. The wallet of a server filters by the tag, and the full wallet has
+ * no account tags, so it ignores it, as monero-cpp does and monero-java too. An RPC wallet that doesn't want the balances uses
+ * monero_wallet_rpc_get_accounts().
  *
  * @param wallet is the wallet handle
  * @param include_subaddresses is true to include the subaddresses of each account
+ * @param tag is the tag of the accounts. NULL or "" for all of them
  * @param out_json receives a JSON array of monero_account. Free with monero_utils_free()
  * @return MONERO_OK or MONERO_ERROR
  */
-MONERO_EXPORT monero_result monero_wallet_get_accounts(monero_wallet* wallet, bool include_subaddresses, char** out_json);
+MONERO_EXPORT monero_result monero_wallet_get_accounts(monero_wallet* wallet, bool include_subaddresses, const char* tag, char** out_json);
 
 /**
  * Get the subaddress that an address belongs to, with its account and subaddress indices.
