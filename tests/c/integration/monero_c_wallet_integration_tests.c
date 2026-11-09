@@ -430,6 +430,9 @@ static void test_daemon(const char* daemon_uri) {
     CHECK(has(g_first_received, "{\"blocks\":[{\"height\":") && has(g_first_received, "\"txs\":[{") && has(g_first_received, "\"hash\":\"") &&
           has(g_first_received, "\"unlockTime\":") && has(g_first_received, "\"isLocked\":") && has(g_first_received, "\"outputs\":[{\"amount\":") &&
           has(g_first_received, "\"accountIndex\":0") && has(g_first_received, "\"subaddressIndex\":0"));
+
+    // and the miner flag and the extra of the tx, which monero-cpp has for the output that a wallet receives
+    CHECK(has(g_first_received, "\"isMinerTx\":true") && has(g_first_received, "\"extra\":["));
   }
 
   // create a tx without relaying, relay it from its JSON and mine it
@@ -495,6 +498,8 @@ static void test_daemon(const char* daemon_uri) {
     CHECK(g_received > 0 && g_spent > 0);
     CHECK(has(g_first_spent, "{\"blocks\":[{\"height\":") && has(g_first_spent, tx_hash) && has(g_first_spent, "\"inputs\":[{\"amount\":") && has(g_first_spent, "\"accountIndex\":0"));
     CHECK(has(g_first_received, "{\"blocks\":[{\"height\":") && has(g_first_received, "\"outputs\":[{\"amount\":"));
+    // the tx that a spent is not a miner tx, and has its extra
+    CHECK(has(g_first_spent, "\"isMinerTx\":false") && has(g_first_spent, "\"extra\":["));
   }
 
   // once it is mined it is in a block with a height, and its transfer is in it. It is asked for by its hash, since a query on the

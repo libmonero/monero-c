@@ -71,9 +71,9 @@ namespace {
 
 // the JSON that a listener gets for an output, in the shape of the results of monero_wallet_get_outputs(): the output in its tx, and the
 // tx in its block, as {"blocks":[...]}. monero-cpp builds a tx for each notification, and the output points to it. The JSON has a copy
-// that keeps the fields that the notification knows, the hash, the version, the unlock time and the flags of the tx, the height of its
-// block when it has one, and the output with its amount and its indices, as a received output, or as an input if it is spent. The
-// copies have no parents, so there is nothing to release, and the models of monero-cpp stay as they are
+// that keeps the fields that the notification knows, the hash, the version, the unlock time, the extra, the miner flag and the flags of
+// the tx, the height of its block when it has one, and the output with its amount and its indices, as a received output, or as an input
+// if it is spent. The copies have no parents, so there is nothing to release, and the models of monero-cpp stay as they are
 std::string json_of_notification(const monero::monero_output_wallet& output, bool spent) {
   std::shared_ptr<monero::monero_block> block = std::make_shared<monero::monero_block>();
   std::shared_ptr<monero::monero_tx_wallet> tx = std::make_shared<monero::monero_tx_wallet>();
@@ -90,6 +90,8 @@ std::string json_of_notification(const monero::monero_output_wallet& output, boo
     tx->m_hash = output.m_tx->m_hash;
     tx->m_version = output.m_tx->m_version;
     tx->m_unlock_time = output.m_tx->m_unlock_time;
+    tx->m_extra = output.m_tx->m_extra;
+    tx->m_is_miner_tx = output.m_tx->m_is_miner_tx;
     tx->m_is_confirmed = output.m_tx->m_is_confirmed;
     tx->m_in_tx_pool = output.m_tx->m_in_tx_pool;
     std::shared_ptr<monero::monero_tx_wallet> source = std::dynamic_pointer_cast<monero::monero_tx_wallet>(output.m_tx);

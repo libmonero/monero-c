@@ -75,11 +75,11 @@ That makes `txQuery` work for transfers and outputs. The caller doesn't have to 
 `on_output_received` and `on_output_spent` get the output inside its tx and its block, in the shape of `monero_wallet_get_outputs()`. A received output is in the `outputs` of the tx, and a spent one in its `inputs`:
 
 ```json
-{"blocks":[{"height":1,"txs":[{"version":2,"unlockTime":61,"hash":"21717baf...","isConfirmed":true,"isLocked":true,
-            "outputs":[{"amount":35184338534400,"accountIndex":0,"subaddressIndex":0}]}]}]}
+{"blocks":[{"height":1,"txs":[{"version":2,"unlockTime":61,"hash":"21717baf...","isMinerTx":true,"isConfirmed":true,"isLocked":true,
+            "outputs":[{"amount":35184338534400,"accountIndex":0,"subaddressIndex":0}],"extra":[1,145,38,...]}]}]}
 ```
 
-A binding then reads it with the parser of the results, and gets the same `MoneroOutputWallet` that the listener of monero-java gets, with its tx and the height. An output of the pool has a block without `height`. monero-cpp builds a tx for each notification, and the JSON has a copy of it with the hash, the version, the unlock time and the flags, and of the output with its amount and its indices. The copies point to no parent, so there is nothing to release, and the models of monero-cpp stay as they are.
+A binding then reads it with the parser of the results, and gets the same `MoneroOutputWallet` that the listener of monero-java gets, with its tx and the height. An output of the pool has a block without `height`. monero-cpp builds a tx for each notification, and the JSON has a copy of it with the hash, the version, the unlock time, the extra and the flags, the miner flag among them, and of the output with its amount and its indices. The tx of the notification of an output that unlocks is one of the txs of the wallet, and it has neither the version nor the extra. The copies point to no parent, so there is nothing to release, and the models of monero-cpp stay as they are.
 
 ### The daemon
 
