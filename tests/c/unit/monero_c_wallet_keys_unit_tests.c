@@ -92,6 +92,12 @@ static void test_create_random(void) {
   bool multisig = false;
   EXPECT_ERR_MSG(monero_wallet_is_multisig(wallet, &multisig), "get_multisig_info() not supported");
 
+  // no listeners to list
+  monero_wallet_listener** listeners = POISON_PTR;
+  size_t listener_count = 7;
+  EXPECT_ERR_MSG(monero_wallet_get_listeners(wallet, &listeners, &listener_count), "get_listeners() not supported");
+  CHECK(listeners == NULL && listener_count == 0);
+
   // and they have no files to export
   uint8_t* buffer = NULL;
   size_t buffer_len = 1;

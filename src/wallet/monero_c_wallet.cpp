@@ -49,6 +49,7 @@ using monero_c::check_json_depth;
 using monero_c::check_mnemonic_length;
 using monero_c::check_period_ms;
 using monero_c::check_timeout_ms;
+using monero_c::dup_array;
 using monero_c::dup_buffer;
 using monero_c::dup_secret;
 using monero_c::dup_string;
@@ -1292,6 +1293,21 @@ monero_result monero_wallet_remove_listeners(::monero_wallet* wallet) {
       std::lock_guard<std::mutex> lock(core->registration_mutex);
       if (core->registered_with.lock() == wallet->wallet) core->registered_with.reset();
     }
+  });
+}
+
+monero_result monero_wallet_get_listeners(::monero_wallet* wallet, ::monero_wallet_listener*** out_listeners, size_t* out_count) {
+  reset_out(out_listeners);
+  reset_out(out_count);
+  if (!require(wallet, "wallet") || !require(out_listeners, "out_listeners") || !require(out_count, "out_count")) return MONERO_ERROR;
+  return guard([&] {
+    std::vector<::monero_wallet_listener*> handles;
+    for (monero::monero_wallet_listener* listener : wallet->wallet->get_listeners()) {
+      // a listener that doesn't come from the C ABI has no handle to give
+      auto* adapter = dynamic_cast<wallet_listener_adapter*>(listener);
+      if (adapter != nullptr) handles.push_back(adapter->owner);
+    }
+    *out_listeners = dup_array(handles, out_count);
   });
 }
 

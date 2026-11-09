@@ -50,6 +50,7 @@ KINDS = {
     'uint64_t**': 'K_OUT_U64S',
     'monero_key_image_spent_status**': 'K_OUT_STATUSES',
     'monero_daemon_listener***': 'K_OUT_LISTENERS',
+    'monero_wallet_listener***': 'K_OUT_LISTENERS',
     'monero_wallet**': 'K_OUT_WALLET',
     'monero_daemon**': 'K_OUT_DAEMON',
     'monero_rpc_connection**': 'K_OUT_CONNECTION',

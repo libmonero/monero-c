@@ -322,14 +322,42 @@ static void test_listeners(void) {
   EXPECT_OK(monero_wallet_listener_create(&callbacks, &listener));
   CHECK(listener != NULL);
 
+  monero_wallet_listener** listed = NULL;
+  size_t listed_count = 7;
+  EXPECT_OK(monero_wallet_get_listeners(first, &listed, &listed_count));
+  CHECK(listed != NULL && listed_count == 0);
+  monero_utils_free(listed);
+
   EXPECT_OK(monero_wallet_add_listener(first, listener));
   EXPECT_OK(monero_wallet_add_listener(first, listener));
   EXPECT_ERR_MSG(monero_wallet_add_listener(second, listener), "listener is already registered with another wallet");
 
+  // the wallet lists the handle that was added, once, and the other wallet lists none
+  listed = NULL;
+  EXPECT_OK(monero_wallet_get_listeners(first, &listed, &listed_count));
+  CHECK(listed != NULL && listed_count == 1 && listed[0] == listener);
+  monero_utils_free(listed);
+  listed = NULL;
+  EXPECT_OK(monero_wallet_get_listeners(second, &listed, &listed_count));
+  CHECK(listed != NULL && listed_count == 0);
+  monero_utils_free(listed);
+
   // after removal from the first wallet, the listener can join the second one
   EXPECT_OK(monero_wallet_remove_listener(first, listener));
+  listed = NULL;
+  EXPECT_OK(monero_wallet_get_listeners(first, &listed, &listed_count));
+  CHECK(listed_count == 0);
+  monero_utils_free(listed);
   EXPECT_OK(monero_wallet_add_listener(second, listener));
+  listed = NULL;
+  EXPECT_OK(monero_wallet_get_listeners(second, &listed, &listed_count));
+  CHECK(listed != NULL && listed_count == 1 && listed[0] == listener);
+  monero_utils_free(listed);
   EXPECT_OK(monero_wallet_remove_listeners(second));
+  listed = POISON_PTR;
+  EXPECT_OK(monero_wallet_get_listeners(second, &listed, &listed_count));
+  CHECK(listed_count == 0);
+  monero_utils_free(listed);
   EXPECT_OK(monero_wallet_add_listener(first, listener));
 
   monero_wallet_listener_free(listener);
@@ -465,6 +493,12 @@ static void test_every_function_rejects_null_wallet(void) {
   EXPECT_ERR_MSG(monero_wallet_add_listener(NULL, listener), "wallet must not be null");
   EXPECT_ERR_MSG(monero_wallet_remove_listener(NULL, listener), "wallet must not be null");
   EXPECT_ERR_MSG(monero_wallet_remove_listeners(NULL), "wallet must not be null");
+  {
+    monero_wallet_listener** none = POISON_PTR;
+    size_t none_count = 7;
+    EXPECT_ERR_MSG(monero_wallet_get_listeners(NULL, &none, &none_count), "wallet must not be null");
+    CHECK(none == NULL && none_count == 0);
+  }
 
   // daemon
   EXPECT_ERR_MSG(monero_wallet_sync(NULL, NULL, listener, &json), "wallet must not be null");

@@ -1046,6 +1046,18 @@ MONERO_EXPORT monero_result monero_wallet_remove_listener(monero_wallet* wallet,
  */
 MONERO_EXPORT monero_result monero_wallet_remove_listeners(monero_wallet* wallet);
 
+/**
+ * Get the listeners that are registered with a wallet. The wallet of a server lists them too, and a keys wallet fails with "not
+ * supported". Call it when no other thread uses the wallet, as with the other methods that change or read the listeners.
+ *
+ * @param wallet is the wallet handle
+ * @param out_listeners receives an array of listener handles that the caller still owns. Free the array with monero_utils_free(),
+ *   and the listeners with monero_wallet_listener_free()
+ * @param out_count receives the number of handles in out_listeners
+ * @return MONERO_OK or MONERO_ERROR
+ */
+MONERO_EXPORT monero_result monero_wallet_get_listeners(monero_wallet* wallet, monero_wallet_listener*** out_listeners, size_t* out_count);
+
 // ------------------------------- DAEMON ------------------------------------
 // these methods need a daemon connection, see monero_wallet_set_daemon_connection()
 
