@@ -106,11 +106,13 @@ typedef enum monero_key_image_spent_status {
  * @param username is the RPC username, or "" for none
  * @param password is the RPC password, or "" for none
  * @param proxy_uri is the proxy to connect through, or "" for none
+ * @param zmq_uri is the ZMQ URI of the daemon, or "" for none. monero-cpp keeps it with the connection and doesn't subscribe to it yet,
+ *   so it only comes back in the JSON of monero_daemon_get_rpc_connection()
  * @param timeout_ms is the RPC timeout in milliseconds, or 0 for the default
  * @param out_daemon receives the new handle, released with monero_daemon_free()
  * @return MONERO_OK on success, or MONERO_ERROR if uri is empty (see monero_last_error())
  */
-MONERO_EXPORT monero_result monero_daemon_connect(const char* uri, const char* username, const char* password, const char* proxy_uri, uint32_t timeout_ms, monero_daemon** out_daemon);
+MONERO_EXPORT monero_result monero_daemon_connect(const char* uri, const char* username, const char* password, const char* proxy_uri, const char* zmq_uri, uint32_t timeout_ms, monero_daemon** out_daemon);
 
 /**
  * Create a daemon RPC client that shares a connection, with its proxy, timeout and TLS

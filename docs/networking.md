@@ -16,7 +16,7 @@ A connection can go through a SOCKS proxy, such as the one of a Tor node, which 
 // a daemon on Tor, through the proxy of the local node. Tor is slower, so wait up to a minute
 monero_daemon* onion_daemon = NULL;
 monero_daemon_connect("http://kyaklhqp4yyza4fmtbvs6z4lrzr5cljxwa7o2d42sfelfhczsmbwzfad.onion:18081", "superuser", "abctesting123",
-                      "127.0.0.1:9050", 60000, &onion_daemon);
+                      "127.0.0.1:9050", "", 60000, &onion_daemon);
 
 // a full wallet through the same proxy. NULL would trust only a daemon on this machine, so say that this one is trusted
 bool trusted = true;

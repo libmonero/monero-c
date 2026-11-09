@@ -41,7 +41,7 @@ static const uint64_t NUMBERS[] = {0};
 // in the calls that query the daemon
 static monero_daemon* create_unreachable_daemon(void) {
   monero_daemon* daemon = NULL;
-  if (monero_daemon_connect(UNREACHABLE_URI, "", "", "", 0, &daemon) != MONERO_OK) return NULL;
+  if (monero_daemon_connect(UNREACHABLE_URI, "", "", "", "", 0, &daemon) != MONERO_OK) return NULL;
   return daemon;
 }
 
@@ -49,14 +49,39 @@ static monero_daemon* create_unreachable_daemon(void) {
 
 static void test_connect_validates_arguments(void) {
   monero_daemon* daemon = NULL;
-  EXPECT_ERR_MSG(monero_daemon_connect(NULL, "", "", "", 0, &daemon), "uri must not be empty");
+  EXPECT_ERR_MSG(monero_daemon_connect(NULL, "", "", "", "", 0, &daemon), "uri must not be empty");
   CHECK(daemon == NULL);
-  EXPECT_ERR_MSG(monero_daemon_connect("", "", "", "", 0, &daemon), "uri must not be empty");
+  EXPECT_ERR_MSG(monero_daemon_connect("", "", "", "", "", 0, &daemon), "uri must not be empty");
   CHECK(daemon == NULL);
-  EXPECT_ERR_MSG(monero_daemon_connect(UNREACHABLE_URI, "", "", "", 0, NULL), "out_daemon must not be null");
-  EXPECT_OK(monero_daemon_connect(UNREACHABLE_URI, "", "", "", 0, &daemon));
+  EXPECT_ERR_MSG(monero_daemon_connect(UNREACHABLE_URI, "", "", "", "", 0, NULL), "out_daemon must not be null");
+  EXPECT_OK(monero_daemon_connect(UNREACHABLE_URI, "", "", "", "", 0, &daemon));
   CHECK(daemon != NULL);
   monero_daemon_free(daemon);
+}
+
+// the ZMQ URI of monero_daemon_connect() is kept with the connection of the daemon, and a daemon that has none says nothing of it
+static void test_connect_keeps_the_zmq_uri(void) {
+  monero_daemon* daemon = NULL;
+  char* json = NULL;
+  EXPECT_OK(monero_daemon_connect(UNREACHABLE_URI, "", "", "", "tcp://127.0.0.1:18084", 0, &daemon));
+  CHECK(daemon != NULL);
+  if (daemon != NULL) {
+    EXPECT_OK(monero_daemon_get_rpc_connection(daemon, &json));
+    CHECK(json != NULL && strstr(json, "\"zmqUri\":\"tcp://127.0.0.1:18084\"") != NULL);
+    monero_utils_free(json);
+    json = NULL;
+    monero_daemon_free(daemon);
+  }
+
+  daemon = NULL;
+  EXPECT_OK(monero_daemon_connect(UNREACHABLE_URI, "", "", "", "", 0, &daemon));
+  CHECK(daemon != NULL);
+  if (daemon != NULL) {
+    EXPECT_OK(monero_daemon_get_rpc_connection(daemon, &json));
+    CHECK(json != NULL && strstr(json, "zmqUri") == NULL);
+    monero_utils_free(json);
+    monero_daemon_free(daemon);
+  }
 }
 
 static void test_free_null_is_noop(void) {
@@ -624,6 +649,7 @@ int main(void) {
   }
 
   test_connect_validates_arguments();
+  test_connect_keeps_the_zmq_uri();
   test_free_null_is_noop();
   test_every_function_rejects_null_daemon();
   test_null_outputs_are_rejected(daemon);

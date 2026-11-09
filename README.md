@@ -50,7 +50,7 @@ static void on_output_received(void* user_data, const char* output_json) {
 
 // connect to daemon
 monero_daemon* daemon = NULL;
-monero_daemon_connect("http://localhost:38081", "superuser", "abctesting123", "", 0, &daemon);
+monero_daemon_connect("http://localhost:38081", "superuser", "abctesting123", "", "", 0, &daemon);
 uint64_t height = 0;
 monero_daemon_get_height(daemon, &height);                      // 1523651
 char* txs_in_pool = NULL;

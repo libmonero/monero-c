@@ -61,7 +61,9 @@ typedef enum monero_optional_bool {
 /**
  * Create a connection. It doesn't contact the server.
  *
- * @param connection_json is the JSON-serialized monero_rpc_connection, e.g. {"uri":"http://127.0.0.1:18081","sslVerify":false}
+ * @param connection_json is the JSON-serialized monero_rpc_connection, e.g. {"uri":"http://127.0.0.1:18081","sslVerify":false}. Its
+ *   keys are "uri", "username", "password", "proxyUri", "zmqUri", "sslVerify", "priority" and "timeoutMs". monero-cpp keeps "zmqUri"
+ *   and doesn't subscribe to it yet
  * @param out_connection receives the new handle, released with monero_rpc_connection_free()
  * @return MONERO_OK or MONERO_ERROR
  */

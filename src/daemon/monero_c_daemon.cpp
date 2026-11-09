@@ -298,7 +298,7 @@ extern "C" {
 
 // ------------------------------ CONNECTION ----------------------------------
 
-monero_result monero_daemon_connect(const char* uri, const char* username, const char* password, const char* proxy_uri, uint32_t timeout_ms, monero_daemon** out_daemon) {
+monero_result monero_daemon_connect(const char* uri, const char* username, const char* password, const char* proxy_uri, const char* zmq_uri, uint32_t timeout_ms, monero_daemon** out_daemon) {
   reset_out(out_daemon);
   if (!require(out_daemon, "out_daemon")) return MONERO_ERROR;
   std::string uri_str = safe_str(uri);
@@ -307,7 +307,7 @@ monero_result monero_daemon_connect(const char* uri, const char* username, const
     boost::optional<uint32_t> timeout;
     if (timeout_ms != 0) timeout = timeout_ms;
     std::unique_ptr<monero_daemon> daemon(new monero_daemon());
-    daemon->rpc = std::make_shared<monero::monero_daemon_rpc>(uri_str, safe_str(username), safe_str(password), safe_str(proxy_uri), std::string(), timeout);
+    daemon->rpc = std::make_shared<monero::monero_daemon_rpc>(uri_str, safe_str(username), safe_str(password), safe_str(proxy_uri), safe_str(zmq_uri), timeout);
     *out_daemon = daemon.release();
   });
 }

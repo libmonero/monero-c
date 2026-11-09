@@ -263,7 +263,7 @@ static void test_daemon(const char* daemon_uri) {
   monero_wallet_listener* listener = NULL;
   monero_wallet_listener_callbacks callbacks = {sizeof(monero_wallet_listener_callbacks), NULL, NULL, NULL, NULL, on_output_received, on_output_spent};
 
-  EXPECT_OK(monero_daemon_connect(daemon_uri, "", "", "", 10000, &g_daemon));
+  EXPECT_OK(monero_daemon_connect(daemon_uri, "", "", "", "", 10000, &g_daemon));
   CHECK(g_daemon != NULL);
   if (g_daemon == NULL) return;
 
@@ -964,7 +964,7 @@ static void test_rpc(const char* daemon_uri, const char* rpc_uri) {
   // mining with no arguments starts with the defaults of the docs on the wallet of a server too, as it does on a full wallet: one thread,
   // not in the background. monero-wallet-rpc refuses to start without a thread
   monero_daemon* miner = NULL;
-  EXPECT_OK(monero_daemon_connect(daemon_uri, "", "", "", 10000, &miner));
+  EXPECT_OK(monero_daemon_connect(daemon_uri, "", "", "", "", 10000, &miner));
   CHECK(miner != NULL);
   EXPECT_OK(monero_wallet_start_mining(rpc, NULL, NULL, NULL));
   if (miner != NULL) {
@@ -1185,7 +1185,7 @@ static void test_sync_start_height(const char* daemon_uri) {
   size_t i;
 
   // 60 seconds for a request, since 50 blocks take a few seconds to mine
-  EXPECT_OK(monero_daemon_connect(daemon_uri, "", "", "", 60000, &daemon));
+  EXPECT_OK(monero_daemon_connect(daemon_uri, "", "", "", "", 60000, &daemon));
   CHECK(daemon != NULL);
   if (daemon == NULL) return;
 

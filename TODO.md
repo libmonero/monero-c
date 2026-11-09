@@ -55,7 +55,7 @@ The core of `monero_wallet` is in `src/wallet/`: creation from random seed, seed
 
 ## RPC connections
 
-With these items, the public API of monero-cpp is exposed, except the `tag` that is left out on purpose in the wallet section, `monero_rpc_connection::compare()`, which orders two priorities and is a line for a binding, and `zmq_uri`, which monero-cpp doesn't implement yet.
+With these items, the public API of monero-cpp is exposed, except `monero_rpc_connection::compare()`, which orders two priorities and is a line for a binding. The ZMQ URI is in `monero_daemon_connect()` and in the JSON of the connection, and monero-cpp doesn't subscribe to it yet.
 
 - [x] **monero-c: a `monero_rpc_connection` handle.** `src/common/monero_c_rpc_connection.h` wraps creation from JSON, `serialize()`, `set_credentials()`, the attributes, `is_onion()`, `is_i2p()`, `is_online()`, `is_authenticated()`, `is_connected()`, `check_connection()` and the JSON, path and binary requests. Optional bools are `monero_optional_bool`. monero-cpp parses the JSON responses into a property tree, so the types are guessed from the text, as in monero-python, but integers keep their 64 bits.
 - [x] **monero-c: daemon and wallet RPC clients from a connection.** `monero_daemon_connect_with()` and `monero_wallet_rpc_connect()` share the connection, with its proxy, timeout and `sslVerify`. `monero_wallet_rpc_open_wallet()` and `monero_wallet_rpc_create_wallet()` open and create wallets on a client.

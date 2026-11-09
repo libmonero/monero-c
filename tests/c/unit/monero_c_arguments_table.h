@@ -6,7 +6,7 @@ static monero_result call_monero_daemon_add_auxiliary_pow(void** a) { return mon
 static monero_result call_monero_daemon_add_listener(void** a) { return monero_daemon_add_listener((monero_daemon*) a[0], (monero_daemon_listener*) a[1]); }
 static monero_result call_monero_daemon_calculate_pow(void** a) { return monero_daemon_calculate_pow((monero_daemon*) a[0], *(uint32_t*) a[1], *(uint64_t*) a[2], (const char*) a[3], (const char*) a[4], (char**) a[5]); }
 static monero_result call_monero_daemon_check_for_update(void** a) { return monero_daemon_check_for_update((monero_daemon*) a[0], (char**) a[1]); }
-static monero_result call_monero_daemon_connect(void** a) { return monero_daemon_connect((const char*) a[0], (const char*) a[1], (const char*) a[2], (const char*) a[3], *(uint32_t*) a[4], (monero_daemon**) a[5]); }
+static monero_result call_monero_daemon_connect(void** a) { return monero_daemon_connect((const char*) a[0], (const char*) a[1], (const char*) a[2], (const char*) a[3], (const char*) a[4], *(uint32_t*) a[5], (monero_daemon**) a[6]); }
 static monero_result call_monero_daemon_connect_with(void** a) { return monero_daemon_connect_with((monero_rpc_connection*) a[0], (monero_daemon**) a[1]); }
 static monero_result call_monero_daemon_download_update(void** a) { return monero_daemon_download_update((monero_daemon*) a[0], (const char*) a[1], (char**) a[2]); }
 static monero_result call_monero_daemon_flush_cache(void** a) { return monero_daemon_flush_cache((monero_daemon*) a[0], *(bool*) a[1]); }
@@ -307,7 +307,7 @@ static const arg_function g_functions[] = {
   {"monero_daemon_add_listener", call_monero_daemon_add_listener, 2, {K_DAEMON, K_DAEMON_LISTENER}, {"daemon", "listener"}, 0x3, RET_RESULT},
   {"monero_daemon_calculate_pow", call_monero_daemon_calculate_pow, 6, {K_DAEMON, K_U32, K_U64, K_STR, K_STR, K_OUT_STR}, {"daemon", "major_version", "height", "block_blob", "seed_hash", "out_pow_hash"}, 0x21, RET_RESULT},
   {"monero_daemon_check_for_update", call_monero_daemon_check_for_update, 2, {K_DAEMON, K_OUT_STR}, {"daemon", "out_json"}, 0x3, RET_RESULT},
-  {"monero_daemon_connect", call_monero_daemon_connect, 6, {K_STR, K_STR, K_STR, K_STR, K_U32, K_OUT_DAEMON}, {"uri", "username", "password", "proxy_uri", "timeout_ms", "out_daemon"}, 0x20, RET_RESULT},
+  {"monero_daemon_connect", call_monero_daemon_connect, 7, {K_STR, K_STR, K_STR, K_STR, K_STR, K_U32, K_OUT_DAEMON}, {"uri", "username", "password", "proxy_uri", "zmq_uri", "timeout_ms", "out_daemon"}, 0x40, RET_RESULT},
   {"monero_daemon_connect_with", call_monero_daemon_connect_with, 2, {K_CONNECTION, K_OUT_DAEMON}, {"connection", "out_daemon"}, 0x3, RET_RESULT},
   {"monero_daemon_download_update", call_monero_daemon_download_update, 3, {K_DAEMON, K_STR, K_OUT_STR}, {"daemon", "path", "out_json"}, 0x5, RET_RESULT},
   {"monero_daemon_flush_cache", call_monero_daemon_flush_cache, 2, {K_DAEMON, K_BOOL}, {"daemon", "bad_blocks"}, 0x1, RET_RESULT},

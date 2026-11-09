@@ -669,7 +669,7 @@ int main(void) {
 
   monero_daemon* daemon = NULL;
   // 30 seconds per request, so an unresponsive node fails the test instead of hanging it
-  if (monero_daemon_connect(uri, "", "", "", 30000, &daemon) != MONERO_OK || daemon == NULL) {
+  if (monero_daemon_connect(uri, "", "", "", "", 30000, &daemon) != MONERO_OK || daemon == NULL) {
     fprintf(stderr, "cannot create a handle for %s: %s\n", uri, monero_last_error());
     return EXIT_FAILURE;
   }

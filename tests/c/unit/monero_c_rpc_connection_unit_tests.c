@@ -65,8 +65,19 @@ static void test_create_and_serialize(void) {
   EXPECT_OK(monero_rpc_connection_set_credentials(connection, "other", "secret"));
   EXPECT_OK(monero_rpc_connection_serialize(connection, &json));
   CHECK(has(json, "\"username\":\"other\""));
+  CHECK(!has(json, "zmqUri"));
   monero_utils_free(json);
   json = NULL;
+
+  // the ZMQ URI is kept, and comes back in the JSON
+  monero_rpc_connection* with_zmq = create_connection("{\"uri\":\"http://127.0.0.1:1\",\"zmqUri\":\"tcp://127.0.0.1:18084\"}");
+  if (with_zmq != NULL) {
+    EXPECT_OK(monero_rpc_connection_serialize(with_zmq, &json));
+    CHECK(has(json, "\"zmqUri\":\"tcp://127.0.0.1:18084\""));
+    monero_utils_free(json);
+    json = NULL;
+    monero_rpc_connection_free(with_zmq);
+  }
   EXPECT_ERR_MSG(monero_rpc_connection_serialize(NULL, &json), "connection must not be null");
   CHECK(json == NULL);
   monero_rpc_connection_free(connection);
@@ -743,7 +754,7 @@ static void test_proxy(void) {
   // a daemon with a socks5 proxy
   snprintf(proxy, sizeof(proxy), "socks5://127.0.0.1:%d", server.port);
   set_body(&server, "{\"jsonrpc\":\"2.0\",\"id\":\"0\",\"result\":{\"count\":42,\"status\":\"OK\"}}");
-  EXPECT_OK(monero_daemon_connect("http://klmnopqrst.onion:18089", "", "", proxy, 10000, &daemon));
+  EXPECT_OK(monero_daemon_connect("http://klmnopqrst.onion:18089", "", "", proxy, "", 10000, &daemon));
   if (daemon != NULL) {
     EXPECT_OK(monero_daemon_get_height(daemon, &height));
     CHECK(height == 42);
