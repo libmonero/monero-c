@@ -65,11 +65,12 @@ typedef struct monero_wallet monero_wallet;
  * @par Delivery
  * The wallet puts its notifications in a queue of the listener, and a thread of monero_c calls the callbacks from it, so a notification is
  * called a short time after it happened. A sync progress or a balance that waits is replaced by the newer one, and when more than 100000
- * new blocks wait, the oldest are dropped. An output is never dropped. monero_wallet_sync() and monero_wallet_close() return after the
- * callbacks they caused have returned, and after monero_wallet_remove_listener() returns, no callback of that listener starts. A callback
- * can remove or free its own listener, which then waits for no one. A callback that does not return holds the calls that wait for it:
- * monero_wallet_sync(), monero_wallet_close(), monero_wallet_remove_listener() and monero_wallet_listener_free(). An exception that leaves a
- * callback is ignored.
+ * new blocks wait, the oldest are dropped. An output is never dropped. monero_wallet_sync(), monero_wallet_scan_txs(),
+ * monero_wallet_rescan_blockchain() and monero_wallet_close() return after the callbacks they caused have returned, and after
+ * monero_wallet_remove_listener() returns, no callback of that listener starts. A callback can remove or free its own listener, which then
+ * waits for no one. A callback that does not return holds the calls that wait for it: monero_wallet_sync(), monero_wallet_scan_txs(),
+ * monero_wallet_rescan_blockchain(), monero_wallet_close(), monero_wallet_remove_listener() and monero_wallet_listener_free(). An exception
+ * that leaves a callback is ignored.
  */
 typedef struct monero_wallet_listener monero_wallet_listener;
 

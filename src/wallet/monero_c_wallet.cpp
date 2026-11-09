@@ -1290,12 +1290,20 @@ monero_result monero_wallet_wait_for_next_block_timeout(::monero_wallet* wallet,
 
 monero_result monero_wallet_scan_txs(::monero_wallet* wallet, const char* const* tx_hashes, size_t num_tx_hashes) {
   if (!require(wallet, "wallet")) return MONERO_ERROR;
-  return guard([&] { wallet->wallet->scan_txs(string_array(tx_hashes, num_tx_hashes, "tx_hashes")); });
+  return guard([&] {
+    // the callbacks of the scan are done when the call returns, the failure of the scan included
+    callbacks_flush flush(*wallet->wallet, nullptr);
+    wallet->wallet->scan_txs(string_array(tx_hashes, num_tx_hashes, "tx_hashes"));
+  });
 }
 
 monero_result monero_wallet_rescan_blockchain(::monero_wallet* wallet) {
   if (!require(wallet, "wallet")) return MONERO_ERROR;
-  return guard([&] { wallet->wallet->rescan_blockchain(); });
+  return guard([&] {
+    // a rescan syncs the wallet from scratch, and its callbacks are done when the call returns
+    callbacks_flush flush(*wallet->wallet, nullptr);
+    wallet->wallet->rescan_blockchain();
+  });
 }
 
 monero_result monero_wallet_rescan_spent(::monero_wallet* wallet) {

@@ -101,6 +101,17 @@ static void on_new_block_asks(void* user_data, uint64_t height) {
   if (monero_wallet_get_balance(asking->wallet, &balance) == MONERO_OK) asking->answered++;
 }
 
+// a listener whose first callback for an output is slow, and the others are not. A call that feeds it and returns before its callbacks do
+// leaves the many that wait for the slow one to come after it
+static volatile int g_slow_outputs = 0;
+
+static void on_output_slow(void* user_data, const char* output_json) {
+  (void)user_data;
+  (void)output_json;
+  if (g_slow_outputs == 0) sleep(1);
+  g_slow_outputs++;
+}
+
 static int has(const char* json, const char* text) {
   return json != NULL && strstr(json, text) != NULL;
 }
@@ -245,6 +256,7 @@ static void test_daemon(const char* daemon_uri) {
   char address_a[128];
   char view_key[128];
   char spend_key[128];
+  char scan_hash[65] = "";
   bool flag = false;
   bool trusted = true;
   uint64_t value = 0;
@@ -559,6 +571,7 @@ static void test_daemon(const char* daemon_uri) {
     CHECK(!good);
     monero_utils_free(proof);
   }
+  if (tx_hash != NULL) snprintf(scan_hash, sizeof(scan_hash), "%s", tx_hash);
   monero_utils_free(tx_hash);
   tx_hash = NULL;
 
@@ -745,6 +758,23 @@ static void test_daemon(const char* daemon_uri) {
   EXPECT_ERR_MSG(monero_wallet_scan_txs(a, NULL, 0), "No tx hashes given to scan");
   EXPECT_OK(monero_wallet_rescan_spent(a));
 
+  // the callbacks of a scan are done when it returns, though the first is slow: the wallet processes the txs again from the one it scans,
+  // and tells the listener about their outputs
+  monero_wallet_listener* slow = NULL;
+  monero_wallet_listener_callbacks slow_callbacks = {sizeof(monero_wallet_listener_callbacks), NULL, NULL, NULL, NULL, on_output_slow, on_output_slow};
+  EXPECT_OK(monero_wallet_listener_create(&slow_callbacks, &slow));
+  EXPECT_OK(monero_wallet_add_listener(a, slow));
+  {
+    const char* scanned[] = {scan_hash};
+    g_slow_outputs = 0;
+    EXPECT_OK(monero_wallet_scan_txs(a, scanned, 1));
+    int after_scan = g_slow_outputs;
+    CHECK(after_scan > 0);
+    sleep(1);
+    CHECK(g_slow_outputs == after_scan);
+  }
+  EXPECT_OK(monero_wallet_remove_listener(a, slow));
+
   // mining on the trusted daemon, to the address of the wallet
   uint64_t threads = 1;
   bool background = false;
@@ -767,7 +797,17 @@ static void test_daemon(const char* daemon_uri) {
     EXPECT_OK(monero_wallet_remove_listener(a, listener));
   }
 
+  // the callbacks of a rescan are done when it returns too: the wallet finds its outputs again, and the listener is told about each. It is told
+  // of no block, since monero-cpp rescans before the sync that tells of the blocks and of its progress starts
+  EXPECT_OK(monero_wallet_add_listener(a, slow));
+  g_slow_outputs = 0;
   EXPECT_OK(monero_wallet_rescan_blockchain(a));
+  int after_rescan = g_slow_outputs;
+  CHECK(after_rescan > 0);
+  sleep(1);
+  CHECK(g_slow_outputs == after_rescan);
+  EXPECT_OK(monero_wallet_remove_listener(a, slow));
+  if (slow != NULL) monero_wallet_listener_free(slow);
 
   if (listener != NULL) monero_wallet_listener_free(listener);
   if (c != NULL) {
