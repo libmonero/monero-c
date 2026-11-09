@@ -1116,8 +1116,8 @@ MONERO_EXPORT monero_result monero_wallet_wait_for_next_block_timeout(monero_wal
 MONERO_EXPORT monero_result monero_wallet_scan_txs(monero_wallet* wallet, const char* const* tx_hashes, size_t num_tx_hashes);
 
 /**
- * Rescan the blockchain from scratch. This discards local data that the blockchain can't restore,
- * like destination addresses, tx keys and tx notes.
+ * Rescan the blockchain from scratch. This discards the destinations of the transactions that the wallet sent,
+ * which the blockchain can't restore. The tx keys and the tx notes are kept.
  *
  * @param wallet is the wallet handle
  * @return MONERO_OK or MONERO_ERROR
