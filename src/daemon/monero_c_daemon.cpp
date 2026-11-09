@@ -424,6 +424,11 @@ monero_result monero_daemon_get_version(monero_daemon* daemon, char** out_json) 
   return guard([&] { *out_json = dup_json_value(daemon->rpc->get_version()); });
 }
 
+monero_result monero_daemon_is_connected(monero_daemon* daemon, bool* out_connected) {
+  if (!require(daemon, "daemon") || !require(out_connected, "out_connected")) return MONERO_ERROR;
+  return guard([&] { *out_connected = daemon->rpc->is_connected(); });
+}
+
 monero_result monero_daemon_is_trusted(monero_daemon* daemon, bool* out_trusted) {
   if (!require(daemon, "daemon") || !require(out_trusted, "out_trusted")) return MONERO_ERROR;
   return guard([&] { *out_trusted = daemon->rpc->is_trusted(); });

@@ -59,6 +59,7 @@ monero_daemon_get_tx_pool_stats
 monero_daemon_get_txs
 monero_daemon_get_upload_limit
 monero_daemon_get_version
+monero_daemon_is_connected
 monero_daemon_is_trusted
 monero_daemon_listener_create
 monero_daemon_listener_free

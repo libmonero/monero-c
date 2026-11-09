@@ -97,6 +97,10 @@ static int is_regtest(monero_daemon* daemon) {
 
 static void test_info(monero_daemon* daemon) {
   char* json = NULL;
+  bool connected = false;
+
+  EXPECT_OK(monero_daemon_is_connected(daemon, &connected));
+  CHECK(connected);
 
   EXPECT_OK(monero_daemon_get_version(daemon, &json));
   CHECK(has_key(json, "number"));

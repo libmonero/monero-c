@@ -216,6 +216,17 @@ MONERO_EXPORT monero_result monero_daemon_remove_listeners(monero_daemon* daemon
 MONERO_EXPORT monero_result monero_daemon_get_version(monero_daemon* daemon, char** out_json);
 
 /**
+ * Check if the daemon answers. It asks for the version of the daemon at every call, unlike monero_rpc_connection_is_connected(),
+ * which reports the state that the last check of a connection left, and a daemon that doesn't answer is found out after the timeout
+ * of the connection. A daemon that fails to answer is the result false, and sets no error.
+ *
+ * @param daemon is the handle returned by monero_daemon_connect()
+ * @param out_connected receives true if the daemon answered
+ * @return MONERO_OK, or MONERO_ERROR if daemon or out_connected is NULL
+ */
+MONERO_EXPORT monero_result monero_daemon_is_connected(monero_daemon* daemon, bool* out_connected);
+
+/**
  * Check if the daemon is trusted.
  *
  * @param daemon is the handle returned by monero_daemon_connect()

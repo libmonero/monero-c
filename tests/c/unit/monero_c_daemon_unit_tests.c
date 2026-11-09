@@ -444,6 +444,14 @@ static void test_errors_from_the_binding_and_monero_cpp(monero_daemon* daemon) {
   EXPECT_ERR(monero_daemon_get_peer_ban(daemon, "1.2.3.4", &json));
   CHECK(json == NULL);
   CHECK(monero_last_error()[0] != '\0');
+
+  // and is_connected() says so with false. That is its answer, not a failure of the call, so the last error stays as it was
+  char before[512];
+  bool connected = true;
+  snprintf(before, sizeof(before), "%s", monero_last_error());
+  EXPECT_OK(monero_daemon_is_connected(daemon, &connected));
+  CHECK(!connected);
+  CHECK(strcmp(monero_last_error(), before) == 0);
 }
 
 // ------------------------------- LISTENERS ----------------------------------

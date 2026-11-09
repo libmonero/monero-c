@@ -63,6 +63,7 @@ static monero_result call_monero_daemon_get_tx_pool_stats(void** a) { return mon
 static monero_result call_monero_daemon_get_txs(void** a) { return monero_daemon_get_txs((monero_daemon*) a[0], (const char* const*) a[1], *(size_t*) a[2], *(bool*) a[3], (char**) a[4]); }
 static monero_result call_monero_daemon_get_upload_limit(void** a) { return monero_daemon_get_upload_limit((monero_daemon*) a[0], (int32_t*) a[1]); }
 static monero_result call_monero_daemon_get_version(void** a) { return monero_daemon_get_version((monero_daemon*) a[0], (char**) a[1]); }
+static monero_result call_monero_daemon_is_connected(void** a) { return monero_daemon_is_connected((monero_daemon*) a[0], (bool*) a[1]); }
 static monero_result call_monero_daemon_is_trusted(void** a) { return monero_daemon_is_trusted((monero_daemon*) a[0], (bool*) a[1]); }
 static monero_result call_monero_daemon_listener_create(void** a) { return monero_daemon_listener_create((const monero_daemon_listener_callbacks*) a[0], (monero_daemon_listener**) a[1]); }
 static monero_result call_monero_daemon_listener_free(void** a) { (void) monero_daemon_listener_free((monero_daemon_listener*) a[0]); return MONERO_OK; }
@@ -366,6 +367,7 @@ static const arg_function g_functions[] = {
   {"monero_daemon_get_txs", call_monero_daemon_get_txs, 5, {K_DAEMON, K_STRS, K_SIZE, K_BOOL, K_OUT_STR}, {"daemon", "tx_hashes", "num_tx_hashes", "prune", "out_json"}, 0x13, RET_RESULT},
   {"monero_daemon_get_upload_limit", call_monero_daemon_get_upload_limit, 2, {K_DAEMON, K_OUT_I32}, {"daemon", "out_limit"}, 0x3, RET_RESULT},
   {"monero_daemon_get_version", call_monero_daemon_get_version, 2, {K_DAEMON, K_OUT_STR}, {"daemon", "out_json"}, 0x3, RET_RESULT},
+  {"monero_daemon_is_connected", call_monero_daemon_is_connected, 2, {K_DAEMON, K_OUT_BOOL}, {"daemon", "out_connected"}, 0x3, RET_RESULT},
   {"monero_daemon_is_trusted", call_monero_daemon_is_trusted, 2, {K_DAEMON, K_OUT_BOOL}, {"daemon", "out_trusted"}, 0x3, RET_RESULT},
   {"monero_daemon_listener_create", call_monero_daemon_listener_create, 2, {K_DAEMON_CALLBACKS, K_OUT_DAEMON_LISTENER}, {"callbacks", "out_listener"}, 0x3, RET_RESULT},
   {"monero_daemon_listener_free", call_monero_daemon_listener_free, 1, {K_DAEMON_LISTENER}, {"listener"}, 0x0, RET_OTHER},
