@@ -92,8 +92,10 @@ typedef enum monero_result {
 
 /**
  * Kind of failure that monero_last_error_code() reports. The kind comes from the type of the exception that ended the call, not
- * from its text, so a failure that monero-cpp reports with its generic exception is MONERO_ERROR_GENERIC. More kinds can be added
- * before 1.0, so treat a value that you don't know as MONERO_ERROR_GENERIC.
+ * from its text, so a failure that monero-cpp reports with its generic exception is MONERO_ERROR_GENERIC. That includes a daemon that
+ * doesn't answer ("Network error: no response from ..."), a file that doesn't exist, a mnemonic that isn't valid and a wallet that is
+ * closed: a program that has to tell them apart reads the message until monero-cpp has an exception of its own for each. More kinds
+ * can be added before 1.0, so treat a value that you don't know as MONERO_ERROR_GENERIC.
  */
 typedef enum monero_error_code {
   MONERO_ERROR_NONE = 0,              /**< no call has failed on this thread yet */
@@ -101,7 +103,7 @@ typedef enum monero_error_code {
   MONERO_ERROR_INVALID_ARGUMENT = 2,  /**< a NULL pointer, a value out of range, or a text that doesn't parse */
   MONERO_ERROR_OUT_OF_MEMORY = 3,     /**< a memory allocation failed */
   MONERO_ERROR_RPC = 4,               /**< the daemon or the wallet RPC server answered with an error, or with an HTTP status that is not OK */
-  MONERO_ERROR_IO = 5                 /**< a file or a network operation failed */
+  MONERO_ERROR_IO = 5                 /**< the system reported an error of a file or a socket */
 } monero_error_code;
 
 /**

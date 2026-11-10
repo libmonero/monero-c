@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### Changed
+
+* The docs of `monero_last_error_code()` and `MONERO_ERROR_IO` say what the code does: a daemon that doesn't answer, a file that doesn't exist, a
+  mnemonic that isn't valid and a closed wallet are `MONERO_ERROR_GENERIC`, because monero-cpp throws its plain exception for them, and
+  `MONERO_ERROR_IO` is for the error of the system on a file or a socket. The header said that a network failure was `MONERO_ERROR_IO`.
+
 ### Fixed
 
 * `monero_wallet_remove_listeners()` and the calls that wait for the callbacks of a wallet (`monero_wallet_sync()`, `monero_wallet_close()`) no longer
