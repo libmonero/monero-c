@@ -39,7 +39,7 @@ A JVM loads a library from a file, so a program extracts the files of its platfo
 * Call `monero_utils_get_abi_version()` after loading the library and compare the major and minor versions with the ones your code was written for. While the major version is 0, a different minor version can break callers.
 * `monero_last_error()` and `monero_last_error_code()` are of the calling thread. A virtual thread can move to another carrier thread, so read them right after the failing call, without a blocking call in between.
 * Callbacks run on threads of monero-c, which are not attached to the JVM. An upcall from native code attaches its thread by itself, and an exception that leaves one ends the process.
-* Don't use one handle from two threads at once, and keep one native listener per wallet. See [Thread Safety](../../README.md#thread-safety) and the headers.
+* Don't use one handle from two threads at once, and keep one native listener per wallet. See [Thread Safety](../../docs/thread-safety.md) and the headers.
 * On Linux and macOS the library sets `SSL_CERT_FILE` and `SSL_CERT_DIR` in your process when it is loaded, to the CA certificates of the system, if neither is set and OpenSSL doesn't find them by itself.
 * `System.load()` and `SymbolLookup.libraryLookup()` need the native access of the program: on Java 22 and newer give `--enable-native-access=ALL-UNNAMED`, or the module of your binding.
 

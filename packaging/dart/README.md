@@ -71,7 +71,7 @@ The hooks are not run again after the settings change, so remove `.dart_tool` wh
 
 * Strings are UTF-8. A string or buffer that a function returns in an `out_*` parameter is released with `monero_utils_free()`, and the seed, the private keys and the tx key with `monero_utils_free_secret()`.
 * `monero_last_error()` and `monero_last_error_code()` are of the calling thread, so read them right after the failing call, before an `await`. A callback of a wallet or a daemon runs on a thread of monero-c, so a Dart callback has to be a `NativeCallable.listener`, which Dart runs on its isolate, and an exception that leaves a native callback ends the process.
-* Don't use one handle from two threads at once, and keep one native listener per wallet. See [Thread Safety](../../README.md#thread-safety) and the headers.
+* Don't use one handle from two threads at once, and keep one native listener per wallet. See [Thread Safety](../../docs/thread-safety.md) and the headers.
 * On Linux, macOS and Android the library sets `SSL_CERT_FILE` and `SSL_CERT_DIR` in your process when it is loaded, if neither is set and OpenSSL doesn't find them by itself.
 
 ## Build

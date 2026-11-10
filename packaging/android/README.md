@@ -52,7 +52,7 @@ target_link_libraries(app monero_c::monero_c)
 * The library sets `SSL_CERT_DIR` to `/system/etc/security/cacerts` when it is loaded, if neither `SSL_CERT_FILE` nor `SSL_CERT_DIR` is set, so a connection to an `https` daemon with `sslVerify` on finds the certificates of the system.
 * Strings are UTF-8. A string or buffer that a function returns in an `out_*` parameter is released with `monero_utils_free()`, and the seed, the private keys and the tx key with `monero_utils_free_secret()`.
 * Call `monero_utils_get_abi_version()` after loading the library and compare the major and minor versions with the ones your code was written for. While the major version is 0, a different minor version can break callers.
-* Don't use one handle from two threads at once, and keep one native listener per wallet. See [Thread Safety](../../README.md#thread-safety) and the headers.
+* Don't use one handle from two threads at once, and keep one native listener per wallet. See [Thread Safety](../../docs/thread-safety.md) and the headers.
 * Callbacks run on threads of monero-c, which are not attached to the JVM. A JNI bridge attaches the thread of a callback with `AttachCurrentThread()`, and an exception that leaves a callback ends the process.
 
 ## Build

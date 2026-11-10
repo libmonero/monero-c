@@ -3,6 +3,7 @@
 [![Build](https://github.com/libmonero/monero-c/actions/workflows/build.yml/badge.svg)](https://github.com/libmonero/monero-c/actions/workflows/build.yml)
 [![Unit tests](https://github.com/libmonero/monero-c/actions/workflows/unit-tests.yml/badge.svg)](https://github.com/libmonero/monero-c/actions/workflows/unit-tests.yml)
 [![Integration tests](https://github.com/libmonero/monero-c/actions/workflows/integration-tests.yml/badge.svg)](https://github.com/libmonero/monero-c/actions/workflows/integration-tests.yml)
+
 [![Codacy Badge](https://app.codacy.com/project/badge/Grade/b86089ef2a1c46769d6931d0057a8f6c)](https://app.codacy.com/gh/libmonero/monero-c/dashboard?utm_source=gh&utm_medium=referral&utm_content=&utm_campaign=Badge_grade)
 [![Codacy Badge](https://app.codacy.com/project/badge/Coverage/b86089ef2a1c46769d6931d0057a8f6c)](https://app.codacy.com/gh/libmonero/monero-c/dashboard?utm_source=gh&utm_medium=referral&utm_content=&utm_campaign=Badge_coverage)
 [![License](https://img.shields.io/badge/license-MIT-green?logo=data:image/svg%2Bxml;base64,PHN2ZyBmaWxsPSIjZmZmIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiIgdmlld0JveD0iMCAwIDE2IDE2Ij48cGF0aCBkPSJNOC43NS43NVYyaC45ODVjLjMwNCAwIC42MDMuMDguODY3LjIzMWwxLjI5LjczNmMuMDM4LjAyMi4wOC4wMzMuMTI0LjAzM2gyLjIzNGEuNzUuNzUgMCAwIDEgMCAxLjVoLS40MjdsMi4xMTEgNC42OTJhLjc1Ljc1IDAgMCAxLS4xNTQuODM4bC0uNTMtLjUzLjUyOS41MzEtLjAwMS4wMDItLjAwMi4wMDItLjAwNi4wMDYtLjAwNi4wMDUtLjAxLjAxLS4wNDUuMDRjLS4yMS4xNzYtLjQ0MS4zMjctLjY4Ni40NUMxNC41NTYgMTAuNzggMTMuODggMTEgMTMgMTFhNC40OTggNC40OTggMCAwIDEtMi4wMjMtLjQ1NCAzLjU0NCAzLjU0NCAwIDAgMS0uNjg2LS40NWwtLjA0NS0uMDQtLjAxNi0uMDE1LS4wMDYtLjAwNi0uMDA0LS4wMDR2LS4wMDFhLjc1Ljc1IDAgMCAxLS4xNTQtLjgzOEwxMi4xNzggNC41aC0uMTYyYy0uMzA1IDAtLjYwNC0uMDc5LS44NjgtLjIzMWwtMS4yOS0uNzM2YS4yNDUuMjQ1IDAgMCAwLS4xMjQtLjAzM0g4Ljc1VjEzaDIuNWEuNzUuNzUgMCAwIDEgMCAxLjVoLTYuNWEuNzUuNzUgMCAwIDEgMC0xLjVoMi41VjMuNWgtLjk4NGEuMjQ1LjI0NSAwIDAgMC0uMTI0LjAzM2wtMS4yODkuNzM3Yy0uMjY1LjE1LS41NjQuMjMtLjg2OS4yM2gtLjE2MmwyLjExMiA0LjY5MmEuNzUuNzUgMCAwIDEtLjE1NC44MzhsLS41My0uNTMuNTI5LjUzMS0uMDAxLjAwMi0uMDAyLjAwMi0uMDA2LjAwNi0uMDE2LjAxNS0uMDQ1LjA0Yy0uMjEuMTc2LS40NDEuMzI3LS42ODYuNDVDNC41NTYgMTAuNzggMy44OCAxMSAzIDExYTQuNDk4IDQuNDk4IDAgMCAxLTIuMDIzLS40NTQgMy41NDQgMy41NDQgMCAwIDEtLjY4Ni0uNDVsLS4wNDUtLjA0LS4wMTYtLjAxNS0uMDA2LS4wMDYtLjAwNC0uMDA0di0uMDAxYS43NS43NSAwIDAgMS0uMTU0LS44MzhMMi4xNzggNC41SDEuNzVhLjc1Ljc1IDAgMCAxIDAtMS41aDIuMjM0YS4yNDkuMjQ5IDAgMCAwIC4xMjUtLjAzM2wxLjI4OC0uNzM3Yy4yNjUtLjE1LjU2NC0uMjMuODY5LS4yM2guOTg0Vi43NWEuNzUuNzUgMCAwIDEgMS41IDBabTIuOTQ1IDguNDc3Yy4yODUuMTM1LjcxOC4yNzMgMS4zMDUuMjczczEuMDItLjEzOCAxLjMwNS0uMjczTDEzIDYuMzI3Wm0tMTAgMGMuMjg1LjEzNS43MTguMjczIDEuMzA1LjI3M3MxLjAyLS4xMzggMS4zMDUtLjI3M0wzIDYuMzI3WiIvPjwvc3ZnPg%3D%3D)](https://github.com/libmonero/monero-c/blob/main/LICENSE)
@@ -119,13 +120,14 @@ Every call that can fail returns `MONERO_OK` or `MONERO_ERROR`, `monero_last_err
 ## Documentation
 
 * [API documentation](https://libmonero.github.io/monero-c/)
+* [API and model overview with visual diagrams](https://github.com/libmonero/monero-c/blob/main/docs/monero-spec.pdf)
 * [Coverage report](https://libmonero.github.io/monero-c/coverage/)
+* [Memory ownership](https://github.com/libmonero/monero-c/blob/main/docs/memory-ownership.md)
+* [Thread safety](https://github.com/libmonero/monero-c/blob/main/docs/thread-safety.md)
+* [Results with context](https://github.com/libmonero/monero-c/blob/main/docs/results.md) and [JSON shapes](https://github.com/libmonero/monero-c/blob/main/docs/json-shapes.md)
+* [Limits, TLS and proxy (Tor)](https://github.com/libmonero/monero-c/blob/main/docs/networking.md)
 * [.NET bindings and NuGet package](https://github.com/libmonero/monero-c/blob/main/docs/dotnet.md)
-* [Android archive (AAR)](https://github.com/libmonero/monero-c/blob/main/packaging/android/README.md)
-* [JVM archive (JAR)](https://github.com/libmonero/monero-c/blob/main/packaging/jvm/README.md)
-* [Dart package](https://github.com/libmonero/monero-c/blob/main/packaging/dart/README.md)
-* [CMake install, pkg-config and Linux packages](https://github.com/libmonero/monero-c/blob/main/packaging/cmake/README.md)
-* [Apple XCFramework](https://github.com/libmonero/monero-c/blob/main/packaging/apple/README.md)
+* [Android](https://github.com/libmonero/monero-c/blob/main/packaging/android/README.md), [JVM](https://github.com/libmonero/monero-c/blob/main/packaging/jvm/README.md), [Dart](https://github.com/libmonero/monero-c/blob/main/packaging/dart/README.md), [CMake and Linux packages](https://github.com/libmonero/monero-c/blob/main/packaging/cmake/README.md) and [Apple](https://github.com/libmonero/monero-c/blob/main/packaging/apple/README.md) packages
 * [Changelog](https://github.com/libmonero/monero-c/blob/main/CHANGELOG.md)
 
 ## Building monero-c from source
@@ -206,80 +208,6 @@ Some of the unit tests look for crashes and leaks instead of checking a feature,
 - `monero_c_arguments_unit_tests` calls every exported function with a NULL in each pointer, one at a time, and then once with plausible arguments, once with the largest numbers and once with long texts, on a full wallet, a keys wallet, a closed wallet, an RPC wallet, a daemon and a connection. It checks that the NULL of a required pointer is refused with `<name> must not be null` and that a failed call resets its outputs. Its list of functions, `tests/c/unit/monero_c_arguments_table.h`, comes from the headers: `python3 tests/c/generator/generate_argument_tests.py` writes it, and CI fails when it is out of date, so a new function can't miss the test.
 - `monero_c_fuzz_unit_tests` gives each function that reads JSON, hex or binary a few hundred mutations of a valid input: a number at the edge of its type, a value of the wrong type, text that stops in the middle, a size that is too large. The generator has a fixed seed, so a failure happens again. `MONERO_C_FUZZ_SEED` and `MONERO_C_FUZZ_ITERATIONS` change the run, and `MONERO_C_FUZZ_VERBOSE` prints each input before its call, so the last line is the input of a crash.
 - `monero_c_threads_unit_tests` calls the functions from several threads, with wallets of their own and with the connection and the daemon that the headers say can be shared.
-
-## Memory Ownership
-
-Any `out_*` parameter that receives a string, a byte buffer or an array (`char**`, `uint8_t**`, `uint64_t**`) is heap-allocated by monero_c and must be freed by the caller with `monero_utils_free()`, as shown above -- the calls of `monero_utils_free()` in the sample are not optional. Fixed-size out-params (e.g. `uint8_t out_payment_id[32]`) write into a buffer the caller already owns, so there's nothing to free. The strings that hold a secret, from `monero_wallet_get_seed()`, `monero_wallet_get_private_view_key()`, `monero_wallet_get_private_spend_key()` and `monero_wallet_get_tx_key()`, are freed with `monero_utils_free_secret()`, which overwrites them first. monero_c wipes the copies of those secrets that it makes, and the passwords, seeds and keys that it copies from its arguments. The wallet of monero-project and the JSON of a wallet config keep their own copies. See [src/utils/monero_c_utils.h](https://github.com/libmonero/monero-c/blob/main/src/utils/monero_c_utils.h) for the one exception (`monero_last_error()`). Handles are released with their matching `*_free()` function: `monero_daemon_free()`, `monero_wallet_free()`, `monero_rpc_connection_free()` and the listener functions. A daemon or RPC wallet created from a `monero_rpc_connection` keeps the connection, so the connection handle can be freed right after. To save a full wallet, close it with `monero_wallet_close(wallet, true)` before freeing it. After a failed call, the string, buffer, array and handle outputs are NULL and the counts are 0, even when the failure was a NULL argument, so there is nothing to free. A thread that makes or opens a wallet, or gives it a new password, gets a scratchpad of 2 MB for the password hash, as monero-project allocates it, and monero_c frees it when the thread ends, so a thread pool costs less than a new thread for each call.
-
-## Results with context
-
-The results come with the parents that their models have, so a transfer is in its tx and a tx in its block, as in monero-java. The shapes are in [docs/json-shapes.md](https://github.com/libmonero/monero-c/blob/main/docs/json-shapes.md), and the docs of each function in `src/wallet/monero_c_wallet.h` and `src/daemon/monero_c_daemon.h` say which one it returns.
-
-- `monero_wallet_get_txs()`, `monero_wallet_get_transfers()` and `monero_wallet_get_outputs()` return `{"blocks":[...]}`, for a full wallet and an RPC wallet alike. A block has its `height` and its `timestamp`, and its `txs`, and a tx has the `incomingTransfers`, the `outgoingTransfer` or the `outputs` of the result. The txs that no block holds yet, in the pool or not relayed, are in one block that has no `height`.
-- `monero_daemon_get_tx()`, `monero_daemon_get_txs()` and `monero_daemon_get_tx_pool()` return the same, with the txs of one block in one block.
-- `monero_wallet_create_tx()`, `monero_wallet_create_txs()`, `monero_wallet_sweep_output()`, `monero_wallet_sweep_unlocked()`, `monero_wallet_sweep_dust()`, `monero_wallet_sign_txs()` and `monero_wallet_describe_tx_set()` return `{"txSets":[...]}`. A tx set has its `txs` and the hex that signs or relays them: the `unsignedTxHex` of a view-only wallet, which a wallet that has the keys signs with `monero_wallet_sign_txs()`. What they return goes as it is into `monero_wallet_relay_tx_json()`, `monero_wallet_relay_txs_json()` and `monero_wallet_describe_tx_set()`.
-- `on_output_received` and `on_output_spent` get the output in its tx and its block, as `{"blocks":[...]}`, with the hash, the unlock time, the extra, the miner flag and the locked flag of the tx and the height of the block.
-- The query of the transfers or the outputs can hold the query of their txs in `txQuery`, such as `{"isIncoming":true,"txQuery":{"isConfirmed":true,"minHeight":50}}`.
-- The txs come in the order of the blocks, so a query by hashes doesn't get them back in the order of its hashes: sort them by the hashes that you asked for.
-
-```json
-{"blocks":[
-  {"height":2,"timestamp":1791675257,
-   "txs":[{"hash":"62ded941...","fee":0,"numConfirmations":99,"unlockTime":62,"isMinerTx":true,"isLocked":false,
-           "incomingTransfers":[{"amount":35184271425600,"accountIndex":0,"subaddressIndex":0}]}]},
-  {"txs":[{"hash":"ffa2a44c...","inTxPool":true,"outgoingTransfer":{"amount":1000000000,"accountIndex":0}}]}
-]}
-```
-
-The lists of values that have no parent, such as the accounts, the subaddresses, the address book and the key images, are plain JSON arrays.
-
-## Limits
-
-A JSON argument can't nest deeper than 64 levels, and a mnemonic can't be longer than 4096 bytes. `monero_daemon_get_blocks_by_range()` takes at most 100000 blocks per call, and `monero_daemon_get_blocks_by_range_chunked()` has no limit. A call over a limit fails with `MONERO_ERROR` before any parser or request runs.
-
-## TLS
-
-A connection to an `https` server checks the certificate against the CA certificates of the system, unless its `sslVerify` is false. The library carries its own OpenSSL, which looks for the certificates in the directory of the machine that built it, so on Linux and macOS the library sets `SSL_CERT_FILE` and `SSL_CERT_DIR` when it is loaded, to the bundle and the directory of the system (the Debian, Fedora, openSUSE, Alpine and macOS ones, and Android's directory). It leaves the environment alone if you set one of the two, or if OpenSSL finds the certificates by itself, as it does on Debian and Ubuntu. Windows reads the root store of the system, and nothing is set there.
-
-## Proxy and Tor
-
-A connection can go through a SOCKS proxy, such as the one of a Tor node, which has to run already and listens on `127.0.0.1:9050` by default. The proxy is the `proxy_uri` argument of `monero_daemon_connect()` and `monero_wallet_set_daemon_connection()`, and the `proxyUri` of a connection JSON (`monero_rpc_connection_create()`, `monero_wallet_rpc_set_daemon_connection()`) and of the `server` in the config of `monero_wallet_create()`. Its form is `[scheme://]ip:port`, where the scheme is `socks4a` (the default), `socks4` or `socks5`, and the host is an IP address, not a name such as `localhost`. Use the default or `socks5`, so that the proxy resolves the host name of an `.onion` address: `socks4` resolves it on your machine and the connection fails. The proxy is not checked when it is set, so a mistake shows as a network error at the first call. `monero_rpc_connection_is_onion()` tells if the URI of a connection is an onion address.
-
-```c
-// a daemon on Tor, through the proxy of the local node. Tor is slower, so wait up to a minute
-monero_daemon* onion_daemon = NULL;
-monero_daemon_connect("http://kyaklhqp4yyza4fmtbvs6z4lrzr5cljxwa7o2d42sfelfhczsmbwzfad.onion:18081", "superuser", "abctesting123",
-                      "127.0.0.1:9050", 60000, &onion_daemon);
-
-// a full wallet through the same proxy. NULL would trust only a daemon on this machine, so say that this one is trusted
-bool trusted = true;
-monero_wallet_set_daemon_connection(wallet_full, "http://kyaklhqp4yyza4fmtbvs6z4lrzr5cljxwa7o2d42sfelfhczsmbwzfad.onion:18081",
-                                    "superuser", "abctesting123", "127.0.0.1:9050", &trusted, true);
-
-// monero-wallet-rpc reaches its daemon through the proxy of the connection
-monero_wallet_rpc_set_daemon_connection(wallet_rpc,
-    "{\"uri\":\"http://kyaklhqp4yyza4fmtbvs6z4lrzr5cljxwa7o2d42sfelfhczsmbwzfad.onion:18081\",\"username\":\"superuser\",\"password\":\"abctesting123\",\"proxyUri\":\"127.0.0.1:9050\"}",
-    true, NULL);
-```
-
-## Thread Safety
-
-> [!WARNING]
->
-> Thread safety is incomplete. Some concurrent uses are still unsafe.
-
-What holds today:
-
-- monero-cpp serializes calls on one `monero_daemon` handle, so they don't run in parallel.
-- monero-cpp locks a `monero_rpc_connection`, so one handle can be shared by several threads and by the daemons and RPC wallets created from it.
-- Don't use one `monero_wallet` handle from two threads at once. `monero_wallet_start_syncing()` syncs on a thread owned by monero-cpp, next to the calls on the handle. The exception is `monero_wallet_request_shutdown()`, which makes the calls in flight return, so that a thread can wait for them and then close and free the wallet.
-- The callbacks of a daemon listener run on a thread owned by monero-cpp. Inside one, `monero_daemon_remove_listener()` and `monero_daemon_remove_listeners()` are safe. Don't free a wallet, a daemon or a daemon listener from a callback.
-- The callbacks of a wallet listener run one at a time, in order, on a thread of monero_c that the listener owns, with no lock of the wallet held, so a callback can call the wallet. A call that needs what a running sync holds, such as `monero_wallet_get_balance()`, waits until the sync is done, and the sync does not wait for the callback. The wallet puts its notifications in a queue, so a callback comes a short time after the event: a sync progress or a balance that waits is replaced by the newer one, more than 100000 waiting new blocks drop the oldest, and an output is never dropped. `monero_wallet_sync()`, `monero_wallet_scan_txs()`, `monero_wallet_rescan_blockchain()` and `monero_wallet_close()` return after the callbacks they caused have returned, no callback of a listener starts after `monero_wallet_remove_listener()` returns, and a callback can remove or free its own listener. A callback that does not return holds those calls. A daemon callback runs on a thread of monero-cpp and can call the daemon.
-- Different listeners on one daemon can be managed from different threads, and `monero_daemon_get_listeners()` can run meanwhile. The handles that it returns are the ones that were added at that moment, and a thread must not free a handle of another.
-- One listener can be on one wallet at a time. Adding it to a second wallet fails.
-- A binding avoids the races of adding, removing and freeing a wallet listener by keeping one native listener per wallet and fanning out to its own listeners. It adds the native listener once, when the first of its own arrives, and doesn't remove it. It frees it after `monero_wallet_close()` has returned, which waits for the callbacks in flight, and then frees the wallet. monero-java works this way.
-- `monero_daemon_wait_for_next_block_header()` blocks only its calling thread, and other calls on the handle run meanwhile. Neither it nor `monero_wallet_wait_for_next_block()` can be cancelled, so a program that has to stop uses `monero_daemon_wait_for_next_block_header_timeout()` and `monero_wallet_wait_for_next_block_timeout()`, which return after the timeout with `out_timed_out` set, and waits again unless it was cancelled.
-- `monero_last_error()` and `monero_last_error_code()` are per thread: they return the last error of the calling thread. The code comes from the type of the exception that ended the call: `MONERO_ERROR_INVALID_ARGUMENT` for what monero_c checks (a NULL pointer, a value out of range, a JSON or a text that doesn't parse, and the `validate_` functions), `MONERO_ERROR_OUT_OF_MEMORY`, `MONERO_ERROR_RPC` for an error that the daemon or the wallet RPC server answered with, and `MONERO_ERROR_IO` for a system error of a file or a socket. What monero-cpp reports as a plain error, a network failure included, is `MONERO_ERROR_GENERIC`, and a binding keeps the message for it.
 
 ## Related projects
 

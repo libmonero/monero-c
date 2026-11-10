@@ -90,7 +90,7 @@ The functions go from 291 to 295.
 ### Known limits
 
 * **Threads.** Don't use one wallet handle from two threads at once. Adding, removing and freeing the same listener from two threads can race,
-  so a binding keeps one native listener per wallet. See [Thread Safety](README.md#thread-safety).
+  so a binding keeps one native listener per wallet. See [Thread Safety](docs/thread-safety.md).
 * **Cancelling.** `monero_wallet_wait_for_next_block()` and `monero_daemon_wait_for_next_block_header()` can't be stopped, so use the
   functions with a timeout.
 * **Errors.** A network failure and most of the validation errors of monero-cpp are `MONERO_ERROR_GENERIC`, since monero-cpp throws one
@@ -121,7 +121,7 @@ prerelease: the C API and the JSON can still change between versions, and `moner
 * 291 functions for the daemon, the full wallet, the wallet that only has the keys, the wallet RPC client, the RPC connections, multisig,
   and the utilities. The headers and the [API documentation](https://libmonero.github.io/monero-c/) describe each one.
 * Results with their context, as the bridge of monero-java has them: the txs, the transfers and the outputs come in `{"blocks":[...]}`,
-  the calls that make txs return `{"txSets":[...]}`, and the listeners get the output in its tx and its block. See [Results with context](README.md#results-with-context).
+  the calls that make txs return `{"txSets":[...]}`, and the listeners get the output in its tx and its block. See [Results with context](docs/results.md).
 * `Monero.Native 0.1.0-alpha.1` for `linux-x64`, `linux-arm64`, `win-x64`, `osx-x64` and `osx-arm64`, with the third-party notices. The
   platforms and what each needs are in [the README of the package](packaging/dotnet-core/README.md).
 * Unit tests on every platform, integration tests on a regtest node and a `monero-wallet-rpc` server on Linux x64, the C# tests on
@@ -134,7 +134,7 @@ prerelease: the C API and the JSON can still change between versions, and `moner
 * **Threads.** Don't use one wallet handle from two threads at once. Adding, removing and freeing the same listener from two threads can race,
   so a binding keeps one native listener per wallet. A wallet callback runs under the lock of the wallet, so `monero_wallet_get_balance()`,
   `monero_wallet_get_unlocked_balance()`, `monero_wallet_get_txs()`, `monero_wallet_get_outputs()` and `monero_wallet_get_accounts()` called
-  from it never return. See [Thread Safety](README.md#thread-safety).
+  from it never return. See [Thread Safety](docs/thread-safety.md).
 * **Cancelling.** `monero_wallet_wait_for_next_block()` can't be stopped until a block comes.
 * **Errors.** A failure is `MONERO_ERROR` and a message, with no code, and the callback structs have no size field. Both will change the ABI before 1.0.
 * **Secrets.** The seed and the keys that the library copies are not wiped from its memory when they are released.
