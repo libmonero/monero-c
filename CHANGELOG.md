@@ -1,9 +1,37 @@
 # Changelog
 
-## Unreleased
+## 0.3.0-alpha.1 (2026-11-10)
+
+The third alpha of the C ABI, version 0.3.0. It adds the functions that monero-cpp had and the ABI did not, and it changes the signature of five
+functions: a program built with the headers of 0.2.x has to be rebuilt. `monero_utils_get_abi_version()` returns 0.3.0, and a binding should ask
+for 0.3.x. The JSON is the one of 0.2.x.
+
+### Breaking changes
+
+* **`monero_daemon_connect()`** takes `zmq_uri` after `proxy_uri`, the ZMQ endpoint of the daemon (NULL for none).
+* **Accounts of any wallet.** `monero_wallet_get_accounts()` takes `tag` (NULL for all the accounts) and `skip_balances`, and
+  `monero_wallet_get_account()` and `monero_wallet_get_subaddresses()` take `skip_balances`. The wallet of a server (`monero_wallet_rpc_*`) and a
+  full wallet use the same functions, so `monero_wallet_rpc_get_accounts()`, `monero_wallet_rpc_get_account()` and
+  `monero_wallet_rpc_get_subaddresses()` are removed.
+
+### Added
+
+* `monero_last_error_rpc_code()`, the JSON-RPC code of the last failure of the thread when it is a `MONERO_ERROR_RPC` (the HTTP status if the server did not answer with a JSON-RPC error, -1 if there is no code), and 0 for any other.
+* `monero_wallet_get_keys_file_buffer()`, `monero_wallet_get_cache_file_buffer()` and `monero_wallet_open_data()`, to export a full wallet as the
+  bytes of its keys file and its cache file, and to open it from them with no file.
+* `monero_utils_get_default_ringdb_path()`, the default directory of the ring database for a network.
+* `monero_wallet_get_listeners()`, the listeners that are registered in a wallet.
+* `monero_daemon_is_connected()`, which asks the daemon whether it answers.
 
 ### Changed
 
+* monero-cpp is updated to its master. A wallet of a regtest chain of 1000 blocks or more no longer skips the hashes below the checkpoint of
+  mainnet when it syncs from a start height: wallet2 asks the daemon whether the checkpoint is on the chain before it uses it, so
+  `monero_wallet_sync()` from a start height fetches the blocks from that height on any chain.
+* `monero_wallet_get_multisig_info()` of a wallet that is not multisig gives `isReady` false and a threshold and a number of participants of 0, and no
+  longer the bytes that were on the stack.
+* The docs of `monero_wallet_get_daemon_height()`, `monero_wallet_get_daemon_max_peer_height()` and `monero_wallet_is_daemon_synced()` say that wallet2 keeps
+  the heights of the daemon for 30 seconds, so they can be 30 seconds late.
 * The docs of `monero_last_error_code()` and `MONERO_ERROR_IO` say what the code does: a daemon that doesn't answer, a file that doesn't exist, a
   mnemonic that isn't valid and a closed wallet are `MONERO_ERROR_GENERIC`, because monero-cpp throws its plain exception for them, and
   `MONERO_ERROR_IO` is for the error of the system on a file or a socket. The header said that a network failure was `MONERO_ERROR_IO`.
