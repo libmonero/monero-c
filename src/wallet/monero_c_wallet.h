@@ -1072,7 +1072,8 @@ MONERO_EXPORT monero_result monero_wallet_get_listeners(monero_wallet* wallet, m
 // these methods need a daemon connection, see monero_wallet_set_daemon_connection()
 
 /**
- * Synchronize the wallet with the daemon in the calling thread.
+ * Synchronize the wallet with the daemon in the calling thread. A daemon that is not synced is skipped, with no block fetched and no
+ * error: see monero_wallet_is_daemon_synced(), which is false for a regtest chain that has only the genesis block.
  *
  * @param wallet is the wallet handle
  * @param start_height is the height to sync from, ignored if it is less than the last processed block. NULL for none
@@ -1111,7 +1112,8 @@ MONERO_EXPORT monero_result monero_wallet_is_connected_to_daemon(monero_wallet* 
 /**
  * Check if the daemon of the wallet is synced with the network, which is when its height is at least the greatest
  * height of its peers and more than 1. It fails if the daemon can not be reached. It reads the two heights that wallet2 keeps for 30
- * seconds, so it can be 30 seconds late.
+ * seconds, so it can be 30 seconds late. monero_wallet_sync() fetches nothing while it is false, so a wallet that was created on a
+ * chain of one block, and got blocks after, syncs none of them for up to 30 seconds.
  *
  * @param wallet is the wallet handle
  * @param out_synced receives true if the daemon is synced
@@ -1130,7 +1132,7 @@ MONERO_EXPORT monero_result monero_wallet_is_synced(monero_wallet* wallet, bool*
 
 /**
  * Get the height the daemon of the wallet is synced to. It fails if the daemon can not be reached. wallet2 keeps the answer for 30
- * seconds, so a block that was mined in that time may not be in it, while monero_wallet_sync() fetches the new blocks at once.
+ * seconds, so a block that was mined in that time may not be in it.
  *
  * @param wallet is the wallet handle
  * @param out_height receives the height

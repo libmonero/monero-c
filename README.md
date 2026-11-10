@@ -126,6 +126,7 @@ Every call that can fail returns `MONERO_OK` or `MONERO_ERROR`, `monero_last_err
 * [Thread safety](https://github.com/libmonero/monero-c/blob/main/docs/thread-safety.md)
 * [Results with context](https://github.com/libmonero/monero-c/blob/main/docs/results.md) and [JSON shapes](https://github.com/libmonero/monero-c/blob/main/docs/json-shapes.md)
 * [Limits, TLS and proxy (Tor)](https://github.com/libmonero/monero-c/blob/main/docs/networking.md)
+* [Wallets](https://github.com/libmonero/monero-c/blob/main/docs/wallets.md)
 * [.NET bindings and NuGet package](https://github.com/libmonero/monero-c/blob/main/docs/dotnet.md)
 * [Android](https://github.com/libmonero/monero-c/blob/main/packaging/android/README.md), [JVM](https://github.com/libmonero/monero-c/blob/main/packaging/jvm/README.md), [Dart](https://github.com/libmonero/monero-c/blob/main/packaging/dart/README.md), [CMake and Linux packages](https://github.com/libmonero/monero-c/blob/main/packaging/cmake/README.md) and [Apple](https://github.com/libmonero/monero-c/blob/main/packaging/apple/README.md) packages
 * [Changelog](https://github.com/libmonero/monero-c/blob/main/CHANGELOG.md)
