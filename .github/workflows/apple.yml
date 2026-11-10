@@ -64,3 +64,4 @@ jobs:
           name: monero-native-apple
           path: packaging/apple/packages/MoneroC-${{ env.PACKAGE_VERSION }}.xcframework.zip
           if-no-files-found: error
+          retention-days: 7

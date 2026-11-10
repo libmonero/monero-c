@@ -112,3 +112,4 @@ jobs:
             packaging/jvm/packages/monero-native-jvm-${{ env.PACKAGE_VERSION }}.jar
             packaging/jvm/packages/monero-native-jvm-${{ env.PACKAGE_VERSION }}.pom
           if-no-files-found: error
+          retention-days: 7

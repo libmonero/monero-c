@@ -195,3 +195,4 @@ jobs:
           name: monero-native-nuget
           path: packaging/dotnet-core/packages/Monero.Native.${{ env.PACKAGE_VERSION }}.nupkg
           if-no-files-found: error
+          retention-days: 7

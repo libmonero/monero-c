@@ -86,3 +86,4 @@ jobs:
             packaging/android/packages/monero-native-android-${{ env.PACKAGE_VERSION }}.aar
             packaging/android/packages/monero-native-android-${{ env.PACKAGE_VERSION }}.pom
           if-no-files-found: error
+          retention-days: 7
