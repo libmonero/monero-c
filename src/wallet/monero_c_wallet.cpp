@@ -208,6 +208,7 @@ struct wallet_listener_core {
   wallet_listener_adapter adapter;
   std::weak_ptr<monero::monero_wallet> registered_with;
   std::mutex registration_mutex;  // guards registered_with, never held across a monero-cpp call
+  ::monero_wallet_listener* handle = nullptr;  // the handle of the program, guarded by live_listeners_mutex() and null once it is freed
 };
 
 std::mutex& live_listeners_mutex() {
@@ -226,6 +227,15 @@ std::shared_ptr<wallet_listener_core> core_of(const monero::monero_wallet_listen
   std::lock_guard<std::mutex> lock(live_listeners_mutex());
   auto found = live_listeners().find(listener);
   return found == live_listeners().end() ? nullptr : found->second.lock();
+}
+
+// the handle that the program holds for the listener that monero-cpp gives by its address, or null if it is not a C listener or its handle was freed
+::monero_wallet_listener* handle_of(const monero::monero_wallet_listener* listener) {
+  std::lock_guard<std::mutex> lock(live_listeners_mutex());
+  auto found = live_listeners().find(listener);
+  if (found == live_listeners().end()) return nullptr;
+  std::shared_ptr<wallet_listener_core> core = found->second.lock();
+  return core != nullptr ? core->handle : nullptr;
 }
 
 // the queues of the C listeners that a wallet has now
@@ -1233,6 +1243,7 @@ monero_result monero_wallet_listener_create(const monero_wallet_listener_callbac
     {
       std::lock_guard<std::mutex> lock(live_listeners_mutex());
       live_listeners()[&listener->core->adapter] = listener->core;
+      listener->core->handle = listener.get();
     }
     *out_listener = listener.release();
   });
@@ -1256,6 +1267,7 @@ void monero_wallet_listener_free(::monero_wallet_listener* listener) {
   {
     std::lock_guard<std::mutex> lock(live_listeners_mutex());
     live_listeners().erase(&listener->core->adapter);
+    listener->core->handle = nullptr;
   }
   delete listener;
 }
@@ -1319,9 +1331,9 @@ monero_result monero_wallet_get_listeners(::monero_wallet* wallet, ::monero_wall
   return guard([&] {
     std::vector<::monero_wallet_listener*> handles;
     for (monero::monero_wallet_listener* listener : wallet->wallet->get_listeners()) {
-      // a listener that doesn't come from the C ABI has no handle to give
-      auto* adapter = dynamic_cast<wallet_listener_adapter*>(listener);
-      if (adapter != nullptr) handles.push_back(adapter->owner);
+      // a listener that doesn't come from the C ABI has no handle to give, and neither has one whose handle was freed
+      ::monero_wallet_listener* handle = handle_of(listener);
+      if (handle != nullptr) handles.push_back(handle);
     }
     *out_listeners = dup_array(handles, out_count);
   });
