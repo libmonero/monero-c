@@ -116,7 +116,7 @@ public class MoneroMarshallingTests
     [Fact]
     public void KeepsTheDelegatesOfAListenerAlive()
     {
-        Assert.Equal(0, ConnectNative(Unreachable, null, null, null, 500, out IntPtr daemon));
+        Assert.Equal(0, ConnectNative(Unreachable, null, null, null, null, 500, out IntPtr daemon));
         try
         {
             OnBlockHeader callback = (userData, headerJson) => { };
@@ -154,7 +154,7 @@ public class MoneroMarshallingTests
     [Fact]
     public void PassesNullForAnOptionalPointer()
     {
-        Assert.Equal(0, ConnectNative(Unreachable, null, null, null, 500, out IntPtr daemon));
+        Assert.Equal(0, ConnectNative(Unreachable, null, null, null, null, 500, out IntPtr daemon));
         try
         {
             ulong end = 5;
@@ -192,7 +192,7 @@ public class MoneroMarshallingTests
         Assert.Equal(-1, ValidateMnemonicNative(new string('a', 5000), null));
         Assert.Equal("mnemonic is longer than 4096 bytes", LastError());
 
-        Assert.Equal(0, ConnectNative(Unreachable, null, null, null, 500, out IntPtr daemon));
+        Assert.Equal(0, ConnectNative(Unreachable, null, null, null, null, 500, out IntPtr daemon));
         try
         {
             ulong start = 0;
@@ -233,7 +233,7 @@ public class MoneroMarshallingTests
 
         for (int i = 0; i < 10; i++)
         {
-            Assert.Equal(0, ConnectNative(Unreachable, null, null, null, 500, out IntPtr daemon));
+            Assert.Equal(0, ConnectNative(Unreachable, null, null, null, null, 500, out IntPtr daemon));
             FreeDaemon(daemon);
         }
     }
@@ -343,6 +343,7 @@ public class MoneroMarshallingTests
         [MarshalAs(UnmanagedType.LPUTF8Str)] string? username,
         [MarshalAs(UnmanagedType.LPUTF8Str)] string? password,
         [MarshalAs(UnmanagedType.LPUTF8Str)] string? proxyUri,
+        [MarshalAs(UnmanagedType.LPUTF8Str)] string? zmqUri,
         uint timeoutMs,
         out IntPtr daemon);
 
