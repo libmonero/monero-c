@@ -11,6 +11,7 @@ jobs:
   library-linux:
     name: ${{ matrix.platform }}
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
 
     strategy:
       fail-fast: false
@@ -69,6 +70,7 @@ jobs:
   library-macos:
     name: ${{ matrix.platform }}
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
 
     strategy:
       fail-fast: false
@@ -113,6 +115,7 @@ jobs:
   library-windows:
     name: Windows x86_64
     runs-on: windows-latest
+    timeout-minutes: 20
 
     defaults:
       run:

@@ -12,6 +12,7 @@ jobs:
   xcframework:
     name: XCFramework
     runs-on: macos-15
+    timeout-minutes: 20
 
     steps:
       - name: Checkout repository

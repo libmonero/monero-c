@@ -12,6 +12,7 @@ jobs:
   build:
     name: ${{ matrix.cpu }}
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 90
     # debian:12 provides a supported build environment. The library needs glibc 2.34, see the unbound step
     container: ${{ matrix.container }}
     env:

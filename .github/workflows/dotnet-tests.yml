@@ -16,6 +16,7 @@ jobs:
   dotnet-linux:
     name: ${{ matrix.platform }}
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
 
     strategy:
       fail-fast: false

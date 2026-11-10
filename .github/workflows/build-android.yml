@@ -12,6 +12,7 @@ jobs:
   build:
     name: ${{ matrix.arch }}
     runs-on: ubuntu-24.04
+    timeout-minutes: 90
 
     env:
       # the NDK of the runner image changes with the image, so this one is installed

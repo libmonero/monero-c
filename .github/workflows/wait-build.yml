@@ -23,7 +23,7 @@ jobs:
   wait:
     name: Wait for Build
     runs-on: ubuntu-24.04
-    timeout-minutes: 300
+    timeout-minutes: 90
 
     outputs:
       run-id: ${{ steps.wait.outputs.run-id }}

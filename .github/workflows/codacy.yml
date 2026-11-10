@@ -15,6 +15,7 @@ jobs:
   report-coverage-linux:
     if: github.repository == 'libmonero/monero-c' && github.event.workflow_run.conclusion == 'success' && (github.event.workflow_run.event == 'pull_request' || (github.event.workflow_run.event == 'push' && github.event.workflow_run.head_branch == 'main'))
     runs-on: ubuntu-24.04
+    timeout-minutes: 15
     env:
       CODACY_PROJECT_TOKEN: ${{ secrets.CODACY_PROJECT_TOKEN }}
       # the commit that Coverage tested, which is the head of the pull request
