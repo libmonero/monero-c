@@ -179,9 +179,16 @@ jobs:
 
     steps:
       - name: Install git and the libraries of the build
+        timeout-minutes: 15
         run: |
-          apt-get update
-          apt-get install -y git ca-certificates make gcc libzmq3-dev libunbound-dev libsodium-dev libunwind-dev liblzma-dev libreadline-dev libexpat1-dev libpgm-dev libhidapi-dev libusb-1.0-0-dev libprotobuf-dev libudev-dev nettle-dev libevent-dev
+          # a run of Linux arm64 stayed on this step for more than 30 minutes (run 42739498377). apt tries again, over IPv4, with timeouts, and a try that hangs
+          # is stopped and made again
+          printf 'Acquire::Retries "5";\nAcquire::http::Timeout "30";\nAcquire::https::Timeout "30";\nAcquire::ForceIPv4 "true";\n' > /etc/apt/apt.conf.d/80-ci
+          for attempt in 1 2 3; do
+            timeout 300 apt-get update && timeout 900 apt-get install -y git ca-certificates make gcc libzmq3-dev libunbound-dev libsodium-dev libunwind-dev liblzma-dev libreadline-dev libexpat1-dev libpgm-dev libhidapi-dev libusb-1.0-0-dev libprotobuf-dev libudev-dev nettle-dev libevent-dev && break
+            [ "$attempt" -lt 3 ] || { echo "apt failed three times"; exit 1; }
+            echo "apt failed, a new try in 20 seconds"; sleep 20
+          done
           git config --global --add safe.directory '*'
 
       - name: Checkout repository

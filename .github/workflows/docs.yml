@@ -1,6 +1,7 @@
 name: Docs
 
-# Builds the docs after integration tests, and publishes them with the coverage report from main only.
+# Builds the docs after the integration tests of main, and publishes them with the coverage report. A pull request has no docs: this workflow runs with the
+# token of the repository, and actions/checkout refuses to check out the code of a fork in it
 on:
   workflow_run:
     workflows:
@@ -15,7 +16,7 @@ permissions:
 
 jobs:
   build:
-    if: github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && (github.event.workflow_run.event == 'pull_request' || (github.event.workflow_run.event == 'push' && github.event.workflow_run.head_branch == 'main')))
+    if: github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push' && github.event.workflow_run.head_branch == 'main')
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     permissions:
