@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+
+* `monero_wallet_remove_listeners()` and the calls that wait for the callbacks of a wallet (`monero_wallet_sync()`, `monero_wallet_close()`) no longer
+  read a wallet listener that another thread frees meanwhile with `monero_wallet_listener_free()`. They found the listeners by the address that
+  monero-cpp gave and read them after the free. A listener handle now holds its state with a shared pointer, and the calls keep it alive while they use it.
+
 ## 0.2.2-alpha.1 (2026-11-09)
 
 Fixes of the wallet that monero-kotlin found with its tests, and the corrected docs of the ABI. The library, the headers and the C ABI are those of

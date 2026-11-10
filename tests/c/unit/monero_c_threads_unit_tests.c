@@ -386,11 +386,64 @@ static void test_listeners_from_many_threads(void) {
   pthread_mutex_destroy(&shared.lock);
 }
 
+// -------------------------- FREE AND REMOVE LISTENERS ------------------------
+
+#define FREED_LISTENERS 8
+
+typedef struct freeing {
+  monero_wallet_listener* listeners[FREED_LISTENERS];
+  gate start;
+} freeing;
+
+// frees the listeners that the main thread removes with monero_wallet_remove_listeners() at the same time. The freed handle must not be
+// used by the call that lists the listeners of the wallet. Run it under AddressSanitizer to see a use after free
+static void* freeing_worker(void* arg) {
+  worker* w = (worker*) arg;
+  freeing* shared = (freeing*) w->shared;
+  gate_wait(&shared->start);
+  for (int i = w->index; i < FREED_LISTENERS; i += 2) monero_wallet_listener_free(shared->listeners[i]);
+  return NULL;
+}
+
+static void test_free_while_removing_listeners(void) {
+  const char* path = "monero_c_threads_free";
+  monero_wallet* wallet = NULL;
+  monero_wallet_listener_callbacks callbacks = {sizeof(monero_wallet_listener_callbacks)};
+  remove_files(path);
+  EXPECT_OK(monero_wallet_create_from_seed(path, PASSWORD, MAINNET, SEED, NULL, 0, NULL, &wallet));
+  if (wallet == NULL) return;
+  for (int round = 0; round < 40; round++) {
+    freeing shared;
+    pthread_t threads[2];
+    worker workers[2];
+    memset(&shared, 0, sizeof(shared));
+    for (int i = 0; i < FREED_LISTENERS; i++) {
+      EXPECT_OK(monero_wallet_listener_create(&callbacks, &shared.listeners[i]));
+      EXPECT_OK(monero_wallet_add_listener(wallet, shared.listeners[i]));
+    }
+    gate_init(&shared.start, 3);
+    for (int i = 0; i < 2; i++) {
+      memset(&workers[i], 0, sizeof(workers[i]));
+      workers[i].index = i;
+      workers[i].shared = &shared;
+      CHECK(pthread_create(&threads[i], NULL, freeing_worker, &workers[i]) == 0);
+    }
+    gate_wait(&shared.start);
+    EXPECT_OK(monero_wallet_remove_listeners(wallet));
+    for (int i = 0; i < 2; i++) pthread_join(threads[i], NULL);
+    gate_destroy(&shared.start);
+  }
+  EXPECT_OK(monero_wallet_close(wallet, false));
+  monero_wallet_free(wallet);
+  remove_files(path);
+}
+
 int main(void) {
   test_utils_from_many_threads();
   test_wallets_from_many_threads();
   test_shared_connection_and_daemon();
   test_listeners_from_many_threads();
+  test_free_while_removing_listeners();
 
   printf("%d/%d checks passed\n", g_checks - g_failures, g_checks);
   return g_failures == 0 ? EXIT_SUCCESS : EXIT_FAILURE;

@@ -38,6 +38,7 @@
 #include <chrono>
 #include <condition_variable>
 #include <memory>
+#include <map>
 #include <mutex>
 #include <stdexcept>
 #include <string>
@@ -158,7 +159,6 @@ const size_t MAX_PENDING_NEW_BLOCKS = 100000;
 // the arguments of monero-cpp, which are valid only during the call, is copied into it
 class wallet_listener_adapter : public monero::monero_wallet_listener {
 public:
-  ::monero_wallet_listener* owner = nullptr;  // the C handle, not the base class of the same name
   monero_wallet_listener_callbacks callbacks = {};
   std::shared_ptr<monero_c::event_queue> queue = std::make_shared<monero_c::event_queue>();
 
@@ -199,13 +199,40 @@ public:
   }
 };
 
+// what a C listener handle stands for. The handle owns it with a shared pointer, and so does every call that reaches it through monero-cpp, which
+// only knows the address of the adapter: a call such as monero_wallet_remove_listeners() and a sync that waits for the callbacks find the listeners of
+// a wallet by that address, and monero_wallet_listener_free() on another thread must not free what they are using
+struct wallet_listener_core {
+  wallet_listener_adapter adapter;
+  std::weak_ptr<monero::monero_wallet> registered_with;
+  std::mutex registration_mutex;  // guards registered_with, never held across a monero-cpp call
+};
+
+std::mutex& live_listeners_mutex() {
+  static std::mutex mutex;
+  return mutex;
+}
+
+// the listeners that have a handle, by the address of their adapter
+std::map<const monero::monero_wallet_listener*, std::weak_ptr<wallet_listener_core>>& live_listeners() {
+  static std::map<const monero::monero_wallet_listener*, std::weak_ptr<wallet_listener_core>> listeners;
+  return listeners;
+}
+
+// the listener that monero-cpp gives by its address, or null if it is not a C listener or its handle was freed
+std::shared_ptr<wallet_listener_core> core_of(const monero::monero_wallet_listener* listener) {
+  std::lock_guard<std::mutex> lock(live_listeners_mutex());
+  auto found = live_listeners().find(listener);
+  return found == live_listeners().end() ? nullptr : found->second.lock();
+}
+
 // the queues of the C listeners that a wallet has now
 std::vector<std::shared_ptr<monero_c::event_queue>> queues_of(monero::monero_wallet& wallet) {
   std::vector<std::shared_ptr<monero_c::event_queue>> queues;
   try {
     for (monero::monero_wallet_listener* listener : wallet.get_listeners()) {
-      auto* adapter = dynamic_cast<wallet_listener_adapter*>(listener);
-      if (adapter != nullptr) queues.push_back(adapter->queue);
+      std::shared_ptr<wallet_listener_core> core = core_of(listener);
+      if (core != nullptr) queues.push_back(core->adapter.queue);
     }
   } catch (...) {
     // a wallet that is closed, or that has no listeners to list, has no callbacks to wait for
@@ -607,9 +634,7 @@ std::shared_ptr<monero::monero_wallet_config> rpc_config(const char* name, const
 } // namespace
 
 struct monero_wallet_listener {
-  wallet_listener_adapter adapter;
-  std::weak_ptr<monero::monero_wallet> registered_with;
-  std::mutex registration_mutex;  // guards registered_with, never held across a monero-cpp call
+  std::shared_ptr<wallet_listener_core> core;
 };
 
 namespace {
@@ -619,12 +644,12 @@ namespace {
 monero::monero_sync_result sync_with_listener(::monero_wallet* wallet, ::monero_wallet_listener* listener, const uint64_t* start_height) {
   std::shared_ptr<monero::monero_wallet> previous;
   {
-    std::lock_guard<std::mutex> lock(listener->registration_mutex);
-    previous = listener->registered_with.lock();
+    std::lock_guard<std::mutex> lock(listener->core->registration_mutex);
+    previous = listener->core->registered_with.lock();
   }
   if (previous && previous != wallet->wallet) throw std::runtime_error("listener is already registered with another wallet");
   if (previous) return start_height ? wallet->wallet->sync(*start_height) : wallet->wallet->sync();
-  return start_height ? wallet->wallet->sync(*start_height, listener->adapter) : wallet->wallet->sync(listener->adapter);
+  return start_height ? wallet->wallet->sync(*start_height, listener->core->adapter) : wallet->wallet->sync(listener->core->adapter);
 }
 
 } // namespace
@@ -1144,8 +1169,12 @@ monero_result monero_wallet_listener_create(const monero_wallet_listener_callbac
   if (!require(callbacks, "callbacks") || !require(out_listener, "out_listener")) return MONERO_ERROR;
   return guard([&] {
     std::unique_ptr<::monero_wallet_listener> listener(new ::monero_wallet_listener());
-    listener->adapter.owner = listener.get();
-    listener->adapter.callbacks = monero_c::copy_callbacks(*callbacks, offsetof(monero_wallet_listener_callbacks, user_data) + sizeof(void*));
+    listener->core = std::make_shared<wallet_listener_core>();
+    listener->core->adapter.callbacks = monero_c::copy_callbacks(*callbacks, offsetof(monero_wallet_listener_callbacks, user_data) + sizeof(void*));
+    {
+      std::lock_guard<std::mutex> lock(live_listeners_mutex());
+      live_listeners()[&listener->core->adapter] = listener->core;
+    }
     *out_listener = listener.release();
   });
 }
@@ -1154,15 +1183,20 @@ void monero_wallet_listener_free(::monero_wallet_listener* listener) {
   if (listener == nullptr) return;
   std::shared_ptr<monero::monero_wallet> wallet;
   {
-    std::lock_guard<std::mutex> lock(listener->registration_mutex);
-    wallet = listener->registered_with.lock();
+    std::lock_guard<std::mutex> lock(listener->core->registration_mutex);
+    wallet = listener->core->registered_with.lock();
   }
   if (wallet) {
     try {
-      wallet->remove_listener(listener->adapter);
+      wallet->remove_listener(listener->core->adapter);
     } catch (...) {
       // release the listener even if the removal fails
     }
+  }
+  // from here a call on another thread that lists the listeners of a wallet doesn't find it, and the one that has found it keeps it alive
+  {
+    std::lock_guard<std::mutex> lock(live_listeners_mutex());
+    live_listeners().erase(&listener->core->adapter);
   }
   delete listener;
 }
@@ -1173,17 +1207,17 @@ monero_result monero_wallet_add_listener(::monero_wallet* wallet, ::monero_walle
     // reserve the wallet under the lock, so one listener can't join two wallets
     std::shared_ptr<monero::monero_wallet> previous;
     {
-      std::lock_guard<std::mutex> lock(listener->registration_mutex);
-      previous = listener->registered_with.lock();
+      std::lock_guard<std::mutex> lock(listener->core->registration_mutex);
+      previous = listener->core->registered_with.lock();
       if (previous && previous != wallet->wallet) throw std::runtime_error("listener is already registered with another wallet");
-      listener->registered_with = wallet->wallet;
+      listener->core->registered_with = wallet->wallet;
     }
     try {
-      wallet->wallet->add_listener(listener->adapter);
+      wallet->wallet->add_listener(listener->core->adapter);
     } catch (...) {
       if (!previous) {
-        std::lock_guard<std::mutex> lock(listener->registration_mutex);
-        if (listener->registered_with.lock() == wallet->wallet) listener->registered_with.reset();
+        std::lock_guard<std::mutex> lock(listener->core->registration_mutex);
+        if (listener->core->registered_with.lock() == wallet->wallet) listener->core->registered_with.reset();
       }
       throw;
     }
@@ -1194,12 +1228,12 @@ monero_result monero_wallet_remove_listener(::monero_wallet* wallet, ::monero_wa
   if (!require(wallet, "wallet") || !require(listener, "listener")) return MONERO_ERROR;
   return guard([&] {
     // monero-cpp notifies under its own lock, so this runs without registration_mutex
-    wallet->wallet->remove_listener(listener->adapter);
+    wallet->wallet->remove_listener(listener->core->adapter);
     // no callback of the listener comes after the removal: the events that wait are dropped, and the one that runs is waited for. A callback
     // that removes its own listener only drops them
-    listener->adapter.queue->cancel();
-    std::lock_guard<std::mutex> lock(listener->registration_mutex);
-    if (listener->registered_with.lock() == wallet->wallet) listener->registered_with.reset();
+    listener->core->adapter.queue->cancel();
+    std::lock_guard<std::mutex> lock(listener->core->registration_mutex);
+    if (listener->core->registered_with.lock() == wallet->wallet) listener->core->registered_with.reset();
   });
 }
 
@@ -1207,13 +1241,14 @@ monero_result monero_wallet_remove_listeners(::monero_wallet* wallet) {
   if (!require(wallet, "wallet")) return MONERO_ERROR;
   return guard([&] {
     for (monero::monero_wallet_listener* listener : wallet->wallet->get_listeners()) {
-      wallet->wallet->remove_listener(*listener);
+      // the cores are looked up before anything else, since a listener that is freed meanwhile is gone from monero-cpp but not from the copy
+      std::shared_ptr<wallet_listener_core> core = core_of(listener);
+      wallet->wallet->remove_listener(core != nullptr ? static_cast<monero::monero_wallet_listener&>(core->adapter) : *listener);
       // listeners that don't come from the C ABI have no handle to reset
-      auto* adapter = dynamic_cast<wallet_listener_adapter*>(listener);
-      if (adapter == nullptr) continue;
-      adapter->queue->cancel();
-      std::lock_guard<std::mutex> lock(adapter->owner->registration_mutex);
-      if (adapter->owner->registered_with.lock() == wallet->wallet) adapter->owner->registered_with.reset();
+      if (core == nullptr) continue;
+      core->adapter.queue->cancel();
+      std::lock_guard<std::mutex> lock(core->registration_mutex);
+      if (core->registered_with.lock() == wallet->wallet) core->registered_with.reset();
     }
   });
 }
@@ -1225,7 +1260,7 @@ monero_result monero_wallet_sync(::monero_wallet* wallet, const uint64_t* start_
   if (!require(wallet, "wallet") || !require(out_json, "out_json")) return MONERO_ERROR;
   return guard([&] {
     // the callbacks of the sync are done when the call returns, the failure of the sync included
-    callbacks_flush flush(*wallet->wallet, listener != nullptr ? listener->adapter.queue : nullptr);
+    callbacks_flush flush(*wallet->wallet, listener != nullptr ? listener->core->adapter.queue : nullptr);
     monero::monero_sync_result result = listener ? sync_with_listener(wallet, listener, start_height) : (start_height ? wallet->wallet->sync(*start_height) : wallet->wallet->sync());
     *out_json = dup_string(result.serialize());
   });
