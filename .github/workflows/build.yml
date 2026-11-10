@@ -15,6 +15,12 @@ on:
 permissions:
   contents: read
 
+# A new push to a pull request cancels the run of the one before, which nobody reads: Unit tests and Integration tests do it already, and Build, which
+# costs the most, did not. The runs of main and of the tags have a group of their own, so none of them is ever cancelled
+concurrency:
+  group: build-${{ github.event_name == 'pull_request' && github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: true
+
 jobs:
   linux:
     name: Linux
