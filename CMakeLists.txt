@@ -12,6 +12,33 @@ add_definitions(-DBOOST_UUID_DISABLE_ALIGNMENT) # match monero-project/monero-cp
 option(BUILD_TESTS "Build monero-c tests" OFF)
 option(ENABLE_COVERAGE "Enable coverage" OFF)
 
+if (CMAKE_SYSTEM_NAME STREQUAL "Linux" OR ANDROID)
+  include(CheckCCompilerFlag)
+  include(CheckCXXCompilerFlag)
+
+  foreach(flag IN ITEMS -fstack-protector-strong -fstack-clash-protection)
+    string(MAKE_C_IDENTIFIER "${flag}" flag_id)
+    set(c_flag_supported "MONERO_C_C_${flag_id}")
+    set(cxx_flag_supported "MONERO_C_CXX_${flag_id}")
+    check_c_compiler_flag("${flag}" "${c_flag_supported}")
+    check_cxx_compiler_flag("${flag}" "${cxx_flag_supported}")
+    if (${c_flag_supported} AND ${cxx_flag_supported})
+      add_compile_options("${flag}")
+    endif()
+  endforeach()
+
+  add_compile_options("$<$<COMPILE_LANGUAGE:CXX>:-D_GLIBCXX_ASSERTIONS>")
+  add_compile_definitions("$<$<OR:$<CONFIG:Release>,$<CONFIG:RelWithDebInfo>,$<CONFIG:MinSizeRel>>:_FORTIFY_SOURCE=2>")
+
+  if (CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86_64|AMD64|amd64)$" OR CMAKE_ANDROID_ARCH_ABI STREQUAL "x86_64")
+    check_c_compiler_flag(-fcf-protection=full MONERO_C_C_FCF_PROTECTION)
+    check_cxx_compiler_flag(-fcf-protection=full MONERO_C_CXX_FCF_PROTECTION)
+    if (MONERO_C_C_FCF_PROTECTION AND MONERO_C_CXX_FCF_PROTECTION)
+      add_compile_options(-fcf-protection=full)
+    endif()
+  endif()
+endif()
+
 if(ENABLE_COVERAGE)
   message(STATUS "Coverage enabled")
   add_compile_options(--coverage -O0 -g -fprofile-update=atomic)

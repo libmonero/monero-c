@@ -61,6 +61,15 @@ jobs:
         with:
           submodules: recursive
 
+      - name: Set compiler hardening flags
+        run: |
+          flags="-O2 -fstack-protector-strong -D_FORTIFY_SOURCE=2 -fstack-clash-protection"
+          if [ "${{ matrix.arch }}" = "linux-x86_64" ]; then
+            flags="$flags -fcf-protection=full"
+          fi
+          echo "CFLAGS=$flags" >> "$GITHUB_ENV"
+          echo "CXXFLAGS=$flags -D_GLIBCXX_ASSERTIONS" >> "$GITHUB_ENV"
+
       - name: Install dependencies
         timeout-minutes: 20
         run: |
@@ -142,7 +151,7 @@ jobs:
           echo "a5714234abe6e1f53647dd8cba7d69f65f71c558b7896ed218864ffcf405bcbd  hidapi-0.14.0.tar.gz" | sha256sum -c
           tar xzf hidapi-0.14.0.tar.gz
           cd hidapi-hidapi-0.14.0
-          cmake -B build -DBUILD_SHARED_LIBS=OFF -DHIDAPI_WITH_HIDRAW=OFF -DCMAKE_POSITION_INDEPENDENT_CODE=ON -DCMAKE_POLICY_VERSION_MINIMUM=3.5 .
+          cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_FLAGS="$CFLAGS" -DCMAKE_CXX_FLAGS="$CXXFLAGS" -DBUILD_SHARED_LIBS=OFF -DHIDAPI_WITH_HIDRAW=OFF -DCMAKE_POSITION_INDEPENDENT_CODE=ON -DCMAKE_POLICY_VERSION_MINIMUM=3.5 .
           cmake --build build
           cmake --install build
 
@@ -154,7 +163,7 @@ jobs:
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: boost-install
-          key: boost-1.85.0-${{ matrix.arch }}-1
+          key: boost-1.85.0-${{ matrix.arch }}-2
 
       - name: Install boost
         if: steps.boost.outputs.cache-hit != 'true'
@@ -167,7 +176,7 @@ jobs:
           tar xf boost_1_85_0.tar.bz2
           cd boost_1_85_0
           ./bootstrap.sh --with-libraries=chrono,date_time,filesystem,locale,program_options,regex,serialization,system,thread
-          ./b2 -j3 --prefix="$GITHUB_WORKSPACE/boost-install" cxxflags=-fPIC cflags=-fPIC link=static runtime-link=shared boost.locale.icu=off install
+          ./b2 -j3 --prefix="$GITHUB_WORKSPACE/boost-install" cxxflags="-fPIC $CXXFLAGS" cflags="-fPIC $CFLAGS" link=static runtime-link=shared boost.locale.icu=off install
           # the license goes with the files, because the source is not extracted when they come from the cache
           mkdir -p "$GITHUB_WORKSPACE/boost-install/share/doc/boost"
           cp LICENSE_1_0.txt "$GITHUB_WORKSPACE/boost-install/share/doc/boost/"
@@ -178,7 +187,7 @@ jobs:
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: boost-install
-          key: boost-1.85.0-${{ matrix.arch }}-1
+          key: boost-1.85.0-${{ matrix.arch }}-2
 
       - name: Put boost in /usr/local
         run: cp -R boost-install/. /usr/local/

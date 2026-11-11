@@ -83,6 +83,12 @@ jobs:
           echo "$ndk/toolchains/llvm/prebuilt/linux-x86_64/bin" >> "$GITHUB_PATH"
           # openssl finds the NDK with this one
           echo "ANDROID_NDK_ROOT=$ndk" >> "$GITHUB_ENV"
+          flags="-O2 -fstack-protector-strong -D_FORTIFY_SOURCE=2 -fstack-clash-protection"
+          if [ "${{ matrix.arch }}" = "android-x86_64" ]; then
+            flags="$flags -fcf-protection=full"
+          fi
+          echo "CFLAGS=-I$PREFIX/include $flags" >> "$GITHUB_ENV"
+          echo "CXXFLAGS=-I$PREFIX/include $flags -D_GLIBCXX_ASSERTIONS" >> "$GITHUB_ENV"
           # the arguments that the projects built with cmake share: the dependencies are found in the prefix only, and the headers there are on the path
           echo "CMAKE_ANDROID=-DCMAKE_TOOLCHAIN_FILE=$ndk/build/cmake/android.toolchain.cmake -DANDROID_ABI=${{ matrix.abi }} -DANDROID_PLATFORM=android-${{ matrix.api }} -DANDROID_STL=c++_static -DCMAKE_FIND_ROOT_PATH=$PREFIX -DCMAKE_C_FLAGS=-I$PREFIX/include -DCMAKE_CXX_FLAGS=-I$PREFIX/include" >> "$GITHUB_ENV"
 
@@ -141,7 +147,7 @@ jobs:
           echo "6653ef5910f17954861fe72332e68b03ca6e4d9c7160eb3a8de5a5a913bfab43  zeromq-4.3.5.tar.gz" | sha256sum -c
           tar xzf zeromq-4.3.5.tar.gz
           cd zeromq-4.3.5
-          cmake -B build $CMAKE_ANDROID $CMAKE_CCACHE -DCMAKE_BUILD_TYPE=Release -DCMAKE_POSITION_INDEPENDENT_CODE=ON -DCMAKE_INSTALL_PREFIX="$PREFIX" -DBUILD_SHARED=OFF -DBUILD_STATIC=ON -DZMQ_BUILD_TESTS=OFF -DWITH_LIBSODIUM=OFF -DWITH_LIBBSD=OFF -DWITH_DOCS=OFF -DWITH_PERF_TOOL=OFF -DENABLE_DRAFTS=OFF -DENABLE_CPACK=OFF -DCMAKE_POLICY_VERSION_MINIMUM=3.5
+          cmake -B build $CMAKE_ANDROID $CMAKE_CCACHE -DCMAKE_C_FLAGS="$CFLAGS" -DCMAKE_CXX_FLAGS="$CXXFLAGS" -DCMAKE_BUILD_TYPE=Release -DCMAKE_POSITION_INDEPENDENT_CODE=ON -DCMAKE_INSTALL_PREFIX="$PREFIX" -DBUILD_SHARED=OFF -DBUILD_STATIC=ON -DZMQ_BUILD_TESTS=OFF -DWITH_LIBSODIUM=OFF -DWITH_LIBBSD=OFF -DWITH_DOCS=OFF -DWITH_PERF_TOOL=OFF -DENABLE_DRAFTS=OFF -DENABLE_CPACK=OFF -DCMAKE_POLICY_VERSION_MINIMUM=3.5
           cmake --build build -j3
           cmake --install build
 
@@ -153,7 +159,7 @@ jobs:
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: boost-install
-          key: boost-1.85.0-${{ matrix.arch }}-api${{ matrix.api }}-ndk${{ env.NDK_VERSION }}-1
+          key: boost-1.85.0-${{ matrix.arch }}-api${{ matrix.api }}-ndk${{ env.NDK_VERSION }}-2
 
       - name: Install boost
         if: steps.boost.outputs.cache-hit != 'true'
@@ -166,7 +172,7 @@ jobs:
           # b2 runs on the runner, so it is built with the compiler of the runner and not the one of the NDK
           CC=cc CXX=c++ ./bootstrap.sh --with-libraries=chrono,date_time,filesystem,locale,program_options,regex,serialization,system,thread
           echo "using clang : android : ccache $CXX : <archiver>$AR <ranlib>$RANLIB ;" > user-config.jam
-          ./b2 -j3 --user-config=user-config.jam --prefix="$GITHUB_WORKSPACE/boost-install" toolset=clang-android target-os=android architecture=${{ matrix.boost_arch }} address-model=64 cxxflags=-fPIC cflags=-fPIC link=static runtime-link=shared boost.locale.icu=off install
+          ./b2 -j3 --user-config=user-config.jam --prefix="$GITHUB_WORKSPACE/boost-install" toolset=clang-android target-os=android architecture=${{ matrix.boost_arch }} address-model=64 cxxflags="-fPIC $CXXFLAGS" cflags="-fPIC $CFLAGS" link=static runtime-link=shared boost.locale.icu=off install
 
       # only main saves, as it does for ccache. The cache is saved here and not at the end, so that a later failure does not lose it
       - name: Save boost
@@ -174,7 +180,7 @@ jobs:
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: boost-install
-          key: boost-1.85.0-${{ matrix.arch }}-api${{ matrix.api }}-ndk${{ env.NDK_VERSION }}-1
+          key: boost-1.85.0-${{ matrix.arch }}-api${{ matrix.api }}-ndk${{ env.NDK_VERSION }}-2
 
       - name: Put boost in the prefix
         run: cp -R boost-install/. "$PREFIX/"
@@ -188,7 +194,7 @@ jobs:
           unset CC CXX AR RANLIB
           # BUILD_GUI_DEPS keeps -fPIE, which monero-project adds for the executables of Android, out of a shared library.
           # STACK_TRACE is off by itself on ARM, but on x86_64 monero-project finds a libunwind that does not build with the c++ library of the NDK
-          cmake $CMAKE_ANDROID -DSTATIC=ON -DBUILD_64=ON -DARCH="${{ matrix.march }}" -DCMAKE_BUILD_TYPE=Release -DUSE_DEVICE_TREZOR=OFF -DUSE_READLINE=OFF -DBUILD_GUI_DEPS=ON -DSTACK_TRACE=OFF -DBOOST_ROOT="$PREFIX" -DBoost_NO_SYSTEM_PATHS=ON $CMAKE_CCACHE -DUSE_CCACHE=OFF ../../
+          cmake $CMAKE_ANDROID -DSTATIC=ON -DBUILD_64=ON -DARCH="${{ matrix.march }}" -DCMAKE_C_FLAGS="$CFLAGS" -DCMAKE_CXX_FLAGS="$CXXFLAGS" -DCMAKE_BUILD_TYPE=Release -DUSE_DEVICE_TREZOR=OFF -DUSE_READLINE=OFF -DBUILD_GUI_DEPS=ON -DSTACK_TRACE=OFF -DBOOST_ROOT="$PREFIX" -DBoost_NO_SYSTEM_PATHS=ON $CMAKE_CCACHE -DUSE_CCACHE=OFF ../../
           make -j3 wallet cryptonote_protocol
           cd ../../../../../../
 
@@ -197,7 +203,7 @@ jobs:
           cd external/monero-cpp
           mkdir -p build
           cd build
-          cmake $CMAKE_ANDROID -DSTATIC=ON -DBUILD_LIBRARY=ON -DBUILD_SAMPLE=OFF -DBUILD_SCRATCHPAD=OFF -DBUILD_TESTS=OFF -DBOOST_ROOT="$PREFIX" -DBoost_NO_SYSTEM_PATHS=ON $CMAKE_CCACHE ..
+          cmake $CMAKE_ANDROID -DSTATIC=ON -DBUILD_LIBRARY=ON -DBUILD_SAMPLE=OFF -DBUILD_SCRATCHPAD=OFF -DBUILD_TESTS=OFF -DCMAKE_C_FLAGS="$CFLAGS" -DCMAKE_CXX_FLAGS="$CXXFLAGS" -DBOOST_ROOT="$PREFIX" -DBoost_NO_SYSTEM_PATHS=ON $CMAKE_CCACHE ..
           cmake --build . --target monero-cpp-static -j3
           cd ../../..
 
@@ -206,7 +212,7 @@ jobs:
         run: |
           mkdir -p build
           cd build
-          cmake $CMAKE_ANDROID -DMONERO_C_STATIC_DEPENDENCIES=ON -DBOOST_ROOT="$PREFIX" -DBoost_NO_SYSTEM_PATHS=ON $CMAKE_CCACHE ..
+          cmake $CMAKE_ANDROID -DMONERO_C_STATIC_DEPENDENCIES=ON -DCMAKE_C_FLAGS="$CFLAGS" -DCMAKE_CXX_FLAGS="$CXXFLAGS" -DBOOST_ROOT="$PREFIX" -DBoost_NO_SYSTEM_PATHS=ON $CMAKE_CCACHE ..
           cmake --build . -j3
           cd ..
 
