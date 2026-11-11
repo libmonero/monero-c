@@ -562,24 +562,51 @@ std::shared_ptr<monero::monero_tx_query> parse_tx_query(const std::string& json)
   return query;
 }
 
-// parses the query of the txs of get_txs()
+// the query as monero-java sends it, rooted at a block: {"txs":[the query of the tx]}, where the query of a transfer or of an output is the
+// transferQuery or the outputQuery of the tx. A query of the flat forms of monero-c has no "txs", so a JSON that has it is rooted at a block.
+// Gives the JSON of the query of the tx in it, or "{}" for a block with no txs, which matches everything. The block holds one tx query, as
+// in monero-java, and the fields of the block itself are not read
+bool tx_query_of_block(const rapidjson::Document& doc, std::string& tx_json) {
+  auto it = doc.FindMember("txs");
+  if (it == doc.MemberEnd()) return false;
+  if (!it->value.IsArray()) throw std::invalid_argument("txs must be a JSON array");
+  if (it->value.Size() > 1) throw std::invalid_argument("the query holds " + std::to_string(it->value.Size()) + " tx queries, and one can be used");
+  if (it->value.Size() == 0) {
+    tx_json = "{}";
+    return true;
+  }
+  if (!it->value[0].IsObject()) throw std::invalid_argument("txs must hold a JSON object");
+  rapidjson::StringBuffer buffer;
+  rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+  it->value[0].Accept(writer);
+  tx_json = buffer.GetString();
+  return true;
+}
+
+// parses the query of the txs of get_txs(), flat or rooted at a block
 std::shared_ptr<monero::monero_tx_query> tx_query_of(const char* json) {
   const char* p = json;
   while (*p == ' ' || *p == '\t' || *p == '\r' || *p == '\n') p++;
   if (*p != '{') throw std::invalid_argument("query must be a JSON object");
   std::string text(json);
   check_json_depth(text);
+  rapidjson::Document doc;
+  if (doc.Parse(text.c_str()).HasParseError() || !doc.IsObject()) throw std::invalid_argument("query must be a JSON object");
+  std::string tx_json;
+  if (tx_query_of_block(doc, tx_json)) text = tx_json;
   return parse_tx_query(text);
 }
 
 // the query of a transfer or of an output holds the query of its tx in "txQuery". monero-cpp reads the two as one tree that is rooted at
 // a block, {"txs":[the query of the tx, with the query as its transferQuery or its outputQuery]}, and without it the query of the tx is
-// lost, so the JSON of the tx is rebuilt that way
+// lost, so the JSON of the tx is rebuilt that way. A query that is rooted at a block already, as monero-java sends it, has it
 std::string tx_rooted_query(const char* json, const char* member) {
   std::string text(json);
   check_json_depth(text);
   rapidjson::Document doc;
   if (doc.Parse(text.c_str()).HasParseError() || !doc.IsObject()) throw std::invalid_argument("query must be a JSON object");
+  std::string tx_json;
+  if (tx_query_of_block(doc, tx_json)) return tx_json;
   rapidjson::Document::AllocatorType& allocator = doc.GetAllocator();
   rapidjson::Value tx_query(rapidjson::kObjectType);
   auto it = doc.FindMember("txQuery");
@@ -612,6 +639,9 @@ std::shared_ptr<monero::monero_transfer_query> transfer_query_of(const char* jso
   std::shared_ptr<monero::monero_tx_query> tx_query = tx_query_in_block(json, "transferQuery");
   std::shared_ptr<monero::monero_transfer_query> transfer_query = tx_query->m_transfer_query == nullptr ? std::make_shared<monero::monero_transfer_query>() : tx_query->m_transfer_query;
   transfer_query->m_tx_query = tx_query;
+  // a flat query always has the transfer query in its tx query, and the search reads it from there. A block with no tx query or a tx query
+  // with no transferQuery, which monero-java can send, has none, so it is linked here (release_tx_query() resets the link)
+  if (tx_query->m_transfer_query == nullptr) tx_query->m_transfer_query = transfer_query;
   return transfer_query;
 }
 
@@ -622,6 +652,8 @@ std::shared_ptr<monero::monero_output_query> output_query_of(const char* json) {
   input_query->m_tx_query = tx_query;
   std::shared_ptr<monero::monero_output_query> output_query = tx_query->m_output_query == nullptr ? std::make_shared<monero::monero_output_query>() : tx_query->m_output_query;
   output_query->m_tx_query = tx_query;
+  // the same for the output query, which the search reads from its tx query
+  if (tx_query->m_output_query == nullptr) tx_query->m_output_query = output_query;
   return output_query;
 }
 

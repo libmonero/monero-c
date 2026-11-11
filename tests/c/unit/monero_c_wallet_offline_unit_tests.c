@@ -642,6 +642,32 @@ static void test_daemon_surface(void) {
   EXPECT_ERR_MSG(monero_wallet_get_outputs(wallet, "{", &json), "query must be a JSON object");
   CHECK(json == NULL);
 
+  // a query rooted at a block, as monero-java sends it, is read as the query of its tx. A query of confirmed txs needs no daemon, and one that
+  // includes the pool does, so a query that was ignored and read as the default one would fail with no connection
+  EXPECT_OK(monero_wallet_get_txs(wallet, "{\"txs\":[{\"isConfirmed\":true,\"minHeight\":5}]}", &json));
+  CHECK(json != NULL && strcmp(json, "{\"blocks\":[]}") == 0);
+  monero_utils_free(json);
+  json = NULL;
+  EXPECT_OK(monero_wallet_get_transfers(wallet, "{\"txs\":[{\"isConfirmed\":true,\"transferQuery\":{\"isIncoming\":true}}]}", &json));
+  CHECK(json != NULL && strcmp(json, "{\"blocks\":[]}") == 0);
+  monero_utils_free(json);
+  json = NULL;
+  EXPECT_OK(monero_wallet_get_outputs(wallet, "{\"txs\":[{\"isLocked\":false,\"isConfirmed\":true,\"outputQuery\":{\"isSpent\":false}}]}", &json));
+  CHECK(json != NULL && strcmp(json, "{\"blocks\":[]}") == 0);
+  monero_utils_free(json);
+  json = NULL;
+  EXPECT_ERR_MSG(monero_wallet_get_txs(wallet, "{\"txs\":[{}]}", &json), "no connection to daemon");
+  EXPECT_ERR_MSG(monero_wallet_get_transfers(wallet, "{\"txs\":[]}", &json), "no connection to daemon");
+  // the outputs of the wallet are in its cache, so their query needs no daemon either way
+  EXPECT_OK(monero_wallet_get_outputs(wallet, "{\"txs\":[{\"outputQuery\":{\"isSpent\":false}}]}", &json));
+  CHECK(json != NULL && strcmp(json, "{\"blocks\":[]}") == 0);
+  monero_utils_free(json);
+  json = NULL;
+  EXPECT_ERR_MSG(monero_wallet_get_txs(wallet, "{\"txs\":5}", &json), "txs must be a JSON array");
+  EXPECT_ERR_MSG(monero_wallet_get_transfers(wallet, "{\"txs\":[5]}", &json), "txs must hold a JSON object");
+  EXPECT_ERR_MSG(monero_wallet_get_outputs(wallet, "{\"txs\":[{},{}]}", &json), "the query holds 2 tx queries, and one can be used");
+  CHECK(json == NULL);
+
   // describing a tx set reads its hex and ignores its txs, which monero-cpp can't parse when they have an outgoing transfer
   EXPECT_ERR_MSG(monero_wallet_describe_tx_set(wallet, "{\"txs\":[{\"hash\":\"00\",\"outgoingTransfer\":{}}]}", &json), "no txset provided");
   CHECK(json == NULL);

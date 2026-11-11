@@ -396,6 +396,20 @@ static void test_daemon(const char* daemon_uri) {
   monero_utils_free(json);
   json = NULL;
 
+  // the queries rooted at a block, as monero-java sends them, give the same results as the flat ones
+  EXPECT_OK(monero_wallet_get_outputs(a, "{\"txs\":[{\"isLocked\":false}]}", &json));
+  CHECK(count_text(json, "\"stealthPublicKey\"") == outputs_unlocked);
+  monero_utils_free(json);
+  json = NULL;
+  EXPECT_OK(monero_wallet_get_transfers(a, "{\"txs\":[{\"isConfirmed\":true,\"minHeight\":50,\"maxHeight\":60,\"transferQuery\":{\"isIncoming\":true}}]}", &json));
+  CHECK(is_blocks(json) && count_text(json, "\"incomingTransfers\":[{") == 11);
+  monero_utils_free(json);
+  json = NULL;
+  EXPECT_OK(monero_wallet_get_txs(a, "{\"txs\":[{\"isConfirmed\":true,\"minHeight\":50,\"maxHeight\":60}]}", &json));
+  CHECK(is_blocks(json) && count_text(json, "\"incomingTransfers\":[{") == 11);
+  monero_utils_free(json);
+  json = NULL;
+
   // wallets that a config connects to the daemon when it creates them: the seed of a with the first block, and a new one on regtest
   {
     const char* path_d = "monero_c_wallet_integration_d";

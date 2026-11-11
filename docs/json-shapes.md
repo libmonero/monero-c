@@ -70,6 +70,8 @@ The queries stay flat for the caller, as they are now, and monero-c builds the b
 
 That makes `txQuery` work for transfers and outputs. The caller doesn't have to build the block-rooted form of monero-java, and what callers send today keeps working.
 
+The block-rooted form of monero-java is read too, for the three calls: a JSON that has `txs` is a query rooted at a block, and the query of its tx is the first element, so `{"txs":[{"isConfirmed":true,"transferQuery":{"isIncoming":true}}]}` is the same query as `{"isIncoming":true,"txQuery":{"isConfirmed":true}}`. It was read as a flat query before, which ignored `txs` and matched everything. A block with no txs matches everything, as in monero-cpp. A block that holds more than one tx query is an error, and the fields of the block itself are not read.
+
 ### Listeners
 
 `on_output_received` and `on_output_spent` get the output inside its tx and its block, in the shape of `monero_wallet_get_outputs()`. A received output is in the `outputs` of the tx, and a spent one in its `inputs`:
