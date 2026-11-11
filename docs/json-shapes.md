@@ -11,7 +11,7 @@ monero-cpp models point to their parents: a tx to its block and to its tx set, a
 | `monero_wallet_get_txs()` | the height and the timestamp of the block. The wallet doesn't have the hash of the block either: wallet2 doesn't keep it |
 | `monero_wallet_get_transfers()`, `monero_wallet_get_outputs()` | the hash of the tx and everything else of it (height, fee, unlock time, confirmations) |
 | `on_output_received`, `on_output_spent` | the payload is `{"amount","accountIndex","subaddressIndex"}`. The JNI listener of monero-java gets the height, the hash, the version, the unlock time and the locked flag |
-| `monero_daemon_get_tx()`, `monero_daemon_get_txs()`, `monero_daemon_get_tx_pool()` | the height and the timestamp. monero-cpp reads them into the block of the tx, and the C layer doesn't serialize it |
+| `monero_daemon_get_tx()`, `monero_daemon_get_txs()`, `monero_daemon_get_tx_pool()`, `monero_daemon_get_outputs()` | the height and the timestamp (for the outputs, the hash and the locked flag of the tx as well). monero-cpp reads them into the block of the tx, and the C layer doesn't serialize it |
 | `monero_wallet_create_tx()`, `monero_wallet_sweep_output()`, `monero_wallet_sweep_unlocked()`, `monero_wallet_sweep_dust()` | the tx set, so a view-only wallet gives no `unsignedTxHex` and an offline signer can't sign what it makes. Only `monero_wallet_create_txs()` returns the set |
 | the queries | `monero_wallet_get_outputs()` ignores `txQuery` (`{"txQuery":{"isLocked":true}}` and `false` both return every output), and `monero_wallet_get_transfers()` fails with "txQuery deserialization not implemented", so the filters of the tx only work through `monero_wallet_get_txs()` |
 
@@ -83,7 +83,7 @@ A binding then reads it with the parser of the results, and gets the same `Moner
 
 ### The daemon
 
-`monero_daemon_get_tx()`, `monero_daemon_get_txs()` and `monero_daemon_get_tx_pool()` return `{"blocks":[...]}` with the height and the timestamp that monero-cpp reads, and a block without `height` for the pool. `monero_daemon_get_tx()` still gives NULL for a tx that the daemon doesn't have. The calls that return blocks (`get_block_by_hash()`, `get_blocks_by_range()` and the others) don't change, because a block is the root, and neither do the headers and the listeners of the daemon.
+`monero_daemon_get_tx()`, `monero_daemon_get_txs()` and `monero_daemon_get_tx_pool()` return `{"blocks":[...]}` with the height and the timestamp that monero-cpp reads, and a block without `height` for the pool. `monero_daemon_get_tx()` still gives NULL for a tx that the daemon doesn't have. `monero_daemon_get_outputs()` returns `{"blocks":[...]}` too, with the outputs in the `outputs` of their txs and the txs in the block of their height, as monero-cpp builds them (monero-java and monero-ts do not implement this call, the reference is monero-cpp and monero-python). A program asks for outputs by amount and index and gets them back in the order of the blocks, so it matches them by those two. The calls that return blocks (`get_block_by_hash()`, `get_blocks_by_range()` and the others) don't change, because a block is the root, and neither do the headers and the listeners of the daemon.
 
 ### What doesn't change
 

@@ -773,7 +773,10 @@ MONERO_EXPORT monero_result monero_daemon_get_output_indices(monero_daemon* daem
  *
  * @param daemon is the handle returned by monero_daemon_connect()
  * @param outputs_json is a JSON array of monero_output, each identified by amount and index
- * @param out_json receives a JSON array of the outputs found, freed with monero_utils_free()
+ * @param out_json receives {"blocks":[...]}: each output is in the "outputs" of its tx, with the amount, the index, the stealth public key
+ *        and the mask, and the tx has its "hash" and its "isLocked" flag, and its block the "height". The outputs of one tx are in
+ *        one tx, and the txs of one block in one block. The blocks come in the order that they first appear in the outputs, so the
+ *        outputs are not in the order of the request: match them by amount and index. Freed with monero_utils_free()
  * @return MONERO_OK on success, or MONERO_ERROR (see monero_last_error())
  */
 MONERO_EXPORT monero_result monero_daemon_get_outputs(monero_daemon* daemon, const char* outputs_json, char** out_json);

@@ -39,6 +39,7 @@
 #include <map>
 #include <memory>
 #include <mutex>
+#include <set>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -779,7 +780,13 @@ monero_result monero_daemon_get_outputs(monero_daemon* daemon, const char* outpu
   return guard([&] {
     std::vector<monero::monero_output> outputs;
     for (const auto& output : parse_list<monero::monero_output>(safe_str(outputs_json))) outputs.push_back(*output);
-    *out_json = dup_string(json_of_list(daemon->rpc->get_outputs(outputs)));
+    // the outputs come in their txs and the txs in their blocks, so the program gets the hash, the locked flag and the height of each one
+    std::vector<std::shared_ptr<monero::monero_tx>> txs;
+    std::set<const monero::monero_tx*> seen;
+    for (const std::shared_ptr<monero::monero_output>& output : daemon->rpc->get_outputs(outputs)) {
+      if (output != nullptr && output->m_tx != nullptr && seen.insert(output->m_tx.get()).second) txs.push_back(output->m_tx);
+    }
+    *out_json = dup_json_blocks_released(txs);
   });
 }
 

@@ -77,6 +77,28 @@ static int is_array(const char* json) {
   return json != NULL && json[0] == '[';
 }
 
+// the number of times that the needle is in the text
+static size_t count_of(const char* text, const char* needle) {
+  size_t count = 0;
+  if (text == NULL) return 0;
+  for (const char* at = strstr(text, needle); at != NULL; at = strstr(at + strlen(needle), needle)) count++;
+  return count;
+}
+
+// copies the hash of the miner tx of the block at the height to hash, which has room for 65 characters
+static void miner_tx_hash(monero_daemon* daemon, uint64_t height, char* hash) {
+  char* json = NULL;
+  hash[0] = '\0';
+  EXPECT_OK(monero_daemon_get_block_by_height(daemon, height, &json));
+  const char* at = json == NULL ? NULL : strstr(json, "\"minerTxHash\":\"");
+  CHECK(at != NULL);
+  if (at != NULL) {
+    memcpy(hash, at + strlen("\"minerTxHash\":\""), 64);
+    hash[64] = '\0';
+  }
+  monero_utils_free(json);
+}
+
 static uint64_t current_height(monero_daemon* daemon) {
   uint64_t height = 0;
   EXPECT_OK(monero_daemon_get_height(daemon, &height));
@@ -375,6 +397,60 @@ static void test_key_images_and_outputs(monero_daemon* daemon) {
 
   EXPECT_OK(monero_daemon_get_output_distribution(daemon, amounts, 1, NULL, NULL, NULL, &json));
   CHECK(is_array(json));
+  monero_utils_free(json);
+}
+
+
+// get_outputs() gives each output in its tx and each tx in its block, with the hash, the locked flag and the height
+static void test_get_outputs(monero_daemon* daemon) {
+  uint64_t top = current_height(daemon);
+  CHECK(top >= 3);
+  if (top < 3) return;
+
+  // the outputs of the miner txs of two blocks, which a RingCT output asks for by amount 0 and its index in the chain
+  char request[1024] = "[";
+  char hashes[2][65];
+  size_t expected = 0;
+  for (int i = 0; i < 2; i++) {
+    miner_tx_hash(daemon, top - 1 - i, hashes[i]);
+    uint64_t* indices = NULL;
+    size_t count = 0;
+    EXPECT_OK(monero_daemon_get_output_indices(daemon, hashes[i], &indices, &count));
+    CHECK(count > 0);
+    for (size_t j = 0; j < count; j++) {
+      size_t used = strlen(request);
+      snprintf(request + used, sizeof(request) - used, "%s{\"amount\":0,\"index\":%llu}", expected == 0 ? "" : ",", (unsigned long long)indices[j]);
+      expected++;
+    }
+    monero_utils_free(indices);
+  }
+  strcat(request, "]");
+
+  char* json = NULL;
+  EXPECT_OK(monero_daemon_get_outputs(daemon, request, &json));
+  CHECK(json != NULL && strncmp(json, "{\"blocks\":[{", 12) == 0);
+  if (json == NULL) return;
+  CHECK(count_of(json, "\"stealthPublicKey\":") == expected);
+  CHECK(count_of(json, "\"mask\":") == expected);
+
+  // two blocks, each with the height, and in each one the tx that the output is in, with its hash and its locked flag
+  CHECK(count_of(json, "\"height\":") == 2);
+  char height[64];
+  for (int i = 0; i < 2; i++) {
+    snprintf(height, sizeof(height), "\"height\":%llu", (unsigned long long)(top - 1 - i));
+    CHECK(strstr(json, height) != NULL);
+    CHECK(strstr(json, hashes[i]) != NULL);
+  }
+  CHECK(count_of(json, "\"isLocked\":") == 2);
+  monero_utils_free(json);
+  json = NULL;
+
+  // a list with a repeated output gives it once per request, in the same tx
+  const char* repeated = "[{\"amount\":0,\"index\":0},{\"amount\":0,\"index\":0}]";
+  EXPECT_OK(monero_daemon_get_outputs(daemon, repeated, &json));
+  if (json == NULL) return;
+  CHECK(count_of(json, "\"stealthPublicKey\":") == 2);
+  CHECK(count_of(json, "\"height\":") == 1);
   monero_utils_free(json);
 }
 
@@ -685,6 +761,7 @@ int main(void) {
   test_transactions(daemon);
   test_tx_pool(daemon);
   test_key_images_and_outputs(daemon);
+  test_get_outputs(daemon);
   test_bandwidth_and_peers(daemon);
   test_listener_receives_blocks(daemon);
   test_wait_for_next_block_header(daemon);

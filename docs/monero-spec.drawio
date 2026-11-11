@@ -715,7 +715,7 @@
         <mxCell id="s64" parent="s61" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;fontStyle=0" value="monero_daemon_get_output_indices(string tx_hash): ulong" vertex="1">
           <mxGeometry height="26" width="814" x="0" y="84" as="geometry" />
         </mxCell>
-        <mxCell id="s65" parent="s61" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;fontStyle=0" value="monero_daemon_get_outputs(string outputs_json): string[]" vertex="1">
+        <mxCell id="s65" parent="s61" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;fontStyle=0" value="monero_daemon_get_outputs(string outputs_json): {blocks: MoneroBlock[]}" vertex="1">
           <mxGeometry height="26" width="814" x="0" y="110" as="geometry" />
         </mxCell>
         <mxCell id="s66" parent="s61" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;fontStyle=0" value="monero_daemon_get_output_histogram(ulong[] amounts, int min_count=null, int max_count=null, bool is_unlocked=null,&#10;        int recent_cutoff=null): MoneroOutputHistogramEntry[]" vertex="1">
