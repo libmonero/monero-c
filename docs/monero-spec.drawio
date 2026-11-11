@@ -1105,10 +1105,10 @@
         <mxCell id="s194" parent="s191" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;fontStyle=0" value="monero_wallet_get_outputs(string query_json=null): json" vertex="1">
           <mxGeometry height="26" width="814" x="0" y="84" as="geometry" />
         </mxCell>
-        <mxCell id="s195" parent="s191" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;fontStyle=0" value="monero_wallet_create_tx(string config_json): {txSets: MoneroTxSet[]}" vertex="1">
+        <mxCell id="s195" parent="s191" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;fontStyle=0" value="monero_wallet_create_tx(string config_json): MoneroTxSet" vertex="1">
           <mxGeometry height="26" width="814" x="0" y="110" as="geometry" />
         </mxCell>
-        <mxCell id="s196" parent="s191" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;fontStyle=0" value="monero_wallet_create_txs(string config_json): {txSets: MoneroTxSet[]}" vertex="1">
+        <mxCell id="s196" parent="s191" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;fontStyle=0" value="monero_wallet_create_txs(string config_json): MoneroTxSet" vertex="1">
           <mxGeometry height="26" width="814" x="0" y="136" as="geometry" />
         </mxCell>
         <mxCell id="s197" parent="s191" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;fontStyle=0" value="monero_wallet_relay_tx(string tx_metadata): string" vertex="1">
@@ -1126,16 +1126,16 @@
         <mxCell id="s201" parent="s191" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;fontStyle=0" value="monero_wallet_submit_txs(string signed_tx_hex): string[]" vertex="1">
           <mxGeometry height="26" width="814" x="0" y="266" as="geometry" />
         </mxCell>
-        <mxCell id="s202" parent="s191" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;fontStyle=0" value="monero_wallet_sign_txs(string unsigned_tx_hex): {txSets: MoneroTxSet[]}" vertex="1">
+        <mxCell id="s202" parent="s191" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;fontStyle=0" value="monero_wallet_sign_txs(string unsigned_tx_hex): MoneroTxSet" vertex="1">
           <mxGeometry height="26" width="814" x="0" y="292" as="geometry" />
         </mxCell>
-        <mxCell id="s203" parent="s191" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;fontStyle=0" value="monero_wallet_describe_tx_set(string tx_set_json): {txSets: MoneroTxSet[]}" vertex="1">
+        <mxCell id="s203" parent="s191" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;fontStyle=0" value="monero_wallet_describe_tx_set(string tx_set_json): MoneroTxSet" vertex="1">
           <mxGeometry height="26" width="814" x="0" y="318" as="geometry" />
         </mxCell>
-        <mxCell id="s204" parent="s191" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;fontStyle=0" value="monero_wallet_sweep_output(string config_json): {txSets: MoneroTxSet[]}" vertex="1">
+        <mxCell id="s204" parent="s191" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;fontStyle=0" value="monero_wallet_sweep_output(string config_json): MoneroTxSet" vertex="1">
           <mxGeometry height="26" width="814" x="0" y="344" as="geometry" />
         </mxCell>
-        <mxCell id="s205" parent="s191" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;fontStyle=0" value="monero_wallet_sweep_dust(bool relay): {txSets: MoneroTxSet[]}" vertex="1">
+        <mxCell id="s205" parent="s191" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;fontStyle=0" value="monero_wallet_sweep_dust(bool relay): MoneroTxSet" vertex="1">
           <mxGeometry height="26" width="814" x="0" y="370" as="geometry" />
         </mxCell>
         <mxCell id="s206" parent="s191" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;fontStyle=0" value="monero_wallet_sweep_unlocked(string config_json): {txSets: MoneroTxSet[]}" vertex="1">

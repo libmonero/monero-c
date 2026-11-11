@@ -1247,10 +1247,11 @@ MONERO_EXPORT monero_result monero_wallet_stop_mining(monero_wallet* wallet);
 // a query by hashes doesn't get them back in the order of its hashes, and the caller sorts them
 //
 // the calls that make transactions (monero_wallet_create_tx(), monero_wallet_create_txs(), monero_wallet_sweep_output(),
-// monero_wallet_sweep_unlocked(), monero_wallet_sweep_dust()) and the ones that sign or describe them (monero_wallet_sign_txs(),
-// monero_wallet_describe_tx_set()) return their transactions in tx sets, as {"txSets":[...]}. A tx set has its "txs" and the hex
-// that signs or relays them: "unsignedTxHex" for a view-only wallet, "signedTxHex" and "multisigTxHex" where they apply. What
-// they return can be passed as it is to monero_wallet_relay_tx_json(), monero_wallet_relay_txs_json() and
+// monero_wallet_sweep_dust()) and the ones that sign or describe them (monero_wallet_sign_txs(), monero_wallet_describe_tx_set())
+// return their tx set, as monero-java does: the set itself, with its "txs" and the hex that signs or relays them, "unsignedTxHex"
+// for a view-only wallet, "signedTxHex" and "multisigTxHex" where they apply. monero_wallet_sweep_unlocked() can make more than one
+// set, so it returns {"txSets":[...]}. A call that makes no txs returns {}. What they return can be passed as it is to
+// monero_wallet_relay_tx_json(), monero_wallet_relay_txs_json() and
 // monero_wallet_describe_tx_set(), which find the transactions and the set in it
 
 /**
@@ -1288,7 +1289,7 @@ MONERO_EXPORT monero_result monero_wallet_get_outputs(monero_wallet* wallet, con
  *
  * @param wallet is the wallet handle
  * @param config_json is the JSON-serialized monero_tx_config
- * @param out_json receives a JSON object with the tx set of the transaction, {"txSets":[...]}. Free with monero_utils_free()
+ * @param out_json receives the tx set of the transaction, a JSON object with its "txs" and its hex. Free with monero_utils_free()
  * @return MONERO_OK or MONERO_ERROR
  */
 MONERO_EXPORT monero_result monero_wallet_create_tx(monero_wallet* wallet, const char* config_json, char** out_json);
@@ -1300,7 +1301,7 @@ MONERO_EXPORT monero_result monero_wallet_create_tx(monero_wallet* wallet, const
  *
  * @param wallet is the wallet handle
  * @param config_json is the JSON-serialized monero_tx_config
- * @param out_json receives a JSON object with the tx set of the transactions, {"txSets":[...]}. Free with monero_utils_free()
+ * @param out_json receives the tx set of the transactions, a JSON object with its "txs" and its hex. Free with monero_utils_free()
  * @return MONERO_OK or MONERO_ERROR
  */
 MONERO_EXPORT monero_result monero_wallet_create_txs(monero_wallet* wallet, const char* config_json, char** out_json);
@@ -1363,7 +1364,7 @@ MONERO_EXPORT monero_result monero_wallet_submit_txs(monero_wallet* wallet, cons
  *
  * @param wallet is the wallet handle
  * @param unsigned_tx_hex is the unsigned transaction hex, from when the transactions were created
- * @param out_json receives a JSON object with the tx set of the signed transactions, {"txSets":[...]}. Free with monero_utils_free()
+ * @param out_json receives the tx set of the signed transactions, a JSON object with its "txs" and its hex. Free with monero_utils_free()
  * @return MONERO_OK or MONERO_ERROR
  */
 MONERO_EXPORT monero_result monero_wallet_sign_txs(monero_wallet* wallet, const char* unsigned_tx_hex, char** out_json);
@@ -1374,7 +1375,7 @@ MONERO_EXPORT monero_result monero_wallet_sign_txs(monero_wallet* wallet, const 
  *
  * @param wallet is the wallet handle
  * @param tx_set_json is the JSON-serialized monero_tx_set, with its unsignedTxHex or multisigTxHex, or the tx sets with one set
- * @param out_json receives a JSON object with the tx set of the structured transactions, {"txSets":[...]}. Free with monero_utils_free()
+ * @param out_json receives the tx set of the structured transactions, a JSON object with its "txs" and its hex. Free with monero_utils_free()
  * @return MONERO_OK or MONERO_ERROR
  */
 MONERO_EXPORT monero_result monero_wallet_describe_tx_set(monero_wallet* wallet, const char* tx_set_json, char** out_json);
@@ -1384,7 +1385,7 @@ MONERO_EXPORT monero_result monero_wallet_describe_tx_set(monero_wallet* wallet,
  *
  * @param wallet is the wallet handle
  * @param config_json is the JSON-serialized monero_tx_config of the sweep
- * @param out_json receives a JSON object with the tx set of the transaction, {"txSets":[...]}. Free with monero_utils_free()
+ * @param out_json receives the tx set of the transaction, a JSON object with its "txs" and its hex. Free with monero_utils_free()
  * @return MONERO_OK or MONERO_ERROR
  */
 MONERO_EXPORT monero_result monero_wallet_sweep_output(monero_wallet* wallet, const char* config_json, char** out_json);
@@ -1394,7 +1395,7 @@ MONERO_EXPORT monero_result monero_wallet_sweep_output(monero_wallet* wallet, co
  *
  * @param wallet is the wallet handle
  * @param relay is true to relay the transactions
- * @param out_json receives a JSON object with the tx sets of the transactions, {"txSets":[...]}, none if there is no dust. Free with monero_utils_free()
+ * @param out_json receives the tx set of the transactions, a JSON object with its "txs" and its hex, or {} if there is no dust. Free with monero_utils_free()
  * @return MONERO_OK or MONERO_ERROR
  */
 MONERO_EXPORT monero_result monero_wallet_sweep_dust(monero_wallet* wallet, bool relay, char** out_json);
@@ -1404,7 +1405,7 @@ MONERO_EXPORT monero_result monero_wallet_sweep_dust(monero_wallet* wallet, bool
  *
  * @param wallet is the wallet handle
  * @param config_json is the JSON-serialized monero_tx_config of the sweep
- * @param out_json receives a JSON object with the tx sets of the transactions, {"txSets":[...]}. Free with monero_utils_free()
+ * @param out_json receives {"txSets":[...]}, the tx sets of the transactions, each with its "txs" and its hex. Free with monero_utils_free()
  * @return MONERO_OK or MONERO_ERROR
  */
 MONERO_EXPORT monero_result monero_wallet_sweep_unlocked(monero_wallet* wallet, const char* config_json, char** out_json);

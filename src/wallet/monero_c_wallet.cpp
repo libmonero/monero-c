@@ -510,6 +510,16 @@ std::string json_of_tx_sets(const std::vector<std::shared_ptr<monero::monero_tx_
   return "{\"txSets\":" + json_of_list(sets) + "}";
 }
 
+// the tx set that the txs of one call belong to, as monero-java returns it: the set itself, with its txs and its hex, and {} if the call made
+// no txs. monero-cpp makes one set for the txs of create_tx(), create_txs(), sweep_output() and sweep_dust(). Only sweep_unlocked() can make
+// more, and it returns {"txSets":[...]}
+std::string json_of_tx_set(const std::vector<std::shared_ptr<monero::monero_tx_wallet>>& txs) {
+  std::vector<std::shared_ptr<monero::monero_tx_set>> sets = tx_sets_of(txs);
+  if (sets.empty()) return "{}";
+  if (sets.size() != 1) throw std::runtime_error("the txs belong to " + std::to_string(sets.size()) + " tx sets");
+  return sets[0]->serialize();
+}
+
 // the lists of values that have no parent, under the name of what they list, as the bridge of monero-java writes them: {"accounts":[...]},
 // {"subaddresses":[...]} and {"entries":[...]}
 template <class T>
@@ -1512,7 +1522,7 @@ monero_result monero_wallet_create_tx(::monero_wallet* wallet, const char* confi
   return guard([&] {
     auto tx = wallet->wallet->create_tx(*model_json<monero::monero_tx_config>(config_json, "config"));
     auto free_tx = epee::misc_utils::create_scope_leave_handler([&] { monero_utils::free(tx); });
-    *out_json = dup_string(json_of_tx_sets(tx_sets_of({tx})));
+    *out_json = dup_string(json_of_tx_set({tx}));
   });
 }
 
@@ -1524,7 +1534,7 @@ monero_result monero_wallet_create_txs(::monero_wallet* wallet, const char* conf
     auto txs = wallet->wallet->create_txs(*model_json<monero::monero_tx_config>(config_json, "config"));
     auto free_txs = epee::misc_utils::create_scope_leave_handler([&] { monero_utils::free(txs); });
     if (txs.empty()) throw std::runtime_error("no transactions were created");
-    *out_json = dup_string(json_of_tx_sets(tx_sets_of(txs)));
+    *out_json = dup_string(json_of_tx_set(txs));
   });
 }
 
@@ -1564,7 +1574,7 @@ monero_result monero_wallet_sign_txs(::monero_wallet* wallet, const char* unsign
   return guard([&] {
     // the txs of a signed set have no block, set or transfers, so nothing points back at them and there is nothing to release
     monero::monero_tx_set tx_set = wallet->wallet->sign_txs(std::string(unsigned_tx_hex));
-    *out_json = dup_string("{\"txSets\":[" + tx_set.serialize() + "]}");
+    *out_json = dup_string(tx_set.serialize());
   });
 }
 
@@ -1574,7 +1584,7 @@ monero_result monero_wallet_describe_tx_set(::monero_wallet* wallet, const char*
   return guard([&] {
     monero::monero_tx_set described = wallet->wallet->describe_tx_set(*tx_set_of_hex(tx_set_json));
     auto free_described = epee::misc_utils::create_scope_leave_handler([&] { monero_utils::free(described.m_txs); });
-    *out_json = dup_string("{\"txSets\":[" + described.serialize() + "]}");
+    *out_json = dup_string(described.serialize());
   });
 }
 
@@ -1584,7 +1594,7 @@ monero_result monero_wallet_sweep_output(::monero_wallet* wallet, const char* co
   return guard([&] {
     auto tx = wallet->wallet->sweep_output(*model_json<monero::monero_tx_config>(config_json, "config"));
     auto free_tx = epee::misc_utils::create_scope_leave_handler([&] { monero_utils::free(tx); });
-    *out_json = dup_string(json_of_tx_sets(tx_sets_of({tx})));
+    *out_json = dup_string(json_of_tx_set({tx}));
   });
 }
 
@@ -1594,7 +1604,7 @@ monero_result monero_wallet_sweep_dust(::monero_wallet* wallet, bool relay, char
   return guard([&] {
     auto txs = wallet->wallet->sweep_dust(relay);
     auto free_txs = epee::misc_utils::create_scope_leave_handler([&] { monero_utils::free(txs); });
-    *out_json = dup_string(json_of_tx_sets(tx_sets_of(txs)));
+    *out_json = dup_string(json_of_tx_set(txs));
   });
 }
 

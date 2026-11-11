@@ -1,6 +1,6 @@
 # JSON shapes of the results
 
-Status: implemented. The wallet returns its txs, transfers and outputs in `{"blocks":[...]}`, the calls that make txs return `{"txSets":[...]}`, the queries of transfers and outputs take a `txQuery`, the listeners get the output in its tx and its block, and the daemon returns its txs in blocks. This document stays as the reference of the shapes and of the reasons for them. This JSON shipped in 0.1.0-alpha.1. While the major version of the ABI is 0, a change of it bumps the minor version.
+Status: implemented. The wallet returns its txs, transfers and outputs in `{"blocks":[...]}`, the calls that make txs return their tx set (`{"txSets":[...]}` for `monero_wallet_sweep_unlocked()`), the queries of transfers and outputs take a `txQuery`, the listeners get the output in its tx and its block, and the daemon returns its txs in blocks. This document stays as the reference of the shapes and of the reasons for them. This JSON shipped in 0.1.0-alpha.1. While the major version of the ABI is 0, a change of it bumps the minor version.
 
 ## The problem
 
@@ -12,7 +12,7 @@ monero-cpp models point to their parents: a tx to its block and to its tx set, a
 | `monero_wallet_get_transfers()`, `monero_wallet_get_outputs()` | the hash of the tx and everything else of it (height, fee, unlock time, confirmations) |
 | `on_output_received`, `on_output_spent` | the payload is `{"amount","accountIndex","subaddressIndex"}`. The JNI listener of monero-java gets the height, the hash, the version, the unlock time and the locked flag |
 | `monero_daemon_get_tx()`, `monero_daemon_get_txs()`, `monero_daemon_get_tx_pool()`, `monero_daemon_get_outputs()` | the height and the timestamp (for the outputs, the hash and the locked flag of the tx as well). monero-cpp reads them into the block of the tx, and the C layer doesn't serialize it |
-| `monero_wallet_create_tx()`, `monero_wallet_sweep_output()`, `monero_wallet_sweep_unlocked()`, `monero_wallet_sweep_dust()` | the tx set, so a view-only wallet gives no `unsignedTxHex` and an offline signer can't sign what it makes. Only `monero_wallet_create_txs()` returns the set |
+| `monero_wallet_create_tx()`, `monero_wallet_sweep_output()`, `monero_wallet_sweep_unlocked()`, `monero_wallet_sweep_dust()` | the tx set, so a view-only wallet gives no `unsignedTxHex` and an offline signer can't sign what it makes. Only `monero_wallet_create_txs()` returns the set (they all do now) |
 | the queries | `monero_wallet_get_outputs()` ignores `txQuery` (`{"txQuery":{"isLocked":true}}` and `false` both return every output), and `monero_wallet_get_transfers()` fails with "txQuery deserialization not implemented", so the filters of the tx only work through `monero_wallet_get_txs()` |
 
 ## The protocol of monero-java
@@ -48,16 +48,16 @@ The C# model `MoneroWalletData` in monero-csharp already has `blocks`, so a bind
 - The order of the txs is the one of the blocks, and a query by hashes doesn't get them back in the order of its hashes. A binding sorts them, as monero-java does. The docs of the functions say so.
 - The helpers of monero-cpp don't fit as they are: `get_blocks_from_outputs()` throws "Need to handle unconfirmed output" for an output in the pool, and `get_blocks_from_txs()` only takes the txs of a wallet, so the daemon needs the same for `monero_tx`. monero-c gets its own helpers, which handle both.
 
-### Tx sets: `{"txSets":[...]}`
+### Tx sets
 
-Every call that returns txs that the wallet made returns `{"txSets":[...]}`: `monero_wallet_create_tx()`, `monero_wallet_create_txs()`, `monero_wallet_sweep_output()`, `monero_wallet_sweep_unlocked()`, `monero_wallet_sweep_dust()`, `monero_wallet_sign_txs()` and `monero_wallet_describe_tx_set()`. Each set has its `txs`, and `unsignedTxHex`, `signedTxHex` or `multisigTxHex` when it has them.
+The calls that return the txs that the wallet made return their tx set, as the bridge of monero-java does: `monero_wallet_create_tx()`, `monero_wallet_create_txs()`, `monero_wallet_sweep_output()`, `monero_wallet_sweep_dust()`, `monero_wallet_sign_txs()` and `monero_wallet_describe_tx_set()`. The set has its `txs`, and `unsignedTxHex`, `signedTxHex` or `multisigTxHex` when it has them. `monero_wallet_sweep_unlocked()` returns `{"txSets":[...]}`, since it can make several sets. `monero_wallet_sweep_dust()` returns `{}` when there is no dust.
 
 ```json
-{"txSets":[{"unsignedTxHex":"4d6f6e65726f20756e7369676e656420747820736574...",
-            "txs":[{"hash":"314b9c55...","fee":2599200000,"metadata":"011673657269616c...","outgoingTransfer":{"amount":1000000000,"accountIndex":0}}]}]}
+{"unsignedTxHex":"4d6f6e65726f20756e7369676e656420747820736574...",
+ "txs":[{"hash":"314b9c55...","fee":2599200000,"metadata":"011673657269616c...","outgoingTransfer":{"amount":1000000000,"accountIndex":0}}]}
 ```
 
-- It is `txSets`, not a single set for `monero_wallet_create_txs()`, so that a binding has one parser for the calls that make txs. `monero_wallet_sweep_unlocked()` and `monero_wallet_sweep_dust()` can make several sets, and the others make one.
+- It was `{"txSets":[...]}` for every call, so that a binding had one parser. It is the set itself now, as monero-java, which has the same split: a set for the calls that make one, `txSets` for `sweep_unlocked()`. monero-cpp makes one set for the txs of `create_tx()`, `create_txs()`, `sweep_output()` and `sweep_dust()` (the wallet of a server too), so a call can't lose a set.
 - The inputs keep what they took: `monero_wallet_relay_tx_json()` a tx of a set (an object with `metadata`), `monero_wallet_relay_txs_json()` a list of them, and `monero_wallet_describe_tx_set()` a set. A binding passes `txSets[i]` and `txSets[i].txs[j]` as they are. They also take what the creations return, so that a caller of C needs no JSON parser to create and relay a tx: `relay_tx_json()` finds the tx in `{"txSets":[...]}` or in one set, if it holds exactly one, `relay_txs_json()` relays all the txs in it, and `describe_tx_set()` describes the set of `{"txSets":[...]}` if there is one.
 
 ### Queries: flat in, block-rooted inside
@@ -97,7 +97,7 @@ They were taken as recommended, in the order of the steps. The decision 7 kept 0
 | --- | --- | --- | --- |
 | 1 | The shape of the results with a context | A: `{"blocks":[...]}` as monero-java. B: keep the flat lists and add fields (`height`, `timestamp`, `txHash`) to each element | A. B duplicates the block or the tx in each transfer and output, and a binding that has the models of monero-java would need a second path |
 | 2 | The input of the queries | A: flat, and monero-c translates it. B: block-rooted, as monero-java | A. It doesn't break the callers, and it fixes `txQuery` without making them build the block form |
-| 3 | The tx sets | A: `{"txSets":[...]}` for every call. B: the set itself for `create_txs()`, `create_tx()` and `sweep_output()`, `{"txSets"}` for the sweeps, as monero-java | A. One parser. B only helps who ports the Java code line by line |
+| 3 | The tx sets | A: `{"txSets":[...]}` for every call. B: the set itself for `create_txs()`, `create_tx()` and `sweep_output()`, `{"txSets"}` for the sweeps, as monero-java | First A, one parser. Then B (`sweep_dust()` too), to match the bridge, with a new minor version. `sweep_unlocked()` keeps `{"txSets"}`, as in monero-java |
 | 4 | The payload of the listener | A: the output in its tx and block, as `get_outputs()`. B: a flat object, `{"height","txHash","amount","accountIndex","subaddressIndex","version","unlockTime","isLocked"}` as the JNI | A. The model is the same as the one of the results. B is easier to read by hand, but it is a second format, and it has to grow with each field |
 | 5 | The other lists | A: plain arrays. B: wrap them as the bridge does (`{"accounts":[...]}`, `{"subaddresses":[...]}`, `{"entries":[...]}`), as `MoneroWalletData` of monero-csharp has them | First A, because they carry no context. Then B for the accounts, the subaddresses and the address book, to match the bridge of monero-java and `MoneroWalletData` of monero-csharp, with a new minor version. The rest stay arrays |
 | 6 | The daemon txs | A: blocks too. B: leave them | A, for the height. It is three calls |
