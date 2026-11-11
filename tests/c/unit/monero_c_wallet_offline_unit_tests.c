@@ -95,6 +95,7 @@ static void test_address_book(void) {
 
   char* json = NULL;
   EXPECT_OK(monero_wallet_get_address_book_entries(wallet, NULL, 0, &json));
+  CHECK(json != NULL && strncmp(json, "{\"entries\":[{", 13) == 0);
   CHECK(contains(json, "\"address\":\"" ADDRESS "\"") && contains(json, "\"description\":\"primary\""));
   monero_utils_free(json);
 
@@ -108,7 +109,7 @@ static void test_address_book(void) {
   EXPECT_OK(monero_wallet_delete_address_book_entry(wallet, 0));
   json = NULL;
   EXPECT_OK(monero_wallet_get_address_book_entries(wallet, NULL, 0, &json));
-  CHECK(json != NULL && strcmp(json, "[]") == 0);
+  CHECK(json != NULL && strcmp(json, "{\"entries\":[]}") == 0);
   monero_utils_free(json);
 
   monero_wallet_free(wallet);
@@ -135,6 +136,7 @@ static void test_accounts_and_subaddresses(void) {
 
   json = NULL;
   EXPECT_OK(monero_wallet_get_accounts(wallet, false, NULL, false, &json));
+  CHECK(json != NULL && strncmp(json, "{\"accounts\":[{", 14) == 0);
   CHECK(contains(json, "\"index\":0") && contains(json, "\"index\":1") && !contains(json, "\"subaddresses\""));
   monero_utils_free(json);
 
@@ -174,6 +176,7 @@ static void test_accounts_and_subaddresses(void) {
   // empty indices return every subaddress of the account
   json = NULL;
   EXPECT_OK(monero_wallet_get_subaddresses(wallet, 0, NULL, 0, false, &json));
+  CHECK(json != NULL && strncmp(json, "{\"subaddresses\":[{", 18) == 0);
   CHECK(contains(json, "\"index\":0") && contains(json, "\"index\":1"));
   monero_utils_free(json);
 
@@ -998,7 +1001,7 @@ static void test_wallet_files_in_memory(void) {
   opened = NULL;
   EXPECT_OK(monero_wallet_open_data(PASSWORD, MAINNET, keys, keys_len, NULL, 0, &opened));
   EXPECT_OK(monero_wallet_get_address_book_entries(opened, NULL, 0, &text));
-  CHECK(text != NULL && strcmp(text, "[]") == 0);
+  CHECK(text != NULL && strcmp(text, "{\"entries\":[]}") == 0);
   monero_utils_free(text);
   text = NULL;
   monero_wallet_free(opened);

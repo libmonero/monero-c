@@ -18,4 +18,4 @@ The results come with the parents that their models have, so a transfer is in it
 ]}
 ```
 
-The lists of values that have no parent, such as the accounts, the subaddresses, the address book and the key images, are plain JSON arrays.
+`monero_wallet_get_accounts()`, `monero_wallet_get_subaddresses()` and `monero_wallet_get_address_book_entries()` return `{"accounts":[...]}`, `{"subaddresses":[...]}` and `{"entries":[...]}`, as the bridge of monero-java writes them. The other lists of values that have no parent, such as the key images, the seed languages, the notes and the hashes, are plain JSON arrays.

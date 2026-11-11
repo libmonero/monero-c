@@ -510,6 +510,13 @@ std::string json_of_tx_sets(const std::vector<std::shared_ptr<monero::monero_tx_
   return "{\"txSets\":" + json_of_list(sets) + "}";
 }
 
+// the lists of values that have no parent, under the name of what they list, as the bridge of monero-java writes them: {"accounts":[...]},
+// {"subaddresses":[...]} and {"entries":[...]}
+template <class T>
+std::string json_of_named_list(const char* name, const std::vector<T>& items) {
+  return std::string("{\"") + name + "\":" + json_of_list(items) + "}";
+}
+
 std::vector<std::shared_ptr<monero::monero_block>> blocks_of_outputs(const std::vector<std::shared_ptr<monero::monero_output_wallet>>& outputs) {
   std::vector<std::shared_ptr<monero::monero_tx_wallet>> txs;
   for (const std::shared_ptr<monero::monero_output_wallet>& output : outputs) {
@@ -976,7 +983,7 @@ monero_result monero_wallet_get_subaddresses(::monero_wallet* wallet, uint32_t a
     auto indices = array_of(subaddress_indices, num_subaddress_indices, "subaddress_indices");
     monero::monero_wallet_rpc* rpc = rpc_or_null(wallet);
     std::vector<monero::monero_subaddress> subaddresses = rpc != nullptr ? rpc->get_subaddresses(account_idx, indices, skip_balances) : wallet->wallet->get_subaddresses(account_idx, indices);
-    *out_json = dup_string(json_of_list(subaddresses));
+    *out_json = dup_string(json_of_named_list("subaddresses", subaddresses));
   });
 }
 
@@ -1010,7 +1017,7 @@ monero_result monero_wallet_delete_address_book_entry(::monero_wallet* wallet, u
 monero_result monero_wallet_get_address_book_entries(::monero_wallet* wallet, const uint64_t* indices, size_t num_indices, char** out_json) {
   reset_out(out_json);
   if (!require(wallet, "wallet") || !require(out_json, "out_json")) return MONERO_ERROR;
-  return guard([&] { *out_json = dup_string(json_of_list(wallet->wallet->get_address_book_entries(array_of(indices, num_indices, "indices")))); });
+  return guard([&] { *out_json = dup_string(json_of_named_list("entries", wallet->wallet->get_address_book_entries(array_of(indices, num_indices, "indices")))); });
 }
 
 monero_result monero_wallet_change_password(::monero_wallet* wallet, const char* old_password, const char* new_password) {
@@ -1040,7 +1047,7 @@ monero_result monero_wallet_get_accounts(::monero_wallet* wallet, bool include_s
   return guard([&] {
     monero::monero_wallet_rpc* rpc = rpc_or_null(wallet);
     std::vector<monero::monero_account> accounts = rpc != nullptr ? rpc->get_accounts(include_subaddresses, safe_str(tag), skip_balances) : wallet->wallet->get_accounts(include_subaddresses, safe_str(tag));
-    *out_json = dup_string(json_of_list(accounts));
+    *out_json = dup_string(json_of_named_list("accounts", accounts));
   });
 }
 

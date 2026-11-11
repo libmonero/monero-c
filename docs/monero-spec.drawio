@@ -904,7 +904,7 @@
         <mxCell id="s127" parent="QYUe6zCbC_x82nWfNGpH-248" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;" value="monero_wallet_get_account(uint account_idx, bool include_subaddresses, bool skip_balances): MoneroAccount" vertex="1">
           <mxGeometry height="26" width="814" x="0" y="32" as="geometry" />
         </mxCell>
-        <mxCell id="s128" parent="QYUe6zCbC_x82nWfNGpH-248" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;" value="monero_wallet_get_subaddresses(uint account_idx, uint[] subaddress_indices=null,&#10;        bool skip_balances): MoneroSubaddress[]" vertex="1">
+        <mxCell id="s128" parent="QYUe6zCbC_x82nWfNGpH-248" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;" value="monero_wallet_get_subaddresses(uint account_idx, uint[] subaddress_indices=null,&#10;        bool skip_balances): {subaddresses: MoneroSubaddress[]}" vertex="1">
           <mxGeometry height="41" width="814" x="0" y="58" as="geometry" />
         </mxCell>
         <mxCell id="s129" parent="QYUe6zCbC_x82nWfNGpH-248" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;" value="monero_wallet_sign_message(string message, MoneroMessageSignatureType signature_type, uint account_idx,&#10;        uint subaddress_idx): string" vertex="1">
@@ -922,7 +922,7 @@
         <mxCell id="s133" parent="QYUe6zCbC_x82nWfNGpH-248" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;" value="monero_wallet_delete_address_book_entry(ulong index): void" vertex="1">
           <mxGeometry height="26" width="814" x="0" y="218" as="geometry" />
         </mxCell>
-        <mxCell id="s134" parent="QYUe6zCbC_x82nWfNGpH-248" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;" value="monero_wallet_get_address_book_entries(ulong[] indices): MoneroAddressBookEntry[]" vertex="1">
+        <mxCell id="s134" parent="QYUe6zCbC_x82nWfNGpH-248" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;" value="monero_wallet_get_address_book_entries(ulong[] indices): {entries: MoneroAddressBookEntry[]}" vertex="1">
           <mxGeometry height="26" width="814" x="0" y="244" as="geometry" />
         </mxCell>
         <mxCell id="s135" parent="QYUe6zCbC_x82nWfNGpH-248" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;" value="monero_wallet_change_password(string old_password, string new_password): void" vertex="1">
@@ -934,7 +934,7 @@
         <mxCell id="s137" parent="QYUe6zCbC_x82nWfNGpH-248" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;" value="monero_wallet_create_subaddress(uint account_idx, string label=null): MoneroSubaddress" vertex="1">
           <mxGeometry height="26" width="814" x="0" y="322" as="geometry" />
         </mxCell>
-        <mxCell id="s138" parent="QYUe6zCbC_x82nWfNGpH-248" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;" value="monero_wallet_get_accounts(bool include_subaddresses, string tag=null, bool skip_balances): MoneroAccount[]" vertex="1">
+        <mxCell id="s138" parent="QYUe6zCbC_x82nWfNGpH-248" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;" value="monero_wallet_get_accounts(bool include_subaddresses, string tag=null, bool skip_balances): {accounts: MoneroAccount[]}" vertex="1">
           <mxGeometry height="26" width="814" x="0" y="348" as="geometry" />
         </mxCell>
         <mxCell id="s139" parent="QYUe6zCbC_x82nWfNGpH-248" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;" value="monero_wallet_get_address_index(string address): MoneroSubaddress" vertex="1">
