@@ -67,12 +67,14 @@ jobs:
       - name: Check the notices cover the components that the libraries link
         run: bash packaging/common/check-notices.sh packaging/common/licenses artifacts/*/*monero_c*
 
-      - name: Strip the Linux libraries
+      - name: Strip the Linux and macOS libraries
         run: |
           sudo apt-get update
-          sudo apt-get install -y binutils-aarch64-linux-gnu
+          sudo apt-get install -y binutils-aarch64-linux-gnu llvm
           strip --strip-unneeded artifacts/linux-x86-64/*.so*
           aarch64-linux-gnu-strip --strip-unneeded artifacts/linux-aarch64/*.so*
+          llvm-strip -x artifacts/darwin-x86-64/*.dylib
+          llvm-strip -x artifacts/darwin-aarch64/*.dylib
 
       - name: Check the stripped libraries export the C ABI
         run: |

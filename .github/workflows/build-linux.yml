@@ -253,6 +253,9 @@ jobs:
           if-no-files-found: error
           retention-days: 1
 
+      - name: Strip library for the Debian package
+        run: strip --strip-unneeded build/libmonero_c.so
+
       # the install rules: a program finds the installed library with CMake and with pkg-config, and the .deb has the library and what it needs.
       # Only the paths of the install change, so the build is not compiled again
       - name: Install the library and use it

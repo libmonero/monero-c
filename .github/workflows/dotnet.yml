@@ -101,13 +101,15 @@ jobs:
           package_runtimes=packaging/dotnet-core/runtimes
           bash packaging/common/check-notices.sh packaging/common/licenses "$package_runtimes"/*/native/*monero_c*
 
-      - name: Strip the Linux libraries
+      - name: Strip the Linux and macOS libraries
         run: |
           sudo apt-get update
-          sudo apt-get install -y binutils-aarch64-linux-gnu
+          sudo apt-get install -y binutils-aarch64-linux-gnu llvm
           package_runtimes=packaging/dotnet-core/runtimes
           strip --strip-unneeded "$package_runtimes"/linux-x64/native/*.so*
           aarch64-linux-gnu-strip --strip-unneeded "$package_runtimes"/linux-arm64/native/*.so*
+          llvm-strip -x "$package_runtimes"/osx-x64/native/*.dylib
+          llvm-strip -x "$package_runtimes"/osx-arm64/native/*.dylib
 
       - name: Check the stripped libraries export the C ABI
         run: |

@@ -35,6 +35,11 @@ jobs:
         run: |
           [ "${GITHUB_REF_NAME#v}" = "$PACKAGE_VERSION" ] || { echo "tag $GITHUB_REF_NAME does not match package version $PACKAGE_VERSION"; exit 1; }
 
+      - name: Install archive stripping tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y binutils-aarch64-linux-gnu llvm
+
       - name: Pack the archives and the package
         run: |
           for platform in linux-x86_64 linux-arm64 mac-x86_64 mac-arm64 windows android-arm64 android-x86_64; do

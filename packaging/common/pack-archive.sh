@@ -23,6 +23,21 @@ stage=$(mktemp -d)
 trap 'rm -rf "$stage"' EXIT
 mkdir -p "$stage/$name/include"
 cp "$build"/lib* "$stage/$name/"
+case "$platform" in
+  linux-x86_64)
+    strip --strip-unneeded "$stage/$name"/*.so*
+    ;;
+  linux-arm64)
+    aarch64-linux-gnu-strip --strip-unneeded "$stage/$name"/*.so*
+    ;;
+  mac-x86_64|mac-arm64)
+    if [ "$(uname -s)" = Darwin ]; then
+      strip -S -x "$stage/$name"/*.dylib
+    else
+      llvm-strip -x "$stage/$name"/*.dylib
+    fi
+    ;;
+esac
 cp -R "$licenses" "$stage/$name/licenses"
 # the public headers, in the layout that monero_c.h includes them in
 # tr drops the CR that a checkout on Windows can put at the end of the lines
