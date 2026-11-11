@@ -39,6 +39,10 @@ if (CMAKE_SYSTEM_NAME STREQUAL "Linux" OR ANDROID)
   endif()
 endif()
 
+if (CMAKE_C_COMPILER_ID MATCHES "GNU|Clang" AND CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+  add_compile_options(-Wall -Wextra)
+endif()
+
 if(ENABLE_COVERAGE)
   message(STATUS "Coverage enabled")
   add_compile_options(--coverage -O0 -g -fprofile-update=atomic)

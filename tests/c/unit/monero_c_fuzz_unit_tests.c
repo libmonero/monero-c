@@ -546,8 +546,11 @@ int main(void) {
   size_t iterations = fuzz_iterations(150);
 #endif
   size_t count = sizeof(g_targets) / sizeof(g_targets[0]);
+  uint64_t seed = fuzz_seed_value();
 
   g_verbose = getenv("MONERO_C_FUZZ_VERBOSE") != NULL;
+  printf("fuzz seed %llu\n", (unsigned long long) seed);
+  fflush(stdout);
 
   // an address that isn't one is looked up as an OpenAlias name by the calls that take a destination, an address book entry or the address of a
   // message, and a mutation of one often looks like a name. The resolver of monero-project goes to the public servers, and on a runner with a
@@ -557,7 +560,7 @@ int main(void) {
 #else
   setenv("DNS_PUBLIC", DNS_SERVER, 1);
 #endif
-  fuzz_seed(&g_rng, fuzz_seed_value());
+  fuzz_seed(&g_rng, seed);
   remove_files(path);
   EXPECT_OK(monero_wallet_create_from_seed(path, "password", MAINNET, SEED, NULL, 0, NULL, &full));
   EXPECT_OK(monero_wallet_keys_create_from_seed(MAINNET, SEED, NULL, NULL, &keys));
@@ -581,7 +584,7 @@ int main(void) {
     double seconds = difftime(time(NULL), start);
     if (g_verbose || seconds > 5.0) fprintf(stderr, "%s took %.0f s\n", g_targets[i].name, seconds);
   }
-  printf("%lu targets, %lu inputs for each, seed %llu\n", (unsigned long) count, (unsigned long) iterations, (unsigned long long) fuzz_seed_value());
+  printf("%lu targets, %lu inputs for each, seed %llu\n", (unsigned long) count, (unsigned long) iterations, (unsigned long long) seed);
 
   monero_wallet_free(rpc);
   monero_wallet_free(keys);

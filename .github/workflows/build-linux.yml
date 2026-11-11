@@ -337,6 +337,30 @@ jobs:
           if-no-files-found: error
           retention-days: 1
 
+      - name: Build monero-c with ThreadSanitizer
+        if: env.INSTRUMENTED == 'true'
+        run: |
+          flags="-fsanitize=thread -fno-omit-frame-pointer -fno-sanitize-recover=thread"
+          cmake -S . -B build-tsan -DBUILD_TESTS=ON -DCMAKE_BUILD_TYPE=Debug -DBOOST_ROOT=/usr/local -DBoost_NO_SYSTEM_PATHS=ON $CMAKE_CCACHE \
+            "-DCMAKE_C_FLAGS=$flags" "-DCMAKE_CXX_FLAGS=$flags" \
+            "-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=thread" "-DCMAKE_SHARED_LINKER_FLAGS=-fsanitize=thread"
+          cmake --build build-tsan -j3
+
+      - name: Stage the ThreadSanitizer build
+        if: env.INSTRUMENTED == 'true'
+        run: |
+          mkdir stage-tsan
+          find build-tsan -type f \( -name libmonero_c.so -o -name monero_c_threads_unit_tests \) -exec cp --parents {} stage-tsan/ \;
+
+      - name: Upload the ThreadSanitizer build
+        if: env.INSTRUMENTED == 'true'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: build-tsan-linux-x86_64
+          path: stage-tsan/
+          if-no-files-found: error
+          retention-days: 1
+
       - name: Show the ccache statistics
         if: ${{ !cancelled() }}
         run: ccache --show-stats
