@@ -16,23 +16,23 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
 
       - name: Download the Android builds
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: monero-c-android-arm64
           path: artifacts/arm64-v8a
 
       - name: Download the x86_64 Android build
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: monero-c-android-x86_64
           path: artifacts/x86_64
 
       # only the Linux build collects the notices
       - name: Download the Linux build for its notices
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: monero-c-linux-x86_64
           path: artifacts/linux
@@ -79,7 +79,7 @@ jobs:
         run: bash packaging/android/check-aar.sh "packaging/android/packages/monero-native-android-$PACKAGE_VERSION.aar" arm64-v8a x86_64
 
       - name: Upload the archive
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: monero-native-android
           path: |

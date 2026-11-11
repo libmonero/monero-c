@@ -45,7 +45,7 @@ jobs:
 
     steps:
       - name: Download monero-c build
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: monero-c-${{ matrix.artifact }}
           path: artifact
@@ -90,7 +90,7 @@ jobs:
 
     steps:
       - name: Download monero-c build
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: monero-c-${{ matrix.artifact }}
           path: artifact
@@ -133,7 +133,7 @@ jobs:
 
     steps:
       - name: Download monero-c build
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: monero-c-windows
           path: artifact
@@ -192,10 +192,10 @@ jobs:
           git config --global --add safe.directory '*'
 
       - name: Checkout repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
 
       - name: Download the sanitizers build
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: build-sanitizers-linux-x86_64
           path: .

@@ -36,7 +36,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           submodules: recursive
 
@@ -198,7 +198,7 @@ jobs:
           cp build/tests/c/unit/monero_c_wallet_unit_tests build/tests/c/unit/monero_c_wallet_keys_unit_tests build/tests/c/unit/monero_c_wallet_offline_unit_tests build/tests/c/unit/monero_c_wallet_multisig_unit_tests build/tests/c/unit/monero_c_rpc_connection_unit_tests build/tests/c/unit/monero_c_abi_unit_tests build/tests/c/unit/monero_c_arguments_unit_tests build/tests/c/unit/monero_c_fuzz_unit_tests build/tests/c/unit/monero_c_threads_unit_tests build/tests/c/unit/monero_c_cpp_unit_tests dist/
 
       - name: Upload monero-c build
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: monero-c-${{ matrix.arch }}
           path: dist/
