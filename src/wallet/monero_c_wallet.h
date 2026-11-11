@@ -38,6 +38,8 @@ extern "C" {
 // wraps the monero_wallet methods of the same name. A JSON argument can't nest deeper than 64
 // levels. On error the call returns MONERO_ERROR, monero_last_error() gives the message, string,
 // array and handle outputs are NULL, counts are 0 and scalar outputs are unchanged
+// On POSIX systems, local full-wallet files and their .keys files are set to mode 0600 after
+// creation, save, password change, and move.
 
 /**
  * Opaque handle to a wallet. Full wallets come from monero_wallet_create_random(),

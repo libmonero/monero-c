@@ -27,6 +27,11 @@
 #include <stdlib.h>
 #include <string.h>
 
+#if defined(__unix__) || defined(__APPLE__) || defined(__ANDROID__)
+#include <sys/stat.h>
+#define MONERO_C_TEST_POSIX_FILE_PERMISSIONS
+#endif
+
 // unit tests for the full wallet binding: creation, opening, argument checks and listeners
 // none needs a daemon, and each test removes the files it creates
 
@@ -121,6 +126,75 @@ static void test_create_random(void) {
   monero_wallet_free(wallet);
   remove_files(path);
 }
+
+#if defined(MONERO_C_TEST_POSIX_FILE_PERMISSIONS)
+static void check_wallet_file_mode(const char* path, mode_t mode) {
+  struct stat info;
+  int result = stat(path, &info);
+  CHECK(result == 0);
+  if (result == 0) CHECK((info.st_mode & 0777) == mode);
+}
+
+static void set_wallet_file_mode(const char* path, mode_t mode) {
+  char keys[256];
+  int length = snprintf(keys, sizeof(keys), "%s.keys", path);
+  CHECK(length >= 0 && (size_t) length < sizeof(keys));
+  if (length < 0 || (size_t) length >= sizeof(keys)) return;
+  CHECK(chmod(path, mode) == 0);
+  CHECK(chmod(keys, mode) == 0);
+}
+
+static void check_wallet_files_mode(const char* path, mode_t mode) {
+  char keys[256];
+  int length = snprintf(keys, sizeof(keys), "%s.keys", path);
+  CHECK(length >= 0 && (size_t) length < sizeof(keys));
+  if (length < 0 || (size_t) length >= sizeof(keys)) return;
+  check_wallet_file_mode(path, mode);
+  check_wallet_file_mode(keys, mode);
+}
+
+static void test_wallet_file_permissions(void) {
+  const char* path = "monero_c_wallet_unit_permissions";
+  const char* moved_path = "monero_c_wallet_unit_permissions_moved";
+  remove_files(path);
+  remove_files(moved_path);
+
+  monero_wallet* wallet = NULL;
+  EXPECT_OK(monero_wallet_create_random(path, PASSWORD, NETWORK, NULL, &wallet));
+  CHECK(wallet != NULL);
+  if (wallet == NULL) {
+    remove_files(path);
+    remove_files(moved_path);
+    return;
+  }
+  check_wallet_files_mode(path, 0600);
+
+  set_wallet_file_mode(path, 0644);
+  EXPECT_OK(monero_wallet_save(wallet));
+  check_wallet_files_mode(path, 0600);
+
+  set_wallet_file_mode(path, 0644);
+  EXPECT_OK(monero_wallet_change_password(wallet, PASSWORD, "new password"));
+  check_wallet_files_mode(path, 0600);
+
+  EXPECT_OK(monero_wallet_move_to(wallet, moved_path, "new password"));
+  check_wallet_files_mode(moved_path, 0600);
+
+  set_wallet_file_mode(moved_path, 0644);
+  EXPECT_OK(monero_wallet_save(wallet));
+  check_wallet_files_mode(moved_path, 0600);
+
+  set_wallet_file_mode(moved_path, 0644);
+  EXPECT_OK(monero_wallet_close(wallet, true));
+  check_wallet_files_mode(moved_path, 0600);
+
+  monero_wallet_free(wallet);
+  remove_files(path);
+  remove_files(moved_path);
+}
+#else
+static void test_wallet_file_permissions(void) {}
+#endif
 
 static void test_restore_and_open(void) {
   const char* source = "monero_c_wallet_unit_source";
@@ -573,6 +647,7 @@ static void test_every_function_rejects_null_wallet(void) {
 
 int main(void) {
   test_create_random();
+  test_wallet_file_permissions();
   test_restore_and_open();
   test_invalid_arguments();
   test_seed_length_limit();

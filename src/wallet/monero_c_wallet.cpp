@@ -43,7 +43,13 @@
 #include <mutex>
 #include <stdexcept>
 #include <string>
+#include <system_error>
 #include <vector>
+
+#if defined(__unix__) || defined(__APPLE__) || defined(__ANDROID__)
+#include <cerrno>
+#include <sys/stat.h>
+#endif
 
 using monero_c::array_of;
 using monero_c::check_json_depth;
@@ -317,6 +323,26 @@ struct config_wipe {
   config_wipe(const config_wipe&) = delete;
   config_wipe& operator=(const config_wipe&) = delete;
 };
+
+void make_wallet_files_private(const std::string& path) {
+#if defined(__unix__) || defined(__APPLE__) || defined(__ANDROID__)
+  if (path.empty()) return;
+  const std::string keys_path = path + ".keys";
+  std::error_code keys_error;
+  if (::chmod(keys_path.c_str(), S_IRUSR | S_IWUSR) != 0) keys_error = std::error_code(errno, std::generic_category());
+  std::error_code wallet_error;
+  if (::chmod(path.c_str(), S_IRUSR | S_IWUSR) != 0) wallet_error = std::error_code(errno, std::generic_category());
+  if (keys_error) throw std::system_error(keys_error, "cannot set wallet keys file permissions to 0600: " + keys_path);
+  if (wallet_error) throw std::system_error(wallet_error, "cannot set wallet file permissions to 0600: " + path);
+#else
+  (void) path;
+#endif
+}
+
+void make_wallet_files_private(monero::monero_wallet& wallet) {
+  monero::monero_wallet_full* full_wallet = dynamic_cast<monero::monero_wallet_full*>(&wallet);
+  if (full_wallet != nullptr) make_wallet_files_private(full_wallet->get_path());
+}
 
 struct json_strings_wipe {
   rapidjson::Document& document;
@@ -778,6 +804,7 @@ monero_result monero_wallet_create_random(const char* path, const char* password
     config_wipe wipe_config(config);
     std::unique_ptr<monero::monero_wallet_full> wallet(monero::monero_wallet_full::create_wallet(config));
     if (network_type == MONERO_UTILS_NETWORK_REGTEST) restart_from_genesis(*wallet, *config.m_password);
+    make_wallet_files_private(wallet->get_path());
     *out_wallet = wrap(std::move(wallet), network_type);
   });
 }
@@ -791,7 +818,9 @@ monero_result monero_wallet_create_from_seed(const char* path, const char* passw
     config.m_seed = mnemonic_of(seed);
     config.m_seed_offset = safe_str(seed_offset);
     config.m_restore_height = restore_height;
-    *out_wallet = wrap(std::unique_ptr<monero::monero_wallet_full>(monero::monero_wallet_full::create_wallet(config)), network_type);
+    std::unique_ptr<monero::monero_wallet_full> wallet(monero::monero_wallet_full::create_wallet(config));
+    make_wallet_files_private(wallet->get_path());
+    *out_wallet = wrap(std::move(wallet), network_type);
   });
 }
 
@@ -805,7 +834,9 @@ monero_result monero_wallet_create_from_keys(const char* path, const char* passw
     config.m_private_view_key = std::string(private_view_key);
     config.m_private_spend_key = safe_str(private_spend_key);
     config.m_restore_height = restore_height;
-    *out_wallet = wrap(std::unique_ptr<monero::monero_wallet_full>(monero::monero_wallet_full::create_wallet(config)), network_type);
+    std::unique_ptr<monero::monero_wallet_full> wallet(monero::monero_wallet_full::create_wallet(config));
+    make_wallet_files_private(wallet->get_path());
+    *out_wallet = wrap(std::move(wallet), network_type);
   });
 }
 
@@ -824,6 +855,7 @@ monero_result monero_wallet_create(const char* config_json, ::monero_wallet** ou
     bool regtest = config->m_regtest != boost::none && *config->m_regtest;
     std::unique_ptr<monero::monero_wallet_full> wallet(monero::monero_wallet_full::create_wallet(*config));
     if (regtest && !has_seed && !has_keys) restart_from_genesis(*wallet, config->m_password != boost::none ? *config->m_password : std::string());
+    make_wallet_files_private(wallet->get_path());
     *out_wallet = wrap(std::move(wallet), regtest ? MONERO_UTILS_NETWORK_REGTEST : static_cast<int32_t>(*config->m_network_type));
   });
 }
@@ -898,7 +930,10 @@ monero_result monero_wallet_keys_create_from_keys(int32_t network_type, const ch
 
 monero_result monero_wallet_save(::monero_wallet* wallet) {
   if (!require(wallet, "wallet")) return MONERO_ERROR;
-  return guard([&] { wallet->wallet->save(); });
+  return guard([&] {
+    wallet->wallet->save();
+    make_wallet_files_private(*wallet->wallet);
+  });
 }
 
 // the keys and the cache are only in the full wallet, which is the one that has files
@@ -933,8 +968,14 @@ monero_result monero_wallet_close(::monero_wallet* wallet, bool save) {
   if (!require(wallet, "wallet")) return MONERO_ERROR;
   return guard([&] {
     // the callbacks of the sync that the close drains are done when the call returns
+    std::string path;
+    if (save) {
+      monero::monero_wallet_full* full_wallet = dynamic_cast<monero::monero_wallet_full*>(wallet->wallet.get());
+      if (full_wallet != nullptr && !full_wallet->is_closed()) path = full_wallet->get_path();
+    }
     callbacks_flush flush(*wallet->wallet, nullptr);
     wallet->wallet->close(save);
+    if (save) make_wallet_files_private(path);
   });
 }
 
@@ -1114,6 +1155,7 @@ monero_result monero_wallet_change_password(::monero_wallet* wallet, const char*
     monero_c::secret_string old_secret(old_password);
     monero_c::secret_string new_secret(new_password);
     wallet->wallet->change_password(old_secret.get(), new_secret.get());
+    make_wallet_files_private(*wallet->wallet);
   });
 }
 
@@ -1701,6 +1743,7 @@ monero_result monero_wallet_move_to(::monero_wallet* wallet, const char* path, c
   return guard([&] {
     monero_c::secret_string wallet_password(password);
     wallet->wallet->move_to(std::string(path), wallet_password.get());
+    make_wallet_files_private(*wallet->wallet);
   });
 }
 
