@@ -63,6 +63,23 @@ jobs:
       - name: Check exported symbols
         run: cmake -DLIBRARY=artifact/libmonero_c.so -DEXPECTED=tests/c/abi/monero_c.symbols -P tests/c/abi/check_symbols.cmake
 
+      - name: Check ELF hardening
+        run: |
+          library=artifact/libmonero_c.so
+          dynamic_symbols=$(readelf --dyn-syms --wide "$library")
+          printf '%s\n' "$dynamic_symbols" | grep -Eq 'UND[[:space:]]+__stack_chk_fail(@|$)' || { echo "stack canary is missing"; exit 1; }
+          printf '%s\n' "$dynamic_symbols" | grep -Eq 'UND[[:space:]]+__[[:alnum:]_]*_chk(@|$)' || { echo "FORTIFY checks are missing"; exit 1; }
+
+          program_headers=$(readelf -lW "$library")
+          printf '%s\n' "$program_headers" | grep -q 'GNU_RELRO' || { echo "RELRO segment is missing"; exit 1; }
+          if ! printf '%s\n' "$program_headers" | awk '$1 == "GNU_STACK" { found = 1; if ($7 ~ /E/) executable = 1 } END { exit !(found && !executable) }'; then
+            echo "GNU_STACK is executable or missing"
+            exit 1
+          fi
+
+          dynamic_section=$(readelf -dW "$library")
+          printf '%s\n' "$dynamic_section" | grep -Eq '\(BIND_NOW\)|\(FLAGS_1\).*NOW' || { echo "full RELRO (BIND_NOW) is missing"; exit 1; }
+
       # the symbols file and the table of the argument tests are written from the headers, so a function that is added or changed is in both
       - name: Check the argument table
         run: python3 tests/c/generator/generate_argument_tests.py --check
