@@ -1,7 +1,7 @@
 # checks that the shared library exports the functions in monero_c.symbols and nothing else
 # usage: cmake -DLIBRARY=libmonero_c.so -DEXPECTED=monero_c.symbols [-DNM=nm] -P check_symbols.cmake
-# On Linux it reads the dynamic symbols with nm -D and looks at the functions. On macOS, for a .dylib, it reads the external symbols
-# with nm -gU, which have an underscore in front, and any other symbol there fails too. Set NM for a library of another architecture
+# On ELF it reads every defined dynamic symbol with nm -D. On macOS, for a .dylib, it reads the external symbols with nm -gU,
+# which have an underscore in front. Any symbol other than a listed C ABI function fails. Set NM for a library of another architecture.
 
 if (NOT NM)
   set(NM nm)
@@ -34,9 +34,10 @@ foreach (line IN LISTS lines)
         list(APPEND foreign "${name}")
       endif()
     endif()
-  elseif (line MATCHES " T ([A-Za-z0-9_]+)$")
-    set(name "${CMAKE_MATCH_1}")
-    if (name MATCHES "^monero_")
+  elseif (line MATCHES "^[0-9a-fA-F]+ ([A-Za-z?]) (.+)$")
+    set(type "${CMAKE_MATCH_1}")
+    set(name "${CMAKE_MATCH_2}")
+    if (type STREQUAL "T" AND name MATCHES "^monero_[A-Za-z0-9_]+$")
       list(APPEND exported "${name}")
     else()
       list(APPEND foreign "${name}")
