@@ -38,6 +38,7 @@ target_link_libraries(monero_c_threads_unit_tests PRIVATE monero_c monero_c_test
 
 add_executable(monero_c_cpp_unit_tests monero_c_cpp_unit_tests.cpp)
 target_link_libraries(monero_c_cpp_unit_tests PRIVATE monero_c monero_c_test_common)
+target_include_directories(monero_c_cpp_unit_tests PRIVATE "${MONERO_PROJECT}/external/rapidjson/include")
 
 add_test(NAME monero_c_utils_unit_tests COMMAND monero_c_utils_unit_tests)
 add_test(NAME monero_c_static_unit_tests COMMAND monero_c_static_unit_tests)

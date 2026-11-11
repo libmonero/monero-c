@@ -45,6 +45,20 @@ inline void wipe(std::string& text) noexcept {
   text.clear();
 }
 
+template <typename JsonValue>
+inline void wipe_json_strings(JsonValue& value) noexcept {
+  if (value.IsString()) {
+    wipe(const_cast<char*>(value.GetString()), value.GetStringLength());
+  } else if (value.IsObject()) {
+    for (auto it = value.MemberBegin(); it != value.MemberEnd(); ++it) {
+      wipe_json_strings(it->name);
+      wipe_json_strings(it->value);
+    }
+  } else if (value.IsArray()) {
+    for (auto& item : value.GetArray()) wipe_json_strings(item);
+  }
+}
+
 // a copy of a text that is wiped when it goes out of scope, for a password or a seed that a function takes as a C string
 class secret_string {
 public:

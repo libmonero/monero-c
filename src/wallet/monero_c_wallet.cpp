@@ -35,6 +35,7 @@
 
 #include <algorithm>
 #include <boost/optional.hpp>
+#include <boost/property_tree/ptree.hpp>
 #include <chrono>
 #include <condition_variable>
 #include <memory>
@@ -317,6 +318,48 @@ struct config_wipe {
   config_wipe& operator=(const config_wipe&) = delete;
 };
 
+struct json_strings_wipe {
+  rapidjson::Document& document;
+
+  ~json_strings_wipe() { monero_c::wipe_json_strings(document); }
+};
+
+void property_tree_of(const rapidjson::Value& value, boost::property_tree::ptree& tree) {
+  if (value.IsObject()) {
+    for (auto it = value.MemberBegin(); it != value.MemberEnd(); ++it) {
+      boost::property_tree::ptree child;
+      property_tree_of(it->value, child);
+      tree.push_back(std::make_pair(std::string(it->name.GetString(), it->name.GetStringLength()), std::move(child)));
+    }
+  } else if (value.IsArray()) {
+    for (const auto& item : value.GetArray()) {
+      boost::property_tree::ptree child;
+      property_tree_of(item, child);
+      tree.push_back(std::make_pair(std::string(), std::move(child)));
+    }
+  } else if (value.IsString()) {
+    tree.data().assign(value.GetString(), value.GetStringLength());
+  } else if (value.IsBool()) {
+    tree.data() = value.GetBool() ? "true" : "false";
+  } else if (value.IsNumber()) {
+    rapidjson::StringBuffer buffer;
+    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+    value.Accept(writer);
+    tree.data().assign(buffer.GetString(), buffer.GetSize());
+  }
+}
+
+void wipe_property_tree(boost::property_tree::ptree& tree) noexcept {
+  monero_c::wipe(tree.data());
+  for (auto& child : tree) wipe_property_tree(child.second);
+}
+
+struct property_tree_wipe {
+  boost::property_tree::ptree& tree;
+
+  ~property_tree_wipe() { wipe_property_tree(tree); }
+};
+
 // a new wallet starts from an estimate of the current date, which is past the height of a regtest chain. The keys file holds the
 // height, and store() doesn't write that file, but a password does, so the same one is set again
 void restart_from_genesis(monero::monero_wallet_full& wallet, const std::string& password) {
@@ -462,10 +505,11 @@ void drop_nulls(rapidjson::Value& object) {
 // parses the config of a wallet. monero-cpp has regtest as a flag on mainnet, and the ABI as the network type 3, so the type is
 // translated before the parser reads it
 std::shared_ptr<monero::monero_wallet_config> wallet_config_of(const char* json) {
-  std::string text(json);
-  check_json_depth(text);
+  monero_c::secret_string text(json);
+  check_json_depth(text.get());
   rapidjson::Document doc;
-  if (doc.Parse(text.c_str()).HasParseError() || !doc.IsObject()) throw std::invalid_argument("config must be a JSON object");
+  json_strings_wipe wipe_doc{doc};
+  if (doc.Parse(text.get().c_str()).HasParseError() || !doc.IsObject()) throw std::invalid_argument("config must be a JSON object");
   drop_nulls(doc);
   auto server = doc.FindMember("server");
   if (server != doc.MemberEnd()) {
@@ -482,10 +526,12 @@ std::shared_ptr<monero::monero_wallet_config> wallet_config_of(const char* json)
       else doc.AddMember("regtest", true, doc.GetAllocator());
     }
   }
-  rapidjson::StringBuffer buffer;
-  rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-  doc.Accept(writer);
-  return monero::monero_wallet_config::deserialize(buffer.GetString());
+  boost::property_tree::ptree tree;
+  property_tree_wipe wipe_tree{tree};
+  property_tree_of(doc, tree);
+  std::shared_ptr<monero::monero_wallet_config> config = std::make_shared<monero::monero_wallet_config>();
+  monero::monero_wallet_config::from_property_tree(tree, config);
+  return config;
 }
 
 // the JSON of the txs, transfers or outputs of a wallet, with the context that they have: every tx is in its block, which has its height

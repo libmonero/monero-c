@@ -26,6 +26,8 @@
 #include "common/monero_c_secret.h"
 #include "common/monero_c_tls.h"
 
+#include "rapidjson/document.h"
+
 #include <atomic>
 #include <chrono>
 #include <cstddef>
@@ -152,6 +154,31 @@ static void test_secret_string() {
   CHECK(none.get().empty());
   monero_c::secret_string password("a password");
   CHECK(password.get() == "a password");
+}
+
+static bool is_zeroed(const char* bytes, size_t size) {
+  for (size_t i = 0; i < size; i++) {
+    if (bytes[i] != 0) return false;
+  }
+  return true;
+}
+
+static void test_wipe_json_strings() {
+  rapidjson::Document doc;
+  doc.Parse("{\"password\":\"wallet password\",\"nested\":[\"seed\",{\"key\":\"private key\"}]}");
+  CHECK(!doc.HasParseError());
+
+  const char* password = doc["password"].GetString();
+  size_t password_size = doc["password"].GetStringLength();
+  const char* nested_seed = doc["nested"][0].GetString();
+  size_t nested_seed_size = doc["nested"][0].GetStringLength();
+  const char* private_key = doc["nested"][1]["key"].GetString();
+  size_t private_key_size = doc["nested"][1]["key"].GetStringLength();
+
+  monero_c::wipe_json_strings(doc);
+  CHECK(is_zeroed(password, password_size));
+  CHECK(is_zeroed(nested_seed, nested_seed_size));
+  CHECK(is_zeroed(private_key, private_key_size));
 }
 
 // ------------------------------ EVENT QUEUE ---------------------------------
@@ -436,6 +463,7 @@ int main() {
   test_struct_size_too_small();
   test_wipe();
   test_secret_string();
+  test_wipe_json_strings();
   test_queue_delivers_in_order();
   test_queue_limits();
   test_queue_flush_waits_for_the_event_that_runs();
