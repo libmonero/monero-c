@@ -77,6 +77,8 @@ jobs:
           echo "ffaa41d741a8a3bee244ac8e54a72ea05bf2879663c098c82fc5757853441575  libusb-1.0.27.tar.bz2" | shasum -a 256 -c
           tar -xf libusb-1.0.27.tar.bz2
           cd libusb-1.0.27
+          # Dart's native-assets bundler rewrites install names to its temporary bundle directory.
+          export LDFLAGS="${LDFLAGS:-} -Wl,-headerpad_max_install_names"
           ./configure --prefix=/usr/local --disable-static --enable-shared --disable-udev --with-pic
           make
           sudo make install
