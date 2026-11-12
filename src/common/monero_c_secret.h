@@ -51,7 +51,6 @@ inline void wipe_json_strings(JsonValue& value) noexcept {
     wipe(const_cast<char*>(value.GetString()), value.GetStringLength());
   } else if (value.IsObject()) {
     for (auto it = value.MemberBegin(); it != value.MemberEnd(); ++it) {
-      wipe_json_strings(it->name);
       wipe_json_strings(it->value);
     }
   } else if (value.IsArray()) {
