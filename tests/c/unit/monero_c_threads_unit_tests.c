@@ -439,6 +439,18 @@ static void test_free_while_removing_listeners(void) {
 }
 
 int main(void) {
+  // Initialize lazy state in the uninstrumented Monero archives before the parallel calls.
+  CHECK(monero_utils_is_valid_mnemonic(SEED, "English"));
+  const char* path = "monero_c_threads_warmup";
+  monero_wallet* wallet = NULL;
+  remove_files(path);
+  EXPECT_OK(monero_wallet_create_from_seed(path, PASSWORD, MAINNET, SEED, NULL, 0, NULL, &wallet));
+  if (wallet != NULL) {
+    EXPECT_OK(monero_wallet_close(wallet, false));
+    monero_wallet_free(wallet);
+  }
+  remove_files(path);
+
   test_utils_from_many_threads();
   test_wallets_from_many_threads();
   test_shared_connection_and_daemon();
