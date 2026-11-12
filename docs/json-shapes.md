@@ -91,6 +91,26 @@ A binding then reads it with the parser of the results, and gets the same `Moner
 
 The accounts, the subaddresses and the address book are wrapped as the bridge does, `{"accounts":[...]}`, `{"subaddresses":[...]}` and `{"entries":[...]}` (decision 5, taken again). The other lists of values that have no parent stay plain arrays: the key images, the seed languages, the notes, the hashes. The tx config, the wallet config, the connection JSON and the sync result stay as they are.
 
+### What stays different from the bridge of monero-java
+
+Every native of the bridge has its function in monero-c (checked on the 115 natives of the bridge at 0.8.62: the balances of an account and of a subaddress are `monero_wallet_get_account_balance()` and `monero_wallet_get_subaddress_balance()` and their unlocked ones, `getChainHeight()` is `monero_wallet_get_daemon_height()`, `openWalletData()` is `monero_wallet_open_data()` and `setListener()` is `monero_wallet_add_listener()`), and the JSON of the results has the shapes above. What differs is the container of some values, not what they hold:
+
+| Call | The bridge | monero-c |
+| --- | --- | --- |
+| `sync` | `Object[2]{long, boolean}` | the JSON of the sync result, `numBlocksFetched` and `receivedMoney` |
+| `get_daemon_connection` | `String[5]` (uri, username, password, proxy, sslVerify) | the JSON of the connection, with the same fields and more |
+| seed languages, tx notes, hashes of `submit_txs()` and `relay_txs()` | `String[]` | a JSON array of strings |
+| balances | a string, since Java has no unsigned 64 bits | `uint64_t` |
+| `on_output_received`, `on_output_spent` | a call with the height, the hash, the amount as a string, the indices, the version, the unlock time and the locked flag | the JSON of the output in its tx and its block, with the same values and the `extra` and the miner flag |
+
+They stay as they are, for three reasons:
+
+- The bridge has typed values because a JNI call can't return an object without a class for it. A C program has no such limit, and the bindings of monero-c (Dart, C# and Kotlin) read JSON for every other result, so a typed form would be a second path for the same data.
+- A typed form is more surface to keep in step with the JSON one: about nine functions and two callbacks, each with its docs, its tests, its symbol and its declaration in every binding, or, if it replaced the JSON one, a break of every binding.
+- The only one that could be worth it is the listener, because its JSON is built while the sync holds the lock of the wallet. It was measured on a regtest chain of 401 blocks, with a wallet that received the 411 outputs of the miner txs (an instrumented build, not kept): the JSON took 10.7 microseconds per notification on average (median 6.9, p95 32.2) and 4.4 ms in all, in a sync of 0.97 s, which is 0.45%. Copying the fields that a typed callback would need took 0.4 microseconds, 0.17 ms in all. The difference is a few milliseconds for hundreds of outputs, and a mainnet block costs the sync more than a regtest one, so the share would be smaller.
+
+If a measurement on a wallet with many outputs ever shows the JSON of the listener as a cost, the way is to add `on_output_received_typed` and `on_output_spent_typed` at the end of `monero_wallet_listener_callbacks`, which `struct_size` allows without a break, and keep the JSON ones.
+
 ## Decisions
 
 They were taken as recommended, in the order of the steps. The decision 7 kept 0.1.0, because nothing had been released, and this JSON shipped in 0.1.0-alpha.1.

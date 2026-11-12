@@ -81,7 +81,7 @@ public class MoneroUtilsTests
 
     // the version of the C ABI that this test was written for. A binding checks it after loading the library
     private const uint ExpectedAbiMajor = 0;
-    private const uint ExpectedAbiMinor = 3;
+    private const uint ExpectedAbiMinor = 4;
     private const uint ExpectedAbiPatch = 0;
 
     [Fact]

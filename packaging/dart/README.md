@@ -27,7 +27,7 @@ The build needs network access the first time, and the release of the version of
 
 ```yaml
 dependencies:
-  monero_native: ^0.3.0-alpha.1
+  monero_native: ^0.4.0-alpha.1
 ```
 
 ```dart

@@ -1,5 +1,46 @@
 # Changelog
 
+## 0.4.0-alpha.1 (2026-11-11)
+
+The fourth alpha of the C ABI, version 0.4.0. No function, struct or enum changed, so a program built with the headers of 0.3.x runs as it is, but
+the JSON of ten calls has the shape that the bridge of monero-java gives, and a program that reads it has to change. `monero_utils_get_abi_version()`
+returns 0.4.0, and a binding should ask for 0.4.x.
+
+### Breaking changes
+
+* **Lists in objects.** `monero_wallet_get_accounts()`, `monero_wallet_get_subaddresses()` and `monero_wallet_get_address_book_entries()` return
+  `{"accounts":[...]}`, `{"subaddresses":[...]}` and `{"entries":[...]}`, and no longer a plain array. The other lists (the key images, the notes, the
+  hashes, the seed languages) are arrays as they were.
+* **Tx sets.** `monero_wallet_create_tx()`, `monero_wallet_create_txs()`, `monero_wallet_sweep_output()`, `monero_wallet_sweep_dust()`,
+  `monero_wallet_sign_txs()` and `monero_wallet_describe_tx_set()` return their tx set, the object with `txs` and the hex, and no longer
+  `{"txSets":[{...}]}`. `monero_wallet_sweep_unlocked()` still returns `{"txSets":[...]}`, because it can make more than one set.
+  `monero_wallet_sweep_dust()` returns `{}` when there is no dust, where it returned `{"txSets":[]}`. What they return still goes as it is into
+  `monero_wallet_relay_tx_json()`, `monero_wallet_relay_txs_json()` and `monero_wallet_describe_tx_set()`, which take both forms.
+* **Outputs of the daemon.** `monero_daemon_get_outputs()` returns `{"blocks":[...]}`, with each output in the `outputs` of its tx and each tx in the
+  block of its height, and no longer an array of outputs. A tx has its `hash` and its `isLocked` flag, and a block its `height`. The blocks come in
+  the order that they first appear in the outputs, so match the outputs by `amount` and `index`.
+
+### Added
+
+* `monero_wallet_get_txs()`, `monero_wallet_get_transfers()` and `monero_wallet_get_outputs()` take the query as monero-java sends it, rooted at a
+  block, such as `{"txs":[{"isConfirmed":true,"transferQuery":{"isIncoming":true}}]}`, as well as the flat forms. A JSON with `txs` was read as a
+  flat query, and it matched everything.
+
+### Fixed
+
+* `monero_daemon_get_outputs()` releases the models of its result once it has serialized them, as the other calls of the daemon do. They were left
+  in cycles of shared pointers.
+
+### Security and release artifacts
+
+* On POSIX systems, full-wallet files and their `.keys` files are restricted to owner read/write (`0600`) after creation, save, password change and
+  move. Calls report an error if the permissions cannot be set; opening an existing wallet alone does not change its permissions.
+* `monero_wallet_create()` wipes monero-c's temporary configuration JSON, parsed values and config copies after use. It does not overwrite the
+  caller's input buffer or erase secrets retained by the wallet.
+* Linux and Android builds enable compiler hardening flags where supported. CI checks Linux artifacts for stack canaries, FORTIFY, full RELRO and
+  a non-executable stack. Linux ELF libraries export only `monero_*` symbols; Linux and macOS release libraries are stripped.
+* Release assets carry GitHub build provenance attestations; see [SECURITY.md](./SECURITY.md) for verification.
+
 ## 0.3.0-alpha.1 (2026-11-10)
 
 The third alpha of the C ABI, version 0.3.0. It adds the functions that monero-cpp had and the ABI did not, and it changes the signature of five
