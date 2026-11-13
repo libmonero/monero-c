@@ -12,7 +12,9 @@ If private reporting is unavailable, contact a repository maintainer privately b
 
 ## Wallet file permissions
 
-On POSIX systems, monero-c restricts local full-wallet files and their `.keys` files to owner read/write (`0600`) after creation, save, password change, and move. Calls report an error if the permissions cannot be set. Opening an existing wallet by itself does not change its existing file permissions.
+On POSIX systems, monero-c makes local full-wallet files and their `.keys` files readable and writable by the owner only (`0600`). The calls that write them (creation, save, close with save, password change and move) run with a umask of `077`, so the files never exist with a wider mode, and they set `0600` after the call too, for the files that were already there. Calls report an error if the permissions cannot be set. Opening an existing wallet by itself does not change its existing file permissions.
+
+The umask belongs to the process: while one of those calls runs, a file that another thread of the program makes also gets no permission for the group and the others. The umask that was there before is put back when the last call returns.
 
 ## Verifying release provenance
 

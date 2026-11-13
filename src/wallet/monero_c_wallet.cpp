@@ -22,6 +22,7 @@
 
 #include "wallet/monero_c_wallet.h"
 #include "common/monero_c_common.h"
+#include "common/monero_c_umask.h"
 #include "wallet/monero_wallet_full.h"
 #include "wallet/monero_wallet_keys.h"
 #include "wallet/monero_wallet_rpc.h"
@@ -807,6 +808,9 @@ monero_result monero_wallet_create_random(const char* path, const char* password
   reset_out(out_wallet);
   if (!require(path, "path") || !require(out_wallet, "out_wallet")) return MONERO_ERROR;
   return guard([&] {
+    // the files that wallet2 makes get no permission for the group and the others, whatever the umask of the process is. The chmod below is for
+    // the files that were already there
+    monero_c::private_file_creation private_files;
     monero::monero_wallet_config config = make_config(path, password, network_type, language);
     config_wipe wipe_config(config);
     std::unique_ptr<monero::monero_wallet_full> wallet(monero::monero_wallet_full::create_wallet(config));
@@ -820,6 +824,9 @@ monero_result monero_wallet_create_from_seed(const char* path, const char* passw
   reset_out(out_wallet);
   if (!require(path, "path") || !require(seed, "seed") || !require(out_wallet, "out_wallet")) return MONERO_ERROR;
   return guard([&] {
+    // the files that wallet2 makes get no permission for the group and the others, whatever the umask of the process is. The chmod below is for
+    // the files that were already there
+    monero_c::private_file_creation private_files;
     monero::monero_wallet_config config = make_config(path, password, network_type, language);
     config_wipe wipe_config(config);
     config.m_seed = mnemonic_of(seed);
@@ -835,6 +842,9 @@ monero_result monero_wallet_create_from_keys(const char* path, const char* passw
   reset_out(out_wallet);
   if (!require(path, "path") || !require(address, "address") || !require(private_view_key, "private_view_key") || !require(out_wallet, "out_wallet")) return MONERO_ERROR;
   return guard([&] {
+    // the files that wallet2 makes get no permission for the group and the others, whatever the umask of the process is. The chmod below is for
+    // the files that were already there
+    monero_c::private_file_creation private_files;
     monero::monero_wallet_config config = make_config(path, password, network_type, language);
     config_wipe wipe_config(config);
     config.m_primary_address = std::string(address);
@@ -851,6 +861,9 @@ monero_result monero_wallet_create(const char* config_json, ::monero_wallet** ou
   reset_out(out_wallet);
   if (!require(config_json, "config_json") || !require(out_wallet, "out_wallet")) return MONERO_ERROR;
   return guard([&] {
+    // the files that wallet2 makes get no permission for the group and the others, whatever the umask of the process is. The chmod below is for
+    // the files that were already there
+    monero_c::private_file_creation private_files;
     std::shared_ptr<monero::monero_wallet_config> config = wallet_config_of(config_json);
     config_wipe wipe_config(*config);
     bool has_seed = config->m_seed != boost::none && !config->m_seed->empty();
@@ -938,6 +951,9 @@ monero_result monero_wallet_keys_create_from_keys(int32_t network_type, const ch
 monero_result monero_wallet_save(::monero_wallet* wallet) {
   if (!require(wallet, "wallet")) return MONERO_ERROR;
   return guard([&] {
+    // the files that wallet2 makes get no permission for the group and the others, whatever the umask of the process is. The chmod below is for
+    // the files that were already there
+    monero_c::private_file_creation private_files;
     wallet->wallet->save();
     make_wallet_files_private(*wallet->wallet);
   });
@@ -981,7 +997,11 @@ monero_result monero_wallet_close(::monero_wallet* wallet, bool save) {
       if (full_wallet != nullptr && !full_wallet->is_closed()) path = full_wallet->get_path();
     }
     callbacks_flush flush(*wallet->wallet, nullptr);
-    wallet->wallet->close(save);
+    {
+      // only a close that saves makes files
+      monero_c::private_file_creation private_files(save);
+      wallet->wallet->close(save);
+    }
     if (save) make_wallet_files_private(path);
   });
 }
@@ -1159,6 +1179,9 @@ monero_result monero_wallet_get_address_book_entries(::monero_wallet* wallet, co
 monero_result monero_wallet_change_password(::monero_wallet* wallet, const char* old_password, const char* new_password) {
   if (!require(wallet, "wallet")) return MONERO_ERROR;
   return guard([&] {
+    // the files that wallet2 makes get no permission for the group and the others, whatever the umask of the process is. The chmod below is for
+    // the files that were already there
+    monero_c::private_file_creation private_files;
     monero_c::secret_string old_secret(old_password);
     monero_c::secret_string new_secret(new_password);
     wallet->wallet->change_password(old_secret.get(), new_secret.get());
@@ -1791,6 +1814,9 @@ monero_result monero_wallet_sweep_unlocked(::monero_wallet* wallet, const char* 
 monero_result monero_wallet_move_to(::monero_wallet* wallet, const char* path, const char* password) {
   if (!require(wallet, "wallet") || !require(path, "path")) return MONERO_ERROR;
   return guard([&] {
+    // the files that wallet2 makes get no permission for the group and the others, whatever the umask of the process is. The chmod below is for
+    // the files that were already there
+    monero_c::private_file_creation private_files;
     monero_c::secret_string wallet_password(password);
     wallet->wallet->move_to(std::string(path), wallet_password.get());
     make_wallet_files_private(*wallet->wallet);

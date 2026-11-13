@@ -25,6 +25,7 @@
 #include "common/monero_c_event_queue.h"
 #include "common/monero_c_secret.h"
 #include "common/monero_c_tls.h"
+#include "common/monero_c_umask.h"
 
 #include "rapidjson/document.h"
 
@@ -40,6 +41,12 @@
 #include <string>
 #include <thread>
 #include <vector>
+
+#if defined(MONERO_C_HAS_UMASK)
+#include <fcntl.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#endif
 
 // links only if the headers declare the functions extern "C"
 
@@ -373,6 +380,71 @@ struct fake_system {
 
 // the OpenSSL of the library has the directory of the machine that built it, and the helper chooses what to export when the
 // certificates aren't there. It is not part of the ABI, so it runs here on fake systems
+#if defined(MONERO_C_HAS_UMASK)
+// the umask of the process, which can only be read by setting it
+static mode_t current_umask() {
+  mode_t mask = ::umask(0);
+  ::umask(mask);
+  return mask;
+}
+
+// the permissions of a file that is made with the most that a program asks for, which the umask cuts
+static mode_t mode_of_new_file(const char* path) {
+  ::unlink(path);
+  int descriptor = ::open(path, O_CREAT | O_EXCL | O_WRONLY, 0666);
+  CHECK(descriptor >= 0);
+  if (descriptor >= 0) ::close(descriptor);
+  struct stat info;
+  mode_t mode = ::stat(path, &info) == 0 ? (info.st_mode & 0777) : 0xffff;
+  ::unlink(path);
+  return mode;
+}
+
+static void test_private_file_creation() {
+  const char* path = "monero_c_umask_test_file";
+  const mode_t original = ::umask(022);
+  CHECK(mode_of_new_file(path) == 0644);
+  {
+    monero_c::private_file_creation outer;
+    CHECK(current_umask() == 077);
+    CHECK(mode_of_new_file(path) == 0600);
+    {
+      monero_c::private_file_creation inner;
+      CHECK(current_umask() == 077);
+    }
+    // the inner guard doesn't put the umask back while the outer one is alive
+    CHECK(current_umask() == 077);
+    CHECK(mode_of_new_file(path) == 0600);
+  }
+  CHECK(current_umask() == 022);
+  CHECK(mode_of_new_file(path) == 0644);
+
+  // a guard that is not active leaves the umask as it is
+  {
+    monero_c::private_file_creation inactive(false);
+    CHECK(current_umask() == 022);
+  }
+  CHECK(current_umask() == 022);
+
+  // guards that overlap in several threads: the umask that was there before the first one is back after the last one
+  std::vector<std::thread> threads;
+  for (int t = 0; t < 8; t++) {
+    threads.emplace_back([] {
+      for (int i = 0; i < 300; i++) {
+        monero_c::private_file_creation guard;
+        if (i % 7 == 0) std::this_thread::yield();
+      }
+    });
+  }
+  for (std::thread& thread : threads) thread.join();
+  CHECK(current_umask() == 022);
+
+  ::umask(original);
+}
+#else
+static void test_private_file_creation() {}
+#endif
+
 static void test_ca_paths() {
   const std::string linux_file = "/etc/ssl/cert.pem";
   const std::string linux_dir = "/etc/ssl/certs";
@@ -473,6 +545,7 @@ int main() {
   test_queue_stop_waits_for_the_event_that_runs_and_refuses_more();
   test_queue_can_be_stopped_by_its_own_callback();
   test_queue_with_several_producers();
+  test_private_file_creation();
   test_ca_paths();
   test_hashed_certificate_names();
 

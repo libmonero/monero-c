@@ -38,8 +38,12 @@ extern "C" {
 // wraps the monero_wallet methods of the same name. A JSON argument can't nest deeper than 64
 // levels. On error the call returns MONERO_ERROR, monero_last_error() gives the message, string,
 // array and handle outputs are NULL, counts are 0 and scalar outputs are unchanged
-// On POSIX systems, local full-wallet files and their .keys files are set to mode 0600 after
-// creation, save, password change, and move.
+// On POSIX systems, local full-wallet files and their .keys files are made with no permission for
+// the group and the others: the creation, save, close with save, password change and move run with
+// a umask of 077, so the files are never readable for others, even for a moment, and they are set
+// to mode 0600 after the call too, for the files that were already there. The umask belongs to the
+// process, so it is 077 for every thread while one of those calls runs, and the one that was there
+// is put back when the last of them returns. A program that makes a file at that time has to chmod it
 
 /**
  * Opaque handle to a wallet. Full wallets come from monero_wallet_create_random(),

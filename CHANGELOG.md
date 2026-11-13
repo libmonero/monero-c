@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+### Fixed
+
+* The files of a full wallet are never readable for the group and the others, not even for the time between their creation and the `chmod` that came
+  after it. The calls that write them (creation, `monero_wallet_save()`, `monero_wallet_close()` with save, `monero_wallet_change_password()` and
+  `monero_wallet_move_to()`) run with a umask of 077, and put back the one that was there when the last of them returns. The umask belongs to the process,
+  so a file that another thread of the program makes meanwhile gets the same permissions. The `chmod` stays, for the files that were already there.
+
 ### Added
 
 The functions that monero-python and monero-java have in the interface of their wallet and that the ABI did not, found by comparing the headers with

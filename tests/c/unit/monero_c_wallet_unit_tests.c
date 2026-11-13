@@ -159,15 +159,20 @@ static void test_wallet_file_permissions(void) {
   remove_files(path);
   remove_files(moved_path);
 
+  // a umask that leaves everything open, which wallet2 would make the files with: they are for the owner whatever it is, and the calls leave the
+  // umask of the process as it was
+  mode_t original_umask = umask(0);
   monero_wallet* wallet = NULL;
   EXPECT_OK(monero_wallet_create_random(path, PASSWORD, NETWORK, NULL, &wallet));
   CHECK(wallet != NULL);
   if (wallet == NULL) {
+    umask(original_umask);
     remove_files(path);
     remove_files(moved_path);
     return;
   }
   check_wallet_files_mode(path, 0600);
+  CHECK(umask(0) == 0);
 
   set_wallet_file_mode(path, 0644);
   EXPECT_OK(monero_wallet_save(wallet));
@@ -187,10 +192,12 @@ static void test_wallet_file_permissions(void) {
   set_wallet_file_mode(moved_path, 0644);
   EXPECT_OK(monero_wallet_close(wallet, true));
   check_wallet_files_mode(moved_path, 0600);
+  CHECK(umask(0) == 0);
 
   monero_wallet_free(wallet);
   remove_files(path);
   remove_files(moved_path);
+  umask(original_umask);
 }
 #else
 static void test_wallet_file_permissions(void) {}
@@ -238,6 +245,9 @@ static void test_restore_and_open(void) {
 
   // the same seed gives the same primary address
   EXPECT_OK(monero_wallet_create_from_seed(from_seed, PASSWORD, NETWORK, seed, NULL, 0, NULL, &wallet));
+#if defined(MONERO_C_TEST_POSIX_FILE_PERMISSIONS)
+  check_wallet_files_mode(from_seed, 0600);
+#endif
   if (wallet != NULL) {
     char* restored = NULL;
     EXPECT_OK(monero_wallet_get_primary_address(wallet, &restored));
@@ -249,6 +259,9 @@ static void test_restore_and_open(void) {
 
   // with the spend key the restored wallet is a full wallet
   EXPECT_OK(monero_wallet_create_from_keys(from_keys, PASSWORD, NETWORK, address, view_key, spend_key, 0, NULL, &wallet));
+#if defined(MONERO_C_TEST_POSIX_FILE_PERMISSIONS)
+  check_wallet_files_mode(from_keys, 0600);
+#endif
   if (wallet != NULL) {
     bool is_view_only = true;
     EXPECT_OK(monero_wallet_is_view_only(wallet, &is_view_only));
