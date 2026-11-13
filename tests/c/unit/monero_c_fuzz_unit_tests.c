@@ -232,6 +232,9 @@ STRING_TARGET(wallet_get_payment_uri, monero_wallet_get_payment_uri(fx->full, in
 STRING_TARGET(wallet_parse_payment_uri, monero_wallet_parse_payment_uri(fx->full, input, &out))
 STRING_TARGET(wallet_import_key_images, monero_wallet_import_key_images(fx->full, input, 0, &out))
 STRING_TARGET(wallet_describe_tx_set, monero_wallet_describe_tx_set(fx->full, input, &out))
+STRING_TARGET(wallet_describe_unsigned_tx_set, monero_wallet_describe_unsigned_tx_set(fx->full, input, &out))
+STRING_TARGET(wallet_describe_multisig_tx_set, monero_wallet_describe_multisig_tx_set(fx->full, input, &out))
+STRING_TARGET(wallet_get_tx, monero_wallet_get_tx(fx->full, input, &out))
 STRING_TARGET(wallet_relay_tx_json, monero_wallet_relay_tx_json(fx->full, input, &out))
 STRING_TARGET(wallet_relay_txs_json, monero_wallet_relay_txs_json(fx->full, input, &out))
 STRING_TARGET(wallet_decode_integrated_address, monero_wallet_decode_integrated_address(fx->full, input, &out))
@@ -428,6 +431,7 @@ static const target g_targets[] = {
   {"wallet_verify_message_address", wallet_verify_message_address, INPUT_TEXT, ADDRESS, 0},
   {"wallet_get_tx_note", wallet_get_tx_note, INPUT_TEXT, HEX64, 0},
   {"wallet_get_tx_key", wallet_get_tx_key, INPUT_TEXT, HEX64, 0},
+  {"wallet_get_tx", wallet_get_tx, INPUT_TEXT, HEX64, 0},
   {"wallet_check_tx_key", wallet_check_tx_key, INPUT_TEXT, HEX64, 0},
   {"wallet_check_tx_proof", wallet_check_tx_proof, INPUT_TEXT, "InProofV2" HEX64 HEX64, 0},
   {"wallet_check_spend_proof", wallet_check_spend_proof, INPUT_TEXT, "SpendProofV1" HEX64 HEX64, 0},
@@ -451,6 +455,8 @@ static const target g_targets[] = {
   // hex, which is the magic bytes of a blob that wallet2 reads and what follows them
   {"wallet_import_outputs", wallet_import_outputs, INPUT_HEX, "4d6f6e65726f206f757470757420657870" "6f727404", 0},
   {"wallet_sign_txs", wallet_sign_txs, INPUT_HEX, "4d6f6e65726f20756e7369676e656420747820736574" "05", 0},
+  {"wallet_describe_unsigned_tx_set", wallet_describe_unsigned_tx_set, INPUT_HEX, "4d6f6e65726f20756e7369676e656420747820736574" "05", 0},
+  {"wallet_describe_multisig_tx_set", wallet_describe_multisig_tx_set, INPUT_HEX, "4d6f6e65726f206d756c746973696720756e7369676e656420747820736574" "01", 0},
   {"wallet_submit_txs", wallet_submit_txs, INPUT_HEX, "4d6f6e65726f207369676e656420747820736574" "05", 0},
   {"wallet_relay_tx", wallet_relay_tx, INPUT_HEX, "011673657269616c697a6174696f6e3a3a61726368697665", 0},
   {"wallet_sign_multisig_tx_hex", wallet_sign_multisig_tx_hex, INPUT_HEX, "4d6f6e65726f206d756c7469736967207369676e656420747820736574" "01", 0},

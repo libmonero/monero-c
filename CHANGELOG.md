@@ -1,5 +1,20 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+The functions that monero-python and monero-java have in the interface of their wallet and that the ABI did not, found by comparing the headers with
+monero-cpp, monero-java, monero-python and monero-ts. A program that is built with these headers needs a library that has them.
+
+* `monero_wallet_get_new_key_images_from_last_import()`, the key images of the outputs that the wallet imported last, as a JSON array. They are the
+  ones that `monero_wallet_export_key_images()` exports with `all` false, which is what monero-java asks the server for.
+* `monero_wallet_get_tx()`, one transaction of the wallet by its hash, in its block as `monero_wallet_get_txs()` returns it, and NULL for a hash that the
+  wallet doesn't have.
+* `monero_wallet_describe_unsigned_tx_set()` and `monero_wallet_describe_multisig_tx_set()`, which describe a transaction set that has only its hex, with
+  no JSON to build.
+* `monero_wallet_set_account_label()`, the label of an account, which is the label of its primary address.
+
 ## 0.4.0-alpha.1 (2026-11-11)
 
 The fourth alpha of the C ABI, version 0.4.0. No function, struct or enum changed, so a program built with the headers of 0.3.x runs as it is, but

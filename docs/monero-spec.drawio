@@ -121,7 +121,7 @@
           <mxGeometry height="1050" width="814" x="16" y="9908" as="geometry" />
         </mxCell>
         <mxCell id="QYUe6zCbC_x82nWfNGpH-287" parent="1" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=32;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;fontSize=16;whiteSpace=wrap;fillColor=#E6E6E6;" value="Monero Wallet Interface 3/5 - monero_c_wallet.h" vertex="1">
-          <mxGeometry height="749" width="811" x="19" y="11047" as="geometry" />
+          <mxGeometry height="801" width="811" x="19" y="11047" as="geometry" />
         </mxCell>
         <mxCell id="QYUe6zCbC_x82nWfNGpH-359" parent="1" style="swimlane;fontStyle=0;childLayout=stackLayout;horizontal=1;startSize=26;fillColor=#E6E6E6;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;direction=east;fontFamily=Verdana;" value="MoneroMultisigSignResult" vertex="1">
           <mxGeometry height="82" width="211.5000000000003" x="317.50000000000034" y="19179" as="geometry">
@@ -943,266 +943,281 @@
         <mxCell id="s140" parent="QYUe6zCbC_x82nWfNGpH-248" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;" value="monero_wallet_get_subaddress(uint account_idx, uint subaddress_idx): MoneroSubaddress" vertex="1">
           <mxGeometry height="26" width="814" x="0" y="400" as="geometry" />
         </mxCell>
-        <mxCell id="s141" parent="QYUe6zCbC_x82nWfNGpH-248" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;" value="monero_wallet_set_subaddress_label(uint account_idx, uint subaddress_idx, string label=null): void" vertex="1">
+        <mxCell id="snew1" parent="QYUe6zCbC_x82nWfNGpH-248" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;" value="monero_wallet_set_account_label(uint account_idx, string label=null): void" vertex="1">
           <mxGeometry height="26" width="814" x="0" y="426" as="geometry" />
         </mxCell>
-        <mxCell id="s142" parent="QYUe6zCbC_x82nWfNGpH-248" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;" value="monero_wallet_set_account_tag_label(string tag, string label): void" vertex="1">
+        <mxCell id="s141" parent="QYUe6zCbC_x82nWfNGpH-248" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;" value="monero_wallet_set_subaddress_label(uint account_idx, uint subaddress_idx, string label=null): void" vertex="1">
           <mxGeometry height="26" width="814" x="0" y="452" as="geometry" />
         </mxCell>
-        <mxCell id="s143" parent="QYUe6zCbC_x82nWfNGpH-248" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;" value="monero_wallet_get_account_tags(): MoneroAccountTag[]" vertex="1">
+        <mxCell id="s142" parent="QYUe6zCbC_x82nWfNGpH-248" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;" value="monero_wallet_set_account_tag_label(string tag, string label): void" vertex="1">
           <mxGeometry height="26" width="814" x="0" y="478" as="geometry" />
         </mxCell>
-        <mxCell id="s144" parent="QYUe6zCbC_x82nWfNGpH-248" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;" value="monero_wallet_tag_accounts(string tag, uint[] account_indices): void" vertex="1">
+        <mxCell id="s143" parent="QYUe6zCbC_x82nWfNGpH-248" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;" value="monero_wallet_get_account_tags(): MoneroAccountTag[]" vertex="1">
           <mxGeometry height="26" width="814" x="0" y="504" as="geometry" />
         </mxCell>
-        <mxCell id="s145" parent="QYUe6zCbC_x82nWfNGpH-248" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;" value="monero_wallet_untag_accounts(uint[] account_indices): void" vertex="1">
+        <mxCell id="s144" parent="QYUe6zCbC_x82nWfNGpH-248" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;" value="monero_wallet_tag_accounts(string tag, uint[] account_indices): void" vertex="1">
           <mxGeometry height="26" width="814" x="0" y="530" as="geometry" />
         </mxCell>
-        <mxCell id="s146" parent="QYUe6zCbC_x82nWfNGpH-248" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;" value="monero_wallet_get_attribute(string key): (bool found, string)" vertex="1">
+        <mxCell id="s145" parent="QYUe6zCbC_x82nWfNGpH-248" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;" value="monero_wallet_untag_accounts(uint[] account_indices): void" vertex="1">
           <mxGeometry height="26" width="814" x="0" y="556" as="geometry" />
         </mxCell>
-        <mxCell id="s147" parent="QYUe6zCbC_x82nWfNGpH-248" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;" value="monero_wallet_set_attribute(string key, string value): void" vertex="1">
+        <mxCell id="s146" parent="QYUe6zCbC_x82nWfNGpH-248" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;" value="monero_wallet_get_attribute(string key): (bool found, string)" vertex="1">
           <mxGeometry height="26" width="814" x="0" y="582" as="geometry" />
         </mxCell>
-        <mxCell id="s148" parent="QYUe6zCbC_x82nWfNGpH-248" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;" value="monero_wallet_get_default_fee_priority(): MoneroTxPriority" vertex="1">
+        <mxCell id="s147" parent="QYUe6zCbC_x82nWfNGpH-248" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;" value="monero_wallet_set_attribute(string key, string value): void" vertex="1">
           <mxGeometry height="26" width="814" x="0" y="608" as="geometry" />
         </mxCell>
-        <mxCell id="s149" parent="QYUe6zCbC_x82nWfNGpH-248" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;" value="monero_wallet_get_path(): string" vertex="1">
+        <mxCell id="s148" parent="QYUe6zCbC_x82nWfNGpH-248" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;" value="monero_wallet_get_default_fee_priority(): MoneroTxPriority" vertex="1">
           <mxGeometry height="26" width="814" x="0" y="634" as="geometry" />
         </mxCell>
-        <mxCell id="s150" parent="QYUe6zCbC_x82nWfNGpH-248" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;" value="monero_wallet_get_public_view_key(): string" vertex="1">
+        <mxCell id="s149" parent="QYUe6zCbC_x82nWfNGpH-248" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;" value="monero_wallet_get_path(): string" vertex="1">
           <mxGeometry height="26" width="814" x="0" y="660" as="geometry" />
         </mxCell>
-        <mxCell id="s151" parent="QYUe6zCbC_x82nWfNGpH-248" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;" value="monero_wallet_get_public_spend_key(): string" vertex="1">
+        <mxCell id="s150" parent="QYUe6zCbC_x82nWfNGpH-248" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;" value="monero_wallet_get_public_view_key(): string" vertex="1">
           <mxGeometry height="26" width="814" x="0" y="686" as="geometry" />
         </mxCell>
-        <mxCell id="s152" parent="QYUe6zCbC_x82nWfNGpH-248" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;" value="monero_wallet_get_version(): MoneroVersion" vertex="1">
+        <mxCell id="s151" parent="QYUe6zCbC_x82nWfNGpH-248" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;" value="monero_wallet_get_public_spend_key(): string" vertex="1">
           <mxGeometry height="26" width="814" x="0" y="712" as="geometry" />
         </mxCell>
-        <mxCell id="s153" parent="QYUe6zCbC_x82nWfNGpH-248" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;" value="monero_wallet_get_restore_height(): ulong" vertex="1">
+        <mxCell id="s152" parent="QYUe6zCbC_x82nWfNGpH-248" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;" value="monero_wallet_get_version(): MoneroVersion" vertex="1">
           <mxGeometry height="26" width="814" x="0" y="738" as="geometry" />
         </mxCell>
-        <mxCell id="s154" parent="QYUe6zCbC_x82nWfNGpH-248" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;" value="monero_wallet_set_restore_height(ulong restore_height): void" vertex="1">
+        <mxCell id="s153" parent="QYUe6zCbC_x82nWfNGpH-248" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;" value="monero_wallet_get_restore_height(): ulong" vertex="1">
           <mxGeometry height="26" width="814" x="0" y="764" as="geometry" />
         </mxCell>
-        <mxCell id="s155" parent="QYUe6zCbC_x82nWfNGpH-248" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;" value="monero_wallet_is_closed(): bool" vertex="1">
+        <mxCell id="s154" parent="QYUe6zCbC_x82nWfNGpH-248" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;" value="monero_wallet_set_restore_height(ulong restore_height): void" vertex="1">
           <mxGeometry height="26" width="814" x="0" y="790" as="geometry" />
         </mxCell>
-        <mxCell id="s156" parent="QYUe6zCbC_x82nWfNGpH-248" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;" value="monero_wallet_export_key_images(bool all): MoneroKeyImageExportResult" vertex="1">
+        <mxCell id="s155" parent="QYUe6zCbC_x82nWfNGpH-248" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;" value="monero_wallet_is_closed(): bool" vertex="1">
           <mxGeometry height="26" width="814" x="0" y="816" as="geometry" />
         </mxCell>
-        <mxCell id="s157" parent="QYUe6zCbC_x82nWfNGpH-248" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;" value="monero_wallet_import_key_images(string key_images_json, ulong offset): MoneroKeyImageImportResult" vertex="1">
+        <mxCell id="s156" parent="QYUe6zCbC_x82nWfNGpH-248" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;" value="monero_wallet_export_key_images(bool all): MoneroKeyImageExportResult" vertex="1">
           <mxGeometry height="26" width="814" x="0" y="842" as="geometry" />
         </mxCell>
-        <mxCell id="s158" parent="QYUe6zCbC_x82nWfNGpH-248" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;" value="monero_wallet_export_outputs(bool all): string" vertex="1">
+        <mxCell id="snew2" parent="QYUe6zCbC_x82nWfNGpH-248" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;" value="monero_wallet_get_new_key_images_from_last_import(): MoneroKeyImage[]" vertex="1">
           <mxGeometry height="26" width="814" x="0" y="868" as="geometry" />
         </mxCell>
-        <mxCell id="s159" parent="QYUe6zCbC_x82nWfNGpH-248" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;" value="monero_wallet_import_outputs(string outputs_hex): int" vertex="1">
+        <mxCell id="s157" parent="QYUe6zCbC_x82nWfNGpH-248" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;" value="monero_wallet_import_key_images(string key_images_json, ulong offset): MoneroKeyImageImportResult" vertex="1">
           <mxGeometry height="26" width="814" x="0" y="894" as="geometry" />
         </mxCell>
-        <mxCell id="s160" parent="QYUe6zCbC_x82nWfNGpH-248" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;" value="monero_wallet_freeze_output(string key_image): void" vertex="1">
+        <mxCell id="s158" parent="QYUe6zCbC_x82nWfNGpH-248" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;" value="monero_wallet_export_outputs(bool all): string" vertex="1">
           <mxGeometry height="26" width="814" x="0" y="920" as="geometry" />
         </mxCell>
-        <mxCell id="s161" parent="QYUe6zCbC_x82nWfNGpH-248" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;" value="monero_wallet_thaw_output(string key_image): void" vertex="1">
+        <mxCell id="s159" parent="QYUe6zCbC_x82nWfNGpH-248" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;" value="monero_wallet_import_outputs(string outputs_hex): int" vertex="1">
           <mxGeometry height="26" width="814" x="0" y="946" as="geometry" />
         </mxCell>
-        <mxCell id="s162" parent="QYUe6zCbC_x82nWfNGpH-248" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;" value="monero_wallet_is_output_frozen(string key_image): bool" vertex="1">
+        <mxCell id="s160" parent="QYUe6zCbC_x82nWfNGpH-248" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;" value="monero_wallet_freeze_output(string key_image): void" vertex="1">
           <mxGeometry height="26" width="814" x="0" y="972" as="geometry" />
         </mxCell>
-        <mxCell id="s163" parent="QYUe6zCbC_x82nWfNGpH-248" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;" value="monero_wallet_get_tx_note(string tx_hash): string" vertex="1">
+        <mxCell id="s161" parent="QYUe6zCbC_x82nWfNGpH-248" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;" value="monero_wallet_thaw_output(string key_image): void" vertex="1">
           <mxGeometry height="26" width="814" x="0" y="998" as="geometry" />
         </mxCell>
-        <mxCell id="s164" parent="QYUe6zCbC_x82nWfNGpH-248" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;" value="monero_wallet_set_tx_note(string tx_hash, string note): void" vertex="1">
+        <mxCell id="s162" parent="QYUe6zCbC_x82nWfNGpH-248" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;" value="monero_wallet_is_output_frozen(string key_image): bool" vertex="1">
           <mxGeometry height="26" width="814" x="0" y="1024" as="geometry" />
         </mxCell>
-        <mxCell id="s165" parent="QYUe6zCbC_x82nWfNGpH-287" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;" value="monero_wallet_get_tx_notes(string[] tx_hashes): string[]" vertex="1">
+        <mxCell id="s163" parent="QYUe6zCbC_x82nWfNGpH-287" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;" value="monero_wallet_get_tx_note(string tx_hash): string" vertex="1">
           <mxGeometry height="26" width="811" x="0" y="32" as="geometry" />
         </mxCell>
-        <mxCell id="s166" parent="QYUe6zCbC_x82nWfNGpH-287" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;" value="monero_wallet_set_tx_notes(string[] tx_hashes, string[] notes): void" vertex="1">
+        <mxCell id="s164" parent="QYUe6zCbC_x82nWfNGpH-287" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;" value="monero_wallet_set_tx_note(string tx_hash, string note): void" vertex="1">
           <mxGeometry height="26" width="811" x="0" y="58" as="geometry" />
         </mxCell>
+        <mxCell id="s165" parent="QYUe6zCbC_x82nWfNGpH-287" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;" value="monero_wallet_get_tx_notes(string[] tx_hashes): string[]" vertex="1">
+          <mxGeometry height="26" width="811" x="0" y="84" as="geometry" />
+        </mxCell>
+        <mxCell id="s166" parent="QYUe6zCbC_x82nWfNGpH-287" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;" value="monero_wallet_set_tx_notes(string[] tx_hashes, string[] notes): void" vertex="1">
+          <mxGeometry height="26" width="811" x="0" y="110" as="geometry" />
+        </mxCell>
         <mxCell id="s167" parent="QYUe6zCbC_x82nWfNGpH-287" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;" value="monero_wallet_set_daemon_connection(string uri, string username=null, string password=null, string proxy_uri=null,&#10;        bool is_trusted=null, bool ssl_verify): void" vertex="1">
-          <mxGeometry height="41" width="811" x="0" y="84" as="geometry" />
+          <mxGeometry height="41" width="811" x="0" y="136" as="geometry" />
         </mxCell>
         <mxCell id="s168" parent="QYUe6zCbC_x82nWfNGpH-287" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;" value="monero_wallet_get_daemon_connection(): MoneroRpcConnection" vertex="1">
-          <mxGeometry height="26" width="811" x="0" y="125" as="geometry" />
-        </mxCell>
-        <mxCell id="s169" parent="QYUe6zCbC_x82nWfNGpH-287" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;" value="monero_wallet_is_daemon_trusted(): bool" vertex="1">
-          <mxGeometry height="26" width="811" x="0" y="151" as="geometry" />
-        </mxCell>
-        <mxCell id="s170" parent="QYUe6zCbC_x82nWfNGpH-287" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;" value="monero_wallet_listener_create(MoneroWalletListenerCallbacks callbacks): MoneroWalletListener" vertex="1">
           <mxGeometry height="26" width="811" x="0" y="177" as="geometry" />
         </mxCell>
-        <mxCell id="s171" parent="QYUe6zCbC_x82nWfNGpH-287" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;" value="monero_wallet_listener_free(MoneroWalletListener listener): void" vertex="1">
+        <mxCell id="s169" parent="QYUe6zCbC_x82nWfNGpH-287" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;" value="monero_wallet_is_daemon_trusted(): bool" vertex="1">
           <mxGeometry height="26" width="811" x="0" y="203" as="geometry" />
         </mxCell>
-        <mxCell id="s172" parent="QYUe6zCbC_x82nWfNGpH-287" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;" value="monero_wallet_add_listener(MoneroWalletListener listener): void" vertex="1">
+        <mxCell id="s170" parent="QYUe6zCbC_x82nWfNGpH-287" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;" value="monero_wallet_listener_create(MoneroWalletListenerCallbacks callbacks): MoneroWalletListener" vertex="1">
           <mxGeometry height="26" width="811" x="0" y="229" as="geometry" />
         </mxCell>
-        <mxCell id="s173" parent="QYUe6zCbC_x82nWfNGpH-287" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;" value="monero_wallet_remove_listener(MoneroWalletListener listener): void" vertex="1">
+        <mxCell id="s171" parent="QYUe6zCbC_x82nWfNGpH-287" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;" value="monero_wallet_listener_free(MoneroWalletListener listener): void" vertex="1">
           <mxGeometry height="26" width="811" x="0" y="255" as="geometry" />
         </mxCell>
-        <mxCell id="s174" parent="QYUe6zCbC_x82nWfNGpH-287" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;" value="monero_wallet_remove_listeners(): void" vertex="1">
+        <mxCell id="s172" parent="QYUe6zCbC_x82nWfNGpH-287" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;" value="monero_wallet_add_listener(MoneroWalletListener listener): void" vertex="1">
           <mxGeometry height="26" width="811" x="0" y="281" as="geometry" />
         </mxCell>
-        <mxCell id="s175" parent="QYUe6zCbC_x82nWfNGpH-287" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;" value="monero_wallet_sync(ulong start_height=null, MoneroWalletListener listener): MoneroSyncResult" vertex="1">
+        <mxCell id="s173" parent="QYUe6zCbC_x82nWfNGpH-287" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;" value="monero_wallet_remove_listener(MoneroWalletListener listener): void" vertex="1">
+          <mxGeometry height="26" width="811" x="0" y="307" as="geometry" />
+        </mxCell>
+        <mxCell id="s174" parent="QYUe6zCbC_x82nWfNGpH-287" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;" value="monero_wallet_remove_listeners(): void" vertex="1">
           <mxGeometry height="26" width="811" x="0" y="333" as="geometry" />
         </mxCell>
-        <mxCell id="s176" parent="QYUe6zCbC_x82nWfNGpH-287" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;" value="monero_wallet_start_syncing(ulong sync_period_ms): void" vertex="1">
+        <mxCell id="s175" parent="QYUe6zCbC_x82nWfNGpH-287" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;" value="monero_wallet_sync(ulong start_height=null, MoneroWalletListener listener): MoneroSyncResult" vertex="1">
           <mxGeometry height="26" width="811" x="0" y="359" as="geometry" />
         </mxCell>
-        <mxCell id="s177" parent="QYUe6zCbC_x82nWfNGpH-287" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;" value="monero_wallet_stop_syncing(): void" vertex="1">
+        <mxCell id="s176" parent="QYUe6zCbC_x82nWfNGpH-287" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;" value="monero_wallet_start_syncing(ulong sync_period_ms): void" vertex="1">
           <mxGeometry height="26" width="811" x="0" y="385" as="geometry" />
         </mxCell>
-        <mxCell id="s178" parent="QYUe6zCbC_x82nWfNGpH-287" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;" value="monero_wallet_is_connected_to_daemon(): bool" vertex="1">
+        <mxCell id="s177" parent="QYUe6zCbC_x82nWfNGpH-287" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;" value="monero_wallet_stop_syncing(): void" vertex="1">
           <mxGeometry height="26" width="811" x="0" y="411" as="geometry" />
         </mxCell>
-        <mxCell id="s179" parent="QYUe6zCbC_x82nWfNGpH-287" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;" value="monero_wallet_is_daemon_synced(): bool" vertex="1">
+        <mxCell id="s178" parent="QYUe6zCbC_x82nWfNGpH-287" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;" value="monero_wallet_is_connected_to_daemon(): bool" vertex="1">
           <mxGeometry height="26" width="811" x="0" y="437" as="geometry" />
         </mxCell>
-        <mxCell id="s180" parent="QYUe6zCbC_x82nWfNGpH-287" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;" value="monero_wallet_is_synced(): bool" vertex="1">
+        <mxCell id="s179" parent="QYUe6zCbC_x82nWfNGpH-287" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;" value="monero_wallet_is_daemon_synced(): bool" vertex="1">
           <mxGeometry height="26" width="811" x="0" y="463" as="geometry" />
         </mxCell>
-        <mxCell id="s181" parent="QYUe6zCbC_x82nWfNGpH-287" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;" value="monero_wallet_get_daemon_height(): ulong" vertex="1">
+        <mxCell id="s180" parent="QYUe6zCbC_x82nWfNGpH-287" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;" value="monero_wallet_is_synced(): bool" vertex="1">
           <mxGeometry height="26" width="811" x="0" y="489" as="geometry" />
         </mxCell>
-        <mxCell id="s182" parent="QYUe6zCbC_x82nWfNGpH-287" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;" value="monero_wallet_get_daemon_max_peer_height(): ulong" vertex="1">
+        <mxCell id="s181" parent="QYUe6zCbC_x82nWfNGpH-287" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;" value="monero_wallet_get_daemon_height(): ulong" vertex="1">
           <mxGeometry height="26" width="811" x="0" y="515" as="geometry" />
         </mxCell>
-        <mxCell id="s183" parent="QYUe6zCbC_x82nWfNGpH-287" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;" value="monero_wallet_wait_for_next_block(): ulong" vertex="1">
+        <mxCell id="s182" parent="QYUe6zCbC_x82nWfNGpH-287" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;" value="monero_wallet_get_daemon_max_peer_height(): ulong" vertex="1">
           <mxGeometry height="26" width="811" x="0" y="541" as="geometry" />
         </mxCell>
-        <mxCell id="s184" parent="QYUe6zCbC_x82nWfNGpH-287" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;" value="monero_wallet_wait_for_next_block_timeout(uint timeout_ms): (ulong height, bool timed_out)" vertex="1">
+        <mxCell id="s183" parent="QYUe6zCbC_x82nWfNGpH-287" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;" value="monero_wallet_wait_for_next_block(): ulong" vertex="1">
           <mxGeometry height="26" width="811" x="0" y="567" as="geometry" />
         </mxCell>
-        <mxCell id="s185" parent="QYUe6zCbC_x82nWfNGpH-287" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;" value="monero_wallet_scan_txs(string[] tx_hashes): void" vertex="1">
+        <mxCell id="s184" parent="QYUe6zCbC_x82nWfNGpH-287" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;" value="monero_wallet_wait_for_next_block_timeout(uint timeout_ms): (ulong height, bool timed_out)" vertex="1">
           <mxGeometry height="26" width="811" x="0" y="593" as="geometry" />
         </mxCell>
-        <mxCell id="s186" parent="QYUe6zCbC_x82nWfNGpH-287" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;" value="monero_wallet_rescan_blockchain(): void" vertex="1">
+        <mxCell id="s185" parent="QYUe6zCbC_x82nWfNGpH-287" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;" value="monero_wallet_scan_txs(string[] tx_hashes): void" vertex="1">
           <mxGeometry height="26" width="811" x="0" y="619" as="geometry" />
         </mxCell>
-        <mxCell id="s187" parent="QYUe6zCbC_x82nWfNGpH-287" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;" value="monero_wallet_rescan_spent(): void" vertex="1">
+        <mxCell id="s186" parent="QYUe6zCbC_x82nWfNGpH-287" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;" value="monero_wallet_rescan_blockchain(): void" vertex="1">
           <mxGeometry height="26" width="811" x="0" y="645" as="geometry" />
         </mxCell>
-        <mxCell id="s188" parent="QYUe6zCbC_x82nWfNGpH-287" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;" value="monero_wallet_get_height_by_date(ushort year, byte month, byte day): ulong" vertex="1">
+        <mxCell id="s187" parent="QYUe6zCbC_x82nWfNGpH-287" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;" value="monero_wallet_rescan_spent(): void" vertex="1">
           <mxGeometry height="26" width="811" x="0" y="671" as="geometry" />
         </mxCell>
-        <mxCell id="s189" parent="QYUe6zCbC_x82nWfNGpH-287" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;" value="monero_wallet_start_mining(ulong num_threads=null, bool background_mining=null, bool ignore_battery=null): void" vertex="1">
+        <mxCell id="s188" parent="QYUe6zCbC_x82nWfNGpH-287" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;" value="monero_wallet_get_height_by_date(ushort year, byte month, byte day): ulong" vertex="1">
           <mxGeometry height="26" width="811" x="0" y="697" as="geometry" />
         </mxCell>
-        <mxCell id="s190" parent="QYUe6zCbC_x82nWfNGpH-287" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;" value="monero_wallet_stop_mining(): void" vertex="1">
+        <mxCell id="s189" parent="QYUe6zCbC_x82nWfNGpH-287" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;" value="monero_wallet_start_mining(ulong num_threads=null, bool background_mining=null, bool ignore_battery=null): void" vertex="1">
           <mxGeometry height="26" width="811" x="0" y="723" as="geometry" />
         </mxCell>
+        <mxCell id="s190" parent="QYUe6zCbC_x82nWfNGpH-287" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;" value="monero_wallet_stop_mining(): void" vertex="1">
+          <mxGeometry height="26" width="811" x="0" y="749" as="geometry" />
+        </mxCell>
         <mxCell id="s191" parent="1" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=32;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;fontSize=16;whiteSpace=wrap;fontFamily=Helvetica;labelBackgroundColor=none;fillColor=#E6E6E6;" value="Monero Wallet Interface 4/5 - monero_c_wallet.h" vertex="1">
-          <mxGeometry height="968" width="814" x="17.5" y="12147" as="geometry" />
+          <mxGeometry height="1046" width="814" x="17.5" y="12147" as="geometry" />
         </mxCell>
         <mxCell id="s192" parent="s191" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;fontStyle=0" value="monero_wallet_get_txs(string query_json=null): json" vertex="1">
           <mxGeometry height="26" width="814" x="0" y="32" as="geometry" />
         </mxCell>
-        <mxCell id="s193" parent="s191" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;fontStyle=0" value="monero_wallet_get_transfers(string query_json=null): json" vertex="1">
+        <mxCell id="snew3" parent="s191" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;" value="monero_wallet_get_tx(string tx_hash): {blocks: MoneroBlock[]}" vertex="1">
           <mxGeometry height="26" width="814" x="0" y="58" as="geometry" />
         </mxCell>
-        <mxCell id="s194" parent="s191" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;fontStyle=0" value="monero_wallet_get_outputs(string query_json=null): json" vertex="1">
+        <mxCell id="s193" parent="s191" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;fontStyle=0" value="monero_wallet_get_transfers(string query_json=null): json" vertex="1">
           <mxGeometry height="26" width="814" x="0" y="84" as="geometry" />
         </mxCell>
-        <mxCell id="s195" parent="s191" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;fontStyle=0" value="monero_wallet_create_tx(string config_json): MoneroTxSet" vertex="1">
+        <mxCell id="s194" parent="s191" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;fontStyle=0" value="monero_wallet_get_outputs(string query_json=null): json" vertex="1">
           <mxGeometry height="26" width="814" x="0" y="110" as="geometry" />
         </mxCell>
-        <mxCell id="s196" parent="s191" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;fontStyle=0" value="monero_wallet_create_txs(string config_json): MoneroTxSet" vertex="1">
+        <mxCell id="s195" parent="s191" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;fontStyle=0" value="monero_wallet_create_tx(string config_json): MoneroTxSet" vertex="1">
           <mxGeometry height="26" width="814" x="0" y="136" as="geometry" />
         </mxCell>
-        <mxCell id="s197" parent="s191" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;fontStyle=0" value="monero_wallet_relay_tx(string tx_metadata): string" vertex="1">
+        <mxCell id="s196" parent="s191" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;fontStyle=0" value="monero_wallet_create_txs(string config_json): MoneroTxSet" vertex="1">
           <mxGeometry height="26" width="814" x="0" y="162" as="geometry" />
         </mxCell>
-        <mxCell id="s198" parent="s191" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;fontStyle=0" value="monero_wallet_relay_tx_json(string tx_json): string" vertex="1">
+        <mxCell id="s197" parent="s191" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;fontStyle=0" value="monero_wallet_relay_tx(string tx_metadata): string" vertex="1">
           <mxGeometry height="26" width="814" x="0" y="188" as="geometry" />
         </mxCell>
-        <mxCell id="s199" parent="s191" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;fontStyle=0" value="monero_wallet_relay_txs(string[] tx_metadatas): string[]" vertex="1">
+        <mxCell id="s198" parent="s191" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;fontStyle=0" value="monero_wallet_relay_tx_json(string tx_json): string" vertex="1">
           <mxGeometry height="26" width="814" x="0" y="214" as="geometry" />
         </mxCell>
-        <mxCell id="s200" parent="s191" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;fontStyle=0" value="monero_wallet_relay_txs_json(string txs_json): string[]" vertex="1">
+        <mxCell id="s199" parent="s191" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;fontStyle=0" value="monero_wallet_relay_txs(string[] tx_metadatas): string[]" vertex="1">
           <mxGeometry height="26" width="814" x="0" y="240" as="geometry" />
         </mxCell>
-        <mxCell id="s201" parent="s191" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;fontStyle=0" value="monero_wallet_submit_txs(string signed_tx_hex): string[]" vertex="1">
+        <mxCell id="s200" parent="s191" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;fontStyle=0" value="monero_wallet_relay_txs_json(string txs_json): string[]" vertex="1">
           <mxGeometry height="26" width="814" x="0" y="266" as="geometry" />
         </mxCell>
-        <mxCell id="s202" parent="s191" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;fontStyle=0" value="monero_wallet_sign_txs(string unsigned_tx_hex): MoneroTxSet" vertex="1">
+        <mxCell id="s201" parent="s191" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;fontStyle=0" value="monero_wallet_submit_txs(string signed_tx_hex): string[]" vertex="1">
           <mxGeometry height="26" width="814" x="0" y="292" as="geometry" />
         </mxCell>
-        <mxCell id="s203" parent="s191" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;fontStyle=0" value="monero_wallet_describe_tx_set(string tx_set_json): MoneroTxSet" vertex="1">
+        <mxCell id="s202" parent="s191" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;fontStyle=0" value="monero_wallet_sign_txs(string unsigned_tx_hex): MoneroTxSet" vertex="1">
           <mxGeometry height="26" width="814" x="0" y="318" as="geometry" />
         </mxCell>
-        <mxCell id="s204" parent="s191" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;fontStyle=0" value="monero_wallet_sweep_output(string config_json): MoneroTxSet" vertex="1">
+        <mxCell id="s203" parent="s191" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;fontStyle=0" value="monero_wallet_describe_tx_set(string tx_set_json): MoneroTxSet" vertex="1">
           <mxGeometry height="26" width="814" x="0" y="344" as="geometry" />
         </mxCell>
-        <mxCell id="s205" parent="s191" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;fontStyle=0" value="monero_wallet_sweep_dust(bool relay): MoneroTxSet" vertex="1">
+        <mxCell id="snew4" parent="s191" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;" value="monero_wallet_describe_unsigned_tx_set(string unsigned_tx_hex): MoneroTxSet" vertex="1">
           <mxGeometry height="26" width="814" x="0" y="370" as="geometry" />
         </mxCell>
-        <mxCell id="s206" parent="s191" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;fontStyle=0" value="monero_wallet_sweep_unlocked(string config_json): {txSets: MoneroTxSet[]}" vertex="1">
+        <mxCell id="snew5" parent="s191" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;" value="monero_wallet_describe_multisig_tx_set(string multisig_tx_hex): MoneroTxSet" vertex="1">
           <mxGeometry height="26" width="814" x="0" y="396" as="geometry" />
         </mxCell>
-        <mxCell id="s207" parent="s191" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;fontStyle=0" value="monero_wallet_move_to(string path, string password): void" vertex="1">
+        <mxCell id="s204" parent="s191" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;fontStyle=0" value="monero_wallet_sweep_output(string config_json): MoneroTxSet" vertex="1">
           <mxGeometry height="26" width="814" x="0" y="422" as="geometry" />
         </mxCell>
-        <mxCell id="s208" parent="s191" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;fontStyle=0" value="monero_wallet_get_payment_uri(string config_json): string" vertex="1">
+        <mxCell id="s205" parent="s191" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;fontStyle=0" value="monero_wallet_sweep_dust(bool relay): MoneroTxSet" vertex="1">
           <mxGeometry height="26" width="814" x="0" y="448" as="geometry" />
         </mxCell>
-        <mxCell id="s209" parent="s191" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;fontStyle=0" value="monero_wallet_parse_payment_uri(string uri): MoneroTxConfig" vertex="1">
+        <mxCell id="s206" parent="s191" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;fontStyle=0" value="monero_wallet_sweep_unlocked(string config_json): {txSets: MoneroTxSet[]}" vertex="1">
           <mxGeometry height="26" width="814" x="0" y="474" as="geometry" />
         </mxCell>
-        <mxCell id="s210" parent="s191" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;fontStyle=0" value="monero_wallet_get_tx_key(string tx_hash): string" vertex="1">
+        <mxCell id="s207" parent="s191" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;fontStyle=0" value="monero_wallet_move_to(string path, string password): void" vertex="1">
           <mxGeometry height="26" width="814" x="0" y="500" as="geometry" />
         </mxCell>
-        <mxCell id="s211" parent="s191" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;fontStyle=0" value="monero_wallet_check_tx_key(string tx_hash, string tx_key, string address): MoneroCheckTx" vertex="1">
+        <mxCell id="s208" parent="s191" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;fontStyle=0" value="monero_wallet_get_payment_uri(string config_json): string" vertex="1">
           <mxGeometry height="26" width="814" x="0" y="526" as="geometry" />
         </mxCell>
-        <mxCell id="s212" parent="s191" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;fontStyle=0" value="monero_wallet_get_tx_proof(string tx_hash, string address, string message=null): string" vertex="1">
+        <mxCell id="s209" parent="s191" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;fontStyle=0" value="monero_wallet_parse_payment_uri(string uri): MoneroTxConfig" vertex="1">
           <mxGeometry height="26" width="814" x="0" y="552" as="geometry" />
         </mxCell>
-        <mxCell id="s213" parent="s191" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;fontStyle=0" value="monero_wallet_check_tx_proof(string tx_hash, string address, string message=null, string signature): MoneroCheckTx" vertex="1">
+        <mxCell id="s210" parent="s191" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;fontStyle=0" value="monero_wallet_get_tx_key(string tx_hash): string" vertex="1">
           <mxGeometry height="26" width="814" x="0" y="578" as="geometry" />
         </mxCell>
-        <mxCell id="s214" parent="s191" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;fontStyle=0" value="monero_wallet_get_spend_proof(string tx_hash, string message=null): string" vertex="1">
+        <mxCell id="s211" parent="s191" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;fontStyle=0" value="monero_wallet_check_tx_key(string tx_hash, string tx_key, string address): MoneroCheckTx" vertex="1">
           <mxGeometry height="26" width="814" x="0" y="604" as="geometry" />
         </mxCell>
-        <mxCell id="s215" parent="s191" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;fontStyle=0" value="monero_wallet_check_spend_proof(string tx_hash, string message=null, string signature): bool" vertex="1">
+        <mxCell id="s212" parent="s191" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;fontStyle=0" value="monero_wallet_get_tx_proof(string tx_hash, string address, string message=null): string" vertex="1">
           <mxGeometry height="26" width="814" x="0" y="630" as="geometry" />
         </mxCell>
-        <mxCell id="s216" parent="s191" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;fontStyle=0" value="monero_wallet_get_reserve_proof_wallet(string message=null): string" vertex="1">
+        <mxCell id="s213" parent="s191" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;fontStyle=0" value="monero_wallet_check_tx_proof(string tx_hash, string address, string message=null, string signature): MoneroCheckTx" vertex="1">
           <mxGeometry height="26" width="814" x="0" y="656" as="geometry" />
         </mxCell>
-        <mxCell id="s217" parent="s191" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;fontStyle=0" value="monero_wallet_get_reserve_proof_account(uint account_idx, ulong amount, string message=null): string" vertex="1">
+        <mxCell id="s214" parent="s191" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;fontStyle=0" value="monero_wallet_get_spend_proof(string tx_hash, string message=null): string" vertex="1">
           <mxGeometry height="26" width="814" x="0" y="682" as="geometry" />
         </mxCell>
-        <mxCell id="s218" parent="s191" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;fontStyle=0" value="monero_wallet_check_reserve_proof(string address, string message=null, string signature): MoneroCheckReserve" vertex="1">
+        <mxCell id="s215" parent="s191" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;fontStyle=0" value="monero_wallet_check_spend_proof(string tx_hash, string message=null, string signature): bool" vertex="1">
           <mxGeometry height="26" width="814" x="0" y="708" as="geometry" />
         </mxCell>
-        <mxCell id="s219" parent="s191" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;fontStyle=0" value="monero_wallet_is_multisig_import_needed(): bool" vertex="1">
+        <mxCell id="s216" parent="s191" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;fontStyle=0" value="monero_wallet_get_reserve_proof_wallet(string message=null): string" vertex="1">
           <mxGeometry height="26" width="814" x="0" y="734" as="geometry" />
         </mxCell>
-        <mxCell id="s220" parent="s191" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;fontStyle=0" value="monero_wallet_get_multisig_info(): MoneroMultisigInfo" vertex="1">
+        <mxCell id="s217" parent="s191" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;fontStyle=0" value="monero_wallet_get_reserve_proof_account(uint account_idx, ulong amount, string message=null): string" vertex="1">
           <mxGeometry height="26" width="814" x="0" y="760" as="geometry" />
         </mxCell>
-        <mxCell id="s221" parent="s191" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;fontStyle=0" value="monero_wallet_prepare_multisig(): string" vertex="1">
+        <mxCell id="s218" parent="s191" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;fontStyle=0" value="monero_wallet_check_reserve_proof(string address, string message=null, string signature): MoneroCheckReserve" vertex="1">
           <mxGeometry height="26" width="814" x="0" y="786" as="geometry" />
         </mxCell>
-        <mxCell id="s222" parent="s191" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;fontStyle=0" value="monero_wallet_make_multisig(string[] multisig_hexes, int threshold, string password): string" vertex="1">
+        <mxCell id="s219" parent="s191" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;fontStyle=0" value="monero_wallet_is_multisig_import_needed(): bool" vertex="1">
           <mxGeometry height="26" width="814" x="0" y="812" as="geometry" />
         </mxCell>
-        <mxCell id="s223" parent="s191" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;fontStyle=0" value="monero_wallet_exchange_multisig_keys(string[] multisig_hexes, string password): MoneroMultisigInitResult" vertex="1">
+        <mxCell id="s220" parent="s191" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;fontStyle=0" value="monero_wallet_get_multisig_info(): MoneroMultisigInfo" vertex="1">
           <mxGeometry height="26" width="814" x="0" y="838" as="geometry" />
         </mxCell>
-        <mxCell id="s224" parent="s191" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;fontStyle=0" value="monero_wallet_export_multisig_hex(): string" vertex="1">
+        <mxCell id="s221" parent="s191" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;fontStyle=0" value="monero_wallet_prepare_multisig(): string" vertex="1">
           <mxGeometry height="26" width="814" x="0" y="864" as="geometry" />
         </mxCell>
-        <mxCell id="s225" parent="s191" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;fontStyle=0" value="monero_wallet_import_multisig_hex(string[] multisig_hexes, bool refresh_after_import): int" vertex="1">
+        <mxCell id="s222" parent="s191" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;fontStyle=0" value="monero_wallet_make_multisig(string[] multisig_hexes, int threshold, string password): string" vertex="1">
           <mxGeometry height="26" width="814" x="0" y="890" as="geometry" />
         </mxCell>
-        <mxCell id="s226" parent="s191" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;fontStyle=0" value="monero_wallet_sign_multisig_tx_hex(string multisig_tx_hex): MoneroMultisigSignResult" vertex="1">
+        <mxCell id="s223" parent="s191" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;fontStyle=0" value="monero_wallet_exchange_multisig_keys(string[] multisig_hexes, string password): MoneroMultisigInitResult" vertex="1">
           <mxGeometry height="26" width="814" x="0" y="916" as="geometry" />
         </mxCell>
-        <mxCell id="s227" parent="s191" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;fontStyle=0" value="monero_wallet_submit_multisig_tx_hex(string signed_multisig_tx_hex): string[]" vertex="1">
+        <mxCell id="s224" parent="s191" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;fontStyle=0" value="monero_wallet_export_multisig_hex(): string" vertex="1">
           <mxGeometry height="26" width="814" x="0" y="942" as="geometry" />
+        </mxCell>
+        <mxCell id="s225" parent="s191" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;fontStyle=0" value="monero_wallet_import_multisig_hex(string[] multisig_hexes, bool refresh_after_import): int" vertex="1">
+          <mxGeometry height="26" width="814" x="0" y="968" as="geometry" />
+        </mxCell>
+        <mxCell id="s226" parent="s191" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;fontStyle=0" value="monero_wallet_sign_multisig_tx_hex(string multisig_tx_hex): MoneroMultisigSignResult" vertex="1">
+          <mxGeometry height="26" width="814" x="0" y="994" as="geometry" />
+        </mxCell>
+        <mxCell id="s227" parent="s191" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;fontStyle=0" value="monero_wallet_submit_multisig_tx_hex(string signed_multisig_tx_hex): string[]" vertex="1">
+          <mxGeometry height="26" width="814" x="0" y="1020" as="geometry" />
         </mxCell>
         <mxCell id="s228" parent="1" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=32;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;fontSize=16;whiteSpace=wrap;fontFamily=Helvetica;labelBackgroundColor=none;fillColor=#E6E6E6;" value="Monero Wallet Interface 5/5 - monero_c_wallet.h" vertex="1">
           <mxGeometry height="460" width="814" x="17.5" y="13247" as="geometry" />
@@ -2732,7 +2747,7 @@
           <mxGeometry height="26" width="814" x="0" y="460" as="geometry" />
         </mxCell>
         <mxCell id="s740" parent="QYUe6zCbC_x82nWfNGpH-287" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;" value="monero_wallet_get_listeners(): MoneroWalletListener[]" vertex="1">
-          <mxGeometry height="26" width="811" x="0" y="307" as="geometry" />
+          <mxGeometry height="26" width="811" x="0" y="775" as="geometry" />
         </mxCell>
         <mxCell id="s241" parent="s245" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontFamily=Verdana;fontStyle=0" value="monero_last_error_rpc_code(): int" vertex="1">
           <mxGeometry height="26" width="814" x="0" y="84" as="geometry" />

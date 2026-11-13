@@ -516,6 +516,14 @@ static void test_daemon(const char* daemon_uri) {
   monero_utils_free(json);
   json = NULL;
 
+  // get_tx() gives the one tx of the hash in its block, as get_txs() does, and nothing for a hash that the wallet doesn't have
+  EXPECT_OK(monero_wallet_get_tx(a, tx_hash, &json));
+  CHECK(has(json, "{\"blocks\":[{\"txs\":[{") && count_text(json, "\"txs\":[{") == 1 && has(json, tx_hash) && has(json, "\"outgoingTransfer\":{") && !has(json, "\"height\""));
+  monero_utils_free(json);
+  json = NULL;
+  EXPECT_OK(monero_wallet_get_tx(a, "0000000000000000000000000000000000000000000000000000000000000000", &json));
+  CHECK(json == NULL);
+
   // the daemon has it in the pool in the same way: in the block that has no height
   EXPECT_OK(monero_daemon_get_tx_pool(g_daemon, &json));
   CHECK(has(json, "{\"blocks\":[{\"txs\":[{") && has(json, tx_hash) && !has(json, "\"height\""));
@@ -531,6 +539,12 @@ static void test_daemon(const char* daemon_uri) {
   json = NULL;
   EXPECT_OK(monero_wallet_get_tx_key(a, tx_hash, &json));
   CHECK(json != NULL);
+  monero_utils_free(json);
+  json = NULL;
+
+  // once it is mined the tx is in the block of its height
+  EXPECT_OK(monero_wallet_get_tx(a, tx_hash, &json));
+  CHECK(has(json, "{\"blocks\":[{\"height\":") && count_text(json, "\"txs\":[{") == 1 && has(json, tx_hash));
   monero_utils_free(json);
   json = NULL;
 
@@ -728,9 +742,34 @@ static void test_daemon(const char* daemon_uri) {
     CHECK(cold != NULL);
     if (unsigned_hex != NULL && cold != NULL) {
       CHECK(json_string(json, "unsignedTxHex", unsigned_hex, unsigned_size));
+
+      // the full wallet describes the unsigned hex with no JSON around it, and gets what it gets for the set, and a view-only wallet can't
+      char* from_hex = NULL;
+      char* from_set = NULL;
+      EXPECT_OK(monero_wallet_describe_unsigned_tx_set(a, unsigned_hex, &from_hex));
+      EXPECT_OK(monero_wallet_describe_tx_set(a, json, &from_set));
+      CHECK(from_hex != NULL && from_set != NULL && strcmp(from_hex, from_set) == 0 && has(from_hex, "\"txs\":[") && has(from_hex, "\"fee\":"));
+      monero_utils_free(from_hex);
+      monero_utils_free(from_set);
+      from_hex = NULL;
+      EXPECT_ERR_MSG(monero_wallet_describe_unsigned_tx_set(v, unsigned_hex, &from_hex), "command not supported by view-only wallet");
+      EXPECT_ERR_MSG(monero_wallet_describe_multisig_tx_set(a, unsigned_hex, &from_hex), "failed to parse multisig transfers: cannot load multisig_txset");
+      CHECK(from_hex == NULL);
+
       char* signed_set = NULL;
       EXPECT_ERR_MSG(monero_wallet_sign_txs(a, unsigned_hex, &signed_set), "Failed to sign unsigned tx: Hot wallets cannot import outputs");
       EXPECT_OK(monero_wallet_sign_txs(cold, unsigned_hex, &signed_set));
+
+      // signing imported the outputs of the view-only wallet, and the key images that the wallet has now are the ones that it exports with all false
+      char* new_images = NULL;
+      char* exported = NULL;
+      EXPECT_OK(monero_wallet_get_new_key_images_from_last_import(cold, &new_images));
+      EXPECT_OK(monero_wallet_export_key_images(cold, false, &exported));
+      // the signatures are random, so the two lists have the same key images and not the same text
+      CHECK(is_list(new_images) && exported != NULL && has(exported, "\"keyImages\":") && count_text(new_images, "\"hex\":") > 0 &&
+            count_text(new_images, "\"hex\":") == count_text(exported, "\"hex\":"));
+      monero_utils_free(new_images);
+      monero_utils_free(exported);
       CHECK(starts_with(signed_set, "{\"signedTxHex\":\"") && has(signed_set, "\"txs\":[") && has(signed_set, "\"hash\"") && !has(signed_set, "\"txSets\""));
       if (signed_set != NULL) hostile_wallet_inputs(a, v, cold, address_a, unsigned_hex, signed_set);
       monero_utils_free(signed_set);

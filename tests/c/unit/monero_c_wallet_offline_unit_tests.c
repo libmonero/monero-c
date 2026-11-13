@@ -168,6 +168,18 @@ static void test_accounts_and_subaddresses(void) {
   CHECK(contains(json, "\"label\":\"label2\""));
   monero_utils_free(json);
 
+  // the label of an account is the one of its primary address, so the account lists it
+  EXPECT_OK(monero_wallet_set_account_label(wallet, 0, "main account"));
+  json = NULL;
+  EXPECT_OK(monero_wallet_get_accounts(wallet, true, "", false, &json));
+  CHECK(contains(json, "\"label\":\"main account\""));
+  monero_utils_free(json);
+  EXPECT_OK(monero_wallet_set_account_label(wallet, 0, NULL));
+  json = NULL;
+  EXPECT_OK(monero_wallet_get_accounts(wallet, true, "", false, &json));
+  CHECK(!contains(json, "main account") && contains(json, "\"label\":\"label2\""));
+  monero_utils_free(json);
+
   json = NULL;
   EXPECT_OK(monero_wallet_get_address_index(wallet, SUBADDRESS, &json));
   CHECK(contains(json, "\"accountIndex\":0") && contains(json, "\"index\":1"));
@@ -303,6 +315,12 @@ static void test_key_images_and_outputs(void) {
   char* json = NULL;
   EXPECT_OK(monero_wallet_export_key_images(wallet, false, &json));
   CHECK(contains(json, "\"offset\":0"));
+  monero_utils_free(json);
+
+  // a wallet that imported no outputs has no new key images, and a list is what import_key_images() takes
+  json = NULL;
+  EXPECT_OK(monero_wallet_get_new_key_images_from_last_import(wallet, &json));
+  CHECK(json != NULL && strcmp(json, "[]") == 0);
   monero_utils_free(json);
 
   json = NULL;
@@ -674,6 +692,13 @@ static void test_daemon_surface(void) {
   EXPECT_ERR_MSG(monero_wallet_describe_tx_set(wallet, "{\"unsignedTxHex\":5}", &json), "unsignedTxHex must be a string");
   EXPECT_ERR_MSG(monero_wallet_describe_tx_set(wallet, "[]", &json), "tx_set must be a JSON object");
   EXPECT_ERR_MSG(monero_wallet_describe_tx_set(wallet, "{\"unsignedTxHex\":\"00\"}", &json), "failed to parse unsigned transfers: cannot load unsigned_txset");
+  CHECK(json == NULL);
+
+  // a program that has the hex describes it with no JSON, and gets the same errors as with the set
+  EXPECT_ERR_MSG(monero_wallet_describe_unsigned_tx_set(wallet, "00", &json), "failed to parse unsigned transfers: cannot load unsigned_txset");
+  EXPECT_ERR_MSG(monero_wallet_describe_multisig_tx_set(wallet, "00", &json), "failed to parse multisig transfers: cannot load multisig_txset");
+  EXPECT_ERR_MSG(monero_wallet_describe_unsigned_tx_set(wallet, "", &json), "no txset provided");
+  EXPECT_ERR_MSG(monero_wallet_describe_multisig_tx_set(wallet, "", &json), "no txset provided");
   CHECK(json == NULL);
 
   // what the calls that make txs return, {"txSets":[...]}, goes into the calls that relay and describe txs as it is: they find the

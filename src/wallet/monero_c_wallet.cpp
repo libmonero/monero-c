@@ -520,6 +520,13 @@ std::shared_ptr<monero::monero_tx_set> tx_set_of_hex(const char* json) {
   return tx_set;
 }
 
+// describes a tx set and serializes it, and releases the txs that monero-cpp makes for it, which hold each other
+std::string describe_tx_set_json(monero::monero_wallet& wallet, const monero::monero_tx_set& set) {
+  monero::monero_tx_set described = wallet.describe_tx_set(set);
+  auto free_described = epee::misc_utils::create_scope_leave_handler([&] { monero_utils::free(described.m_txs); });
+  return described.serialize();
+}
+
 // monero-cpp reads a null as the text "null", so a caller that writes its unset fields as null would set them
 void drop_nulls(rapidjson::Value& object) {
   for (auto it = object.MemberBegin(); it != object.MemberEnd();) {
@@ -1193,6 +1200,12 @@ monero_result monero_wallet_get_subaddress(::monero_wallet* wallet, uint32_t acc
   return guard([&] { *out_json = dup_string(wallet->wallet->get_subaddress(account_idx, subaddress_idx).serialize()); });
 }
 
+monero_result monero_wallet_set_account_label(::monero_wallet* wallet, uint32_t account_idx, const char* label) {
+  if (!require(wallet, "wallet")) return MONERO_ERROR;
+  // the label of an account is the one of its primary address
+  return guard([&] { wallet->wallet->set_subaddress_label(account_idx, 0, safe_str(label)); });
+}
+
 monero_result monero_wallet_set_subaddress_label(::monero_wallet* wallet, uint32_t account_idx, uint32_t subaddress_idx, const char* label) {
   if (!require(wallet, "wallet")) return MONERO_ERROR;
   return guard([&] { wallet->wallet->set_subaddress_label(account_idx, subaddress_idx, safe_str(label)); });
@@ -1288,6 +1301,13 @@ monero_result monero_wallet_export_key_images(::monero_wallet* wallet, bool all,
   reset_out(out_json);
   if (!require(wallet, "wallet") || !require(out_json, "out_json")) return MONERO_ERROR;
   return guard([&] { *out_json = dup_string(wallet->wallet->export_key_images(all)->serialize()); });
+}
+
+monero_result monero_wallet_get_new_key_images_from_last_import(::monero_wallet* wallet, char** out_json) {
+  reset_out(out_json);
+  if (!require(wallet, "wallet") || !require(out_json, "out_json")) return MONERO_ERROR;
+  // the key images that the wallet hasn't exported yet are the ones of the outputs that it imported last, as monero-java does it
+  return guard([&] { *out_json = dup_string(json_of_list(wallet->wallet->export_key_images(false)->m_key_images)); });
 }
 
 monero_result monero_wallet_import_key_images(::monero_wallet* wallet, const char* key_images_json, uint64_t offset, char** out_json) {
@@ -1610,6 +1630,20 @@ monero_result monero_wallet_get_txs(::monero_wallet* wallet, const char* query_j
   });
 }
 
+monero_result monero_wallet_get_tx(::monero_wallet* wallet, const char* tx_hash, char** out_json) {
+  reset_out(out_json);
+  if (!require(wallet, "wallet") || !require(tx_hash, "tx_hash") || !require(out_json, "out_json")) return MONERO_ERROR;
+  return guard([&] {
+    monero::monero_tx_query query;
+    query.m_hashes.push_back(std::string(tx_hash));
+    auto txs = wallet->wallet->get_txs(query);
+    if (txs.empty()) return;
+    auto blocks = monero_utils::get_blocks_from_txs(txs);
+    auto free_blocks = epee::misc_utils::create_scope_leave_handler([&] { monero_utils::free(blocks); });
+    *out_json = dup_string(json_of_blocks(blocks));
+  });
+}
+
 monero_result monero_wallet_get_transfers(::monero_wallet* wallet, const char* query_json, char** out_json) {
   reset_out(out_json);
   if (!require(wallet, "wallet") || !require(out_json, "out_json")) return MONERO_ERROR;
@@ -1701,10 +1735,26 @@ monero_result monero_wallet_sign_txs(::monero_wallet* wallet, const char* unsign
 monero_result monero_wallet_describe_tx_set(::monero_wallet* wallet, const char* tx_set_json, char** out_json) {
   reset_out(out_json);
   if (!require(wallet, "wallet") || !require(tx_set_json, "tx_set_json") || !require(out_json, "out_json")) return MONERO_ERROR;
+  return guard([&] { *out_json = dup_string(describe_tx_set_json(*wallet->wallet, *tx_set_of_hex(tx_set_json))); });
+}
+
+monero_result monero_wallet_describe_unsigned_tx_set(::monero_wallet* wallet, const char* unsigned_tx_hex, char** out_json) {
+  reset_out(out_json);
+  if (!require(wallet, "wallet") || !require(unsigned_tx_hex, "unsigned_tx_hex") || !require(out_json, "out_json")) return MONERO_ERROR;
   return guard([&] {
-    monero::monero_tx_set described = wallet->wallet->describe_tx_set(*tx_set_of_hex(tx_set_json));
-    auto free_described = epee::misc_utils::create_scope_leave_handler([&] { monero_utils::free(described.m_txs); });
-    *out_json = dup_string(described.serialize());
+    monero::monero_tx_set set;
+    set.m_unsigned_tx_hex = std::string(unsigned_tx_hex);
+    *out_json = dup_string(describe_tx_set_json(*wallet->wallet, set));
+  });
+}
+
+monero_result monero_wallet_describe_multisig_tx_set(::monero_wallet* wallet, const char* multisig_tx_hex, char** out_json) {
+  reset_out(out_json);
+  if (!require(wallet, "wallet") || !require(multisig_tx_hex, "multisig_tx_hex") || !require(out_json, "out_json")) return MONERO_ERROR;
+  return guard([&] {
+    monero::monero_tx_set set;
+    set.m_multisig_tx_hex = std::string(multisig_tx_hex);
+    *out_json = dup_string(describe_tx_set_json(*wallet->wallet, set));
   });
 }
 

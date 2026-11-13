@@ -726,6 +726,17 @@ MONERO_EXPORT monero_result monero_wallet_get_address_index(monero_wallet* walle
 MONERO_EXPORT monero_result monero_wallet_get_subaddress(monero_wallet* wallet, uint32_t account_idx, uint32_t subaddress_idx, char** out_json);
 
 /**
+ * Set the label of an account, which is the label of its primary address: it is the same as monero_wallet_set_subaddress_label() with
+ * the subaddress index 0.
+ *
+ * @param wallet is the wallet handle
+ * @param account_idx is the index of the account
+ * @param label is the new label. NULL or "" to clear it
+ * @return MONERO_OK or MONERO_ERROR
+ */
+MONERO_EXPORT monero_result monero_wallet_set_account_label(monero_wallet* wallet, uint32_t account_idx, const char* label);
+
+/**
  * Set the label of a subaddress.
  *
  * @param wallet is the wallet handle
@@ -878,6 +889,16 @@ MONERO_EXPORT monero_result monero_wallet_is_closed(monero_wallet* wallet, bool*
  * @return MONERO_OK or MONERO_ERROR
  */
 MONERO_EXPORT monero_result monero_wallet_export_key_images(monero_wallet* wallet, bool all, char** out_json);
+
+/**
+ * Get the key images of the outputs that the wallet imported last. They are the ones that monero_wallet_export_key_images() exports with
+ * all false, so a program that imports outputs into a wallet gets back the key images that the wallet is waiting for.
+ *
+ * @param wallet is the wallet handle
+ * @param out_json receives a JSON array of monero_key_image, with the hex and the signature of each. Free with monero_utils_free()
+ * @return MONERO_OK or MONERO_ERROR
+ */
+MONERO_EXPORT monero_result monero_wallet_get_new_key_images_from_last_import(monero_wallet* wallet, char** out_json);
 
 /**
  * Import key images into the wallet.
@@ -1267,6 +1288,17 @@ MONERO_EXPORT monero_result monero_wallet_stop_mining(monero_wallet* wallet);
 MONERO_EXPORT monero_result monero_wallet_get_txs(monero_wallet* wallet, const char* query_json, char** out_json);
 
 /**
+ * Get one transaction of the wallet by its hash. It is monero_wallet_get_txs() for one hash.
+ *
+ * @param wallet is the wallet handle
+ * @param tx_hash is the hash of the transaction
+ * @param out_json receives a JSON object with the block of the monero_tx_wallet, as monero_wallet_get_txs() returns it, with its transfers.
+ *        It is NULL if the wallet has no transaction with that hash, which is not an error. Free with monero_utils_free()
+ * @return MONERO_OK or MONERO_ERROR
+ */
+MONERO_EXPORT monero_result monero_wallet_get_tx(monero_wallet* wallet, const char* tx_hash, char** out_json);
+
+/**
  * Get the incoming and outgoing transfers of the wallet.
  *
  * @param wallet is the wallet handle
@@ -1381,6 +1413,28 @@ MONERO_EXPORT monero_result monero_wallet_sign_txs(monero_wallet* wallet, const 
  * @return MONERO_OK or MONERO_ERROR
  */
 MONERO_EXPORT monero_result monero_wallet_describe_tx_set(monero_wallet* wallet, const char* tx_set_json, char** out_json);
+
+/**
+ * Describe an unsigned transaction set as structured transactions. It is monero_wallet_describe_tx_set() for a set that has only its
+ * unsigned hex, so a program that has the hex needs no JSON to describe it.
+ *
+ * @param wallet is the wallet handle
+ * @param unsigned_tx_hex is the unsigned transaction hex, from a view-only wallet
+ * @param out_json receives the tx set of the structured transactions, a JSON object with its "txs" and its hex. Free with monero_utils_free()
+ * @return MONERO_OK or MONERO_ERROR
+ */
+MONERO_EXPORT monero_result monero_wallet_describe_unsigned_tx_set(monero_wallet* wallet, const char* unsigned_tx_hex, char** out_json);
+
+/**
+ * Describe a multisig transaction set as structured transactions. It is monero_wallet_describe_tx_set() for a set that has only its
+ * multisig hex.
+ *
+ * @param wallet is the wallet handle
+ * @param multisig_tx_hex is the multisig transaction hex, from monero_wallet_create_txs() of a multisig wallet
+ * @param out_json receives the tx set of the structured transactions, a JSON object with its "txs" and its hex. Free with monero_utils_free()
+ * @return MONERO_OK or MONERO_ERROR
+ */
+MONERO_EXPORT monero_result monero_wallet_describe_multisig_tx_set(monero_wallet* wallet, const char* multisig_tx_hex, char** out_json);
 
 /**
  * Sweep an output with a given key image into the wallet.
