@@ -50,6 +50,7 @@
 #if defined(__unix__) || defined(__APPLE__) || defined(__ANDROID__)
 #include <cerrno>
 #include <sys/stat.h>
+#include <unistd.h>
 #endif
 
 using monero_c::array_of;
@@ -335,6 +336,24 @@ void make_wallet_files_private(const std::string& path) {
   if (::chmod(path.c_str(), S_IRUSR | S_IWUSR) != 0) wallet_error = std::error_code(errno, std::generic_category());
   if (keys_error) throw std::system_error(keys_error, "cannot set wallet keys file permissions to 0600: " + keys_path);
   if (wallet_error) throw std::system_error(wallet_error, "cannot set wallet file permissions to 0600: " + path);
+#else
+  (void) path;
+#endif
+}
+
+// a wallet that was made by another program, or with a umask that left its files open, has files that the group and the others can read. Opening
+// it takes that permission away from the cache and the keys file that the caller owns (the others are not its to change), and keeps the rest
+// of the mode as it is. It doesn't fail the call: a file system with no permissions, or a file that can't be changed, opens as it did
+void tighten_wallet_files(const std::string& path) {
+#if defined(__unix__) || defined(__APPLE__) || defined(__ANDROID__)
+  if (path.empty()) return;
+  const std::string files[] = {path, path + ".keys"};
+  for (const std::string& file : files) {
+    struct stat info;
+    if (::stat(file.c_str(), &info) != 0 || !S_ISREG(info.st_mode) || info.st_uid != ::geteuid()) continue;
+    if ((info.st_mode & (S_IRWXG | S_IRWXO)) == 0) continue;
+    (void) ::chmod(file.c_str(), info.st_mode & ~static_cast<mode_t>(S_IRWXG | S_IRWXO));
+  }
 #else
   (void) path;
 #endif
@@ -886,6 +905,8 @@ monero_result monero_wallet_open(const char* path, const char* password, int32_t
   return guard([&] {
     monero_c::secret_string wallet_password(password);
     *out_wallet = wrap(std::unique_ptr<monero::monero_wallet_full>(monero::monero_wallet_full::open_wallet(std::string(path), wallet_password.get(), network_of<monero::monero_network_type>(network_type), network_type == MONERO_UTILS_NETWORK_REGTEST)), network_type);
+    // only a wallet that opened, so a wrong password changes nothing
+    tighten_wallet_files(std::string(path));
   });
 }
 

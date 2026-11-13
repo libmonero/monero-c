@@ -9,6 +9,12 @@
   `monero_wallet_move_to()`) run with a umask of 077, and put back the one that was there when the last of them returns. The umask belongs to the process,
   so a file that another thread of the program makes meanwhile gets the same permissions. The `chmod` stays, for the files that were already there.
 
+### Changed
+
+* `monero_wallet_open()` takes the permission of the group and the others away from the wallet file and its `.keys` file when they have it and belong to
+  the user that opens the wallet, so a wallet that was made with a looser umask, or by another program, is for its owner after the first open. A mode
+  0644 becomes 0600, and the owner bits stay as they are. The open doesn't fail if the mode can't be changed, and a wallet that doesn't open is left as it was.
+
 ### Added
 
 The functions that monero-python and monero-java have in the interface of their wallet and that the ABI did not, found by comparing the headers with

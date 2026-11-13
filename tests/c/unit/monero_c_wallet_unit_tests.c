@@ -195,6 +195,25 @@ static void test_wallet_file_permissions(void) {
   CHECK(umask(0) == 0);
 
   monero_wallet_free(wallet);
+
+  // opening takes the permission of the group and the others away from the files of a wallet that has it, and keeps the rest of the mode. A wallet
+  // that doesn't open is left as it was
+  set_wallet_file_mode(moved_path, 0644);
+  EXPECT_ERR(monero_wallet_open(moved_path, "wrong password", NETWORK, &wallet));
+  CHECK(wallet == NULL);
+  check_wallet_files_mode(moved_path, 0644);
+  EXPECT_OK(monero_wallet_open(moved_path, "new password", NETWORK, &wallet));
+  CHECK(wallet != NULL);
+  check_wallet_files_mode(moved_path, 0600);
+  if (wallet != NULL) EXPECT_OK(monero_wallet_close(wallet, false));
+  monero_wallet_free(wallet);
+  wallet = NULL;
+  set_wallet_file_mode(moved_path, 0664);
+  EXPECT_OK(monero_wallet_open(moved_path, "new password", NETWORK, &wallet));
+  check_wallet_files_mode(moved_path, 0600);
+  if (wallet != NULL) EXPECT_OK(monero_wallet_close(wallet, false));
+  monero_wallet_free(wallet);
+
   remove_files(path);
   remove_files(moved_path);
   umask(original_umask);

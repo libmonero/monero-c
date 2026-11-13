@@ -43,7 +43,9 @@ extern "C" {
 // a umask of 077, so the files are never readable for others, even for a moment, and they are set
 // to mode 0600 after the call too, for the files that were already there. The umask belongs to the
 // process, so it is 077 for every thread while one of those calls runs, and the one that was there
-// is put back when the last of them returns. A program that makes a file at that time has to chmod it
+// is put back when the last of them returns. A program that makes a file at that time has to chmod it.
+// monero_wallet_open() takes the permission of the group and the others away from the files of a
+// wallet that has it, if they belong to the user
 
 /**
  * Opaque handle to a wallet. Full wallets come from monero_wallet_create_random(),
@@ -224,7 +226,9 @@ MONERO_EXPORT monero_result monero_wallet_create_from_keys(const char* path, con
 MONERO_EXPORT monero_result monero_wallet_create(const char* config_json, monero_wallet** out_wallet);
 
 /**
- * Open a wallet from its files on disk.
+ * Open a wallet from its files on disk. On POSIX systems, if the wallet file or its .keys file is readable or writable for the group or the others and
+ * belongs to the user that opens it, the call takes that permission away (a mode 0644 becomes 0600), once the wallet is open. It doesn't fail for
+ * that: a file that can't be changed is opened as it is, and a wallet that doesn't open, with a wrong password, is left as it was.
  *
  * @param path is the path of the wallet file
  * @param password decrypts the wallet files. NULL or "" for no password
