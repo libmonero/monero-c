@@ -213,6 +213,7 @@ static const char* benign_string(const char* name, int index, call_state* state)
     return "{}";
   }
   if (strstr(name, "hex") != NULL || strstr(name, "blob") != NULL || strcmp(name, "tx_metadata") == 0) return "aabbcc";
+  if (strcmp(name, "config_json") == 0) return "{\"networkType\":0}";
   if (strcmp(name, "name") == 0) return "monero_c_arguments_name";
   return "x";
 }
