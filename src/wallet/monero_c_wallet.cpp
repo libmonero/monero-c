@@ -2140,7 +2140,6 @@ monero_result monero_wallet_light_open(const char* config_json, ::monero_rpc_con
 }
 
 monero_result monero_wallet_light_wallet_exists(const char* config_json, ::monero_rpc_connection* connection, bool* out_exists) {
-  reset_out(out_exists);
   if (!require(config_json, "config_json") || !require(connection, "connection") || !require(out_exists, "out_exists")) return MONERO_ERROR;
   return guard([&] {
     std::shared_ptr<monero::monero_wallet_config> config = light_config_of(config_json);
@@ -2154,7 +2153,6 @@ monero_result monero_wallet_light_wallet_exists(const char* config_json, ::moner
 }
 
 monero_result monero_wallet_light_get_unrefined_spend_count(::monero_wallet* wallet, uint64_t* out_count) {
-  reset_out(out_count);
   if (!require(wallet, "wallet") || !require(out_count, "out_count")) return MONERO_ERROR;
   return guard([&] { *out_count = as_light(wallet).get_unrefined_spend_count(); });
 }
