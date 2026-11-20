@@ -157,6 +157,7 @@ or enum changed. A binding that asks for 0.2.x keeps working.
   [packaging/apple](packaging/apple/README.md).
 
 ## 0.2.0-alpha.1 (2026-10-31)
+(wallet: light wallets behind the C ABI)
 
 The second alpha of the C ABI, version 0.2.0, and of `Monero.Native`. It changes the ABI: a program built with the headers of 0.1.0 has to be
 rebuilt, and the callbacks of a wallet are delivered in another way. `monero_utils_get_abi_version()` tells which version a library has, and a
