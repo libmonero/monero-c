@@ -1,3 +1,7 @@
+## 0.4.0-alpha.2
+
+* Follows monero-c 0.4.0-alpha.2 and downloads its release archives. See the [monero-c changelog](../../CHANGELOG.md) for the ABI and JSON shape changes.
+
 ## 0.4.0-alpha.1
 
 * Follows monero-c 0.4.0-alpha.1 and downloads its release archives. See the [monero-c changelog](../../CHANGELOG.md) for the ABI and JSON shape changes.

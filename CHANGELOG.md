@@ -1,6 +1,30 @@
 # Changelog
 
-## Unreleased
+## 0.4.0-alpha.2 (2026-11-23)
+
+The fifth alpha of the C ABI, version 0.4.0. No function, struct or enum of 0.4.0-alpha.1 changed, so a program built with its headers runs as it is.
+`monero_utils_get_abi_version()` returns 0.4.0, and a binding should ask for 0.4.x.
+
+### Added
+
+* The light wallet of monero-cpp behind the C ABI: the wallet of an account on a light wallet server (monero-lws), which lives in memory and reads its
+  money through the server. `monero_wallet_light_create()` makes one from a config with a seed, with its keys, or with neither for a new address;
+  `monero_wallet_light_open()` restores one that the server has, registering the address again, so a wallet that the create refused because the server
+  has it opens here. `monero_wallet_light_wallet_exists()` tells whether a server has a wallet, and false when it does not or when the server does not
+  answer. `monero_wallet_light_get_unrefined_spend_count()` gives the number of candidate spends that the last sync could not verify, which is greater
+  than zero only for a view-only wallet without imported key images. The wallet answers the calls that a server of that kind serves, and the ones that
+  it does not fail as the wallet of monero-cpp does.
+
+The functions that monero-python and monero-java have in the interface of their wallet and that the ABI did not, found by comparing the headers with
+monero-cpp, monero-java, monero-python and monero-ts. A program that is built with these headers needs a library that has them.
+
+* `monero_wallet_get_new_key_images_from_last_import()`, the key images of the outputs that the wallet imported last, as a JSON array. They are the
+  ones that `monero_wallet_export_key_images()` exports with `all` false, which is what monero-java asks the server for.
+* `monero_wallet_get_tx()`, one transaction of the wallet by its hash, in its block as `monero_wallet_get_txs()` returns it, and NULL for a hash that the
+  wallet doesn't have.
+* `monero_wallet_describe_unsigned_tx_set()` and `monero_wallet_describe_multisig_tx_set()`, which describe a transaction set that has only its hex, with
+  no JSON to build.
+* `monero_wallet_set_account_label()`, the label of an account, which is the label of its primary address.
 
 ### Fixed
 
@@ -14,19 +38,6 @@
 * `monero_wallet_open()` takes the permission of the group and the others away from the wallet file and its `.keys` file when they have it and belong to
   the user that opens the wallet, so a wallet that was made with a looser umask, or by another program, is for its owner after the first open. A mode
   0644 becomes 0600, and the owner bits stay as they are. The open doesn't fail if the mode can't be changed, and a wallet that doesn't open is left as it was.
-
-### Added
-
-The functions that monero-python and monero-java have in the interface of their wallet and that the ABI did not, found by comparing the headers with
-monero-cpp, monero-java, monero-python and monero-ts. A program that is built with these headers needs a library that has them.
-
-* `monero_wallet_get_new_key_images_from_last_import()`, the key images of the outputs that the wallet imported last, as a JSON array. They are the
-  ones that `monero_wallet_export_key_images()` exports with `all` false, which is what monero-java asks the server for.
-* `monero_wallet_get_tx()`, one transaction of the wallet by its hash, in its block as `monero_wallet_get_txs()` returns it, and NULL for a hash that the
-  wallet doesn't have.
-* `monero_wallet_describe_unsigned_tx_set()` and `monero_wallet_describe_multisig_tx_set()`, which describe a transaction set that has only its hex, with
-  no JSON to build.
-* `monero_wallet_set_account_label()`, the label of an account, which is the label of its primary address.
 
 ## 0.4.0-alpha.1 (2026-11-11)
 
@@ -157,7 +168,6 @@ or enum changed. A binding that asks for 0.2.x keeps working.
   [packaging/apple](packaging/apple/README.md).
 
 ## 0.2.0-alpha.1 (2026-10-31)
-(wallet: light wallets behind the C ABI)
 
 The second alpha of the C ABI, version 0.2.0, and of `Monero.Native`. It changes the ABI: a program built with the headers of 0.1.0 has to be
 rebuilt, and the callbacks of a wallet are delivered in another way. `monero_utils_get_abi_version()` tells which version a library has, and a
