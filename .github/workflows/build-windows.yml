@@ -42,7 +42,6 @@ jobs:
             mingw-w64-x86_64-openssl
             mingw-w64-x86_64-zeromq
             mingw-w64-x86_64-libsodium
-            mingw-w64-x86_64-unbound
             mingw-w64-x86_64-protobuf
             mingw-w64-x86_64-expat
             mingw-w64-x86_64-ntldd
@@ -54,6 +53,20 @@ jobs:
             automake
             libtool
             wget
+
+      # unbound is not in the list above: the mingw64 repository dropped it, and the one that the module links comes pinned with
+      # OpenSSL 3 here, since OpenSSL 4 does not build with the net_ssl.cpp of monero-project. unbound and ldns were rebuilt for
+      # that OpenSSL, so the three go together
+      - name: Install OpenSSL 3.6.5, unbound v1.26.2 and ldns v1.9.2 (pinned)
+        shell: msys2 {0}
+        run: |
+          wget --tries=5 --waitretry=5 --timeout=30 --retry-on-http-error=500,502,503,504 https://repo.msys2.org/mingw/mingw64/mingw-w64-x86_64-openssl-3.6.5-1-any.pkg.tar.zst
+          echo "389d1af21e99223d9e2cd32d4c073131b276da85be7636bd8d23571f6938864f  mingw-w64-x86_64-openssl-3.6.5-1-any.pkg.tar.zst" | sha256sum -c
+          wget --tries=5 --waitretry=5 --timeout=30 --retry-on-http-error=500,502,503,504 https://repo.msys2.org/mingw/mingw64/mingw-w64-x86_64-unbound-1.26.2-1-any.pkg.tar.zst
+          echo "478826706a4f520a763ba953c17c799ef6c96c7194815c1cc23335ec806df4b6  mingw-w64-x86_64-unbound-1.26.2-1-any.pkg.tar.zst" | sha256sum -c
+          wget --tries=5 --waitretry=5 --timeout=30 --retry-on-http-error=500,502,503,504 https://repo.msys2.org/mingw/mingw64/mingw-w64-x86_64-ldns-1.9.2-1-any.pkg.tar.zst
+          echo "5de273c09473f642cc24011f748c2d5b3ea634228d4d6f30c1845164a5e31cfc  mingw-w64-x86_64-ldns-1.9.2-1-any.pkg.tar.zst" | sha256sum -c
+          pacman -U --noconfirm mingw-w64-x86_64-openssl-3.6.5-1-any.pkg.tar.zst mingw-w64-x86_64-unbound-1.26.2-1-any.pkg.tar.zst mingw-w64-x86_64-ldns-1.9.2-1-any.pkg.tar.zst
 
       - name: Restore ccache
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
