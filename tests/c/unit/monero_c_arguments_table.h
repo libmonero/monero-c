@@ -247,6 +247,10 @@ static monero_result call_monero_wallet_is_view_only(void** a) { return monero_w
 static monero_result call_monero_wallet_keys_create_from_keys(void** a) { return monero_wallet_keys_create_from_keys(*(int32_t*) a[0], (const char*) a[1], (const char*) a[2], (const char*) a[3], (const char*) a[4], (monero_wallet**) a[5]); }
 static monero_result call_monero_wallet_keys_create_from_seed(void** a) { return monero_wallet_keys_create_from_seed(*(int32_t*) a[0], (const char*) a[1], (const char*) a[2], (const char*) a[3], (monero_wallet**) a[4]); }
 static monero_result call_monero_wallet_keys_create_random(void** a) { return monero_wallet_keys_create_random(*(int32_t*) a[0], (const char*) a[1], (monero_wallet**) a[2]); }
+static monero_result call_monero_wallet_light_create(void** a) { return monero_wallet_light_create((const char*) a[0], (monero_rpc_connection*) a[1], (monero_wallet**) a[2]); }
+static monero_result call_monero_wallet_light_get_unrefined_spend_count(void** a) { return monero_wallet_light_get_unrefined_spend_count((monero_wallet*) a[0], (uint64_t*) a[1]); }
+static monero_result call_monero_wallet_light_open(void** a) { return monero_wallet_light_open((const char*) a[0], (monero_rpc_connection*) a[1], (monero_wallet**) a[2]); }
+static monero_result call_monero_wallet_light_wallet_exists(void** a) { return monero_wallet_light_wallet_exists((const char*) a[0], (monero_rpc_connection*) a[1], (bool*) a[2]); }
 static monero_result call_monero_wallet_listener_create(void** a) { return monero_wallet_listener_create((const monero_wallet_listener_callbacks*) a[0], (monero_wallet_listener**) a[1]); }
 static monero_result call_monero_wallet_listener_free(void** a) { (void) monero_wallet_listener_free((monero_wallet_listener*) a[0]); return MONERO_OK; }
 static monero_result call_monero_wallet_make_multisig(void** a) { return monero_wallet_make_multisig((monero_wallet*) a[0], (const char* const*) a[1], *(size_t*) a[2], *(int32_t*) a[3], (const char*) a[4], (char**) a[5]); }
@@ -553,6 +557,10 @@ static const arg_function g_functions[] = {
   {"monero_wallet_keys_create_from_keys", call_monero_wallet_keys_create_from_keys, 6, {K_I32, K_STR, K_STR, K_STR, K_STR, K_OUT_WALLET}, {"network_type", "address", "private_view_key", "private_spend_key", "language", "out_wallet"}, 0x26, RET_RESULT},
   {"monero_wallet_keys_create_from_seed", call_monero_wallet_keys_create_from_seed, 5, {K_I32, K_STR, K_STR, K_STR, K_OUT_WALLET}, {"network_type", "seed", "seed_offset", "language", "out_wallet"}, 0x12, RET_RESULT},
   {"monero_wallet_keys_create_random", call_monero_wallet_keys_create_random, 3, {K_I32, K_STR, K_OUT_WALLET}, {"network_type", "language", "out_wallet"}, 0x4, RET_RESULT},
+  {"monero_wallet_light_create", call_monero_wallet_light_create, 3, {K_STR, K_CONNECTION, K_OUT_WALLET}, {"config_json", "connection", "out_wallet"}, 0x7, RET_RESULT},
+  {"monero_wallet_light_get_unrefined_spend_count", call_monero_wallet_light_get_unrefined_spend_count, 2, {K_WALLET, K_OUT_U64}, {"wallet", "out_count"}, 0x3, RET_RESULT},
+  {"monero_wallet_light_open", call_monero_wallet_light_open, 3, {K_STR, K_CONNECTION, K_OUT_WALLET}, {"config_json", "connection", "out_wallet"}, 0x7, RET_RESULT},
+  {"monero_wallet_light_wallet_exists", call_monero_wallet_light_wallet_exists, 3, {K_STR, K_CONNECTION, K_OUT_BOOL}, {"config_json", "connection", "out_exists"}, 0x7, RET_RESULT},
   {"monero_wallet_listener_create", call_monero_wallet_listener_create, 2, {K_WALLET_CALLBACKS, K_OUT_WALLET_LISTENER}, {"callbacks", "out_listener"}, 0x3, RET_RESULT},
   {"monero_wallet_listener_free", call_monero_wallet_listener_free, 1, {K_WALLET_LISTENER}, {"listener"}, 0x0, RET_OTHER},
   {"monero_wallet_make_multisig", call_monero_wallet_make_multisig, 6, {K_WALLET, K_STRS, K_SIZE, K_I32, K_STR, K_OUT_STR}, {"wallet", "multisig_hexes", "num_multisig_hexes", "threshold", "password", "out_multisig_hex"}, 0x23, RET_RESULT},

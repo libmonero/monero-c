@@ -50,7 +50,8 @@ extern "C" {
 /**
  * Opaque handle to a wallet. Full wallets come from monero_wallet_create_random(),
  * monero_wallet_create_from_seed(), monero_wallet_create_from_keys() and monero_wallet_open().
- * Keys-only wallets come from the monero_wallet_keys_create_*() functions. Release the handle
+ * Keys-only wallets come from the monero_wallet_keys_create_*() functions. Light wallets come
+ * from monero_wallet_light_create() and monero_wallet_light_open(). Release the handle
  * with monero_wallet_free().
  *
  * @par Thread safety
@@ -1183,13 +1184,14 @@ MONERO_EXPORT monero_result monero_wallet_get_daemon_max_peer_height(monero_wall
 
 /**
  * Wait until the next block is added to the chain. It blocks until a block arrives, and the wallet
- * must be syncing in the background with monero_wallet_start_syncing(), or it never returns.
+ * must be syncing in the background with monero_wallet_start_syncing(), or it never returns. A light
+ * wallet gives up after a minute and answers the height 0, which no block of a chain carries.
  * Neither monero_wallet_stop_syncing() nor monero_wallet_close() wakes it, so call it from a thread
  * that the application can leave behind, use a listener instead, or use
  * monero_wallet_wait_for_next_block_timeout(), which gives up after a time.
  *
  * @param wallet is the wallet handle
- * @param out_height receives the height of the new block
+ * @param out_height receives the height of the new block, which a light wallet that gave up answers 0
  * @return MONERO_OK or MONERO_ERROR
  */
 MONERO_EXPORT monero_result monero_wallet_wait_for_next_block(monero_wallet* wallet, uint64_t* out_height);
@@ -1209,7 +1211,8 @@ MONERO_EXPORT monero_result monero_wallet_wait_for_next_block(monero_wallet* wal
 MONERO_EXPORT monero_result monero_wallet_wait_for_next_block_timeout(monero_wallet* wallet, uint32_t timeout_ms, uint64_t* out_height, bool* out_timed_out);
 
 /**
- * Scan transactions by their hashes.
+ * Scan transactions by their hashes. A light wallet server does not carry the transactions of the
+ * chain, so a light wallet syncs when the list is empty and refuses a list that names transactions.
  *
  * @param wallet is the wallet handle
  * @param tx_hashes are the hashes of the transactions
@@ -1515,7 +1518,9 @@ MONERO_EXPORT monero_result monero_wallet_parse_payment_uri(monero_wallet* walle
 MONERO_EXPORT monero_result monero_wallet_get_tx_key(monero_wallet* wallet, const char* tx_hash, char** out_key);
 
 /**
- * Check a transaction in the blockchain with its secret key.
+ * Check a transaction in the blockchain with its secret key. A key that is not the one of the
+ * transaction, or a transaction that paid the address nothing, is not an error: the check says it is
+ * not good and how much the address received.
  *
  * @param wallet is the wallet handle
  * @param tx_hash is the hash of the transaction
@@ -1861,6 +1866,78 @@ MONERO_EXPORT monero_result monero_wallet_rpc_get_balances(monero_wallet* wallet
  * @return MONERO_OK or MONERO_ERROR
  */
 MONERO_EXPORT monero_result monero_wallet_rpc_set_daemon_connection(monero_wallet* wallet, const char* connection_json, bool is_trusted, const char* ssl_options_json);
+
+// -------------------------------- LIGHT WALLETS --------------------------------
+// a wallet that syncs from a light wallet server (monero-lws), never from a daemon. It has the
+// same handle as the other wallets, so the functions above work on it. It lives in memory, so
+// monero_wallet_close() with save fails, and its server is the connection of the call that makes
+// it: a light wallet can not switch servers
+
+/**
+ * Create a light wallet and register its address with its light wallet server. The wallet is
+ * restored from its seed if the config has one, from its keys if it has the address or the
+ * private keys, and has a new random seed otherwise. A wallet that the server already has fails.
+ *
+ * The fields of the JSON, all optional but networkType, and the ones that are null are ignored:
+ * - networkType: a monero_utils_network_type. 3 is regtest
+ * - seed, seedOffset: the mnemonic to restore, and its offset
+ * - primaryAddress, privateViewKey, privateSpendKey: the keys to restore. The spend key can be
+ *   left out for a view-only wallet
+ * - restoreHeight: the first block to scan. Without it the wallet scans from the height that the
+ *   server has for the address, and a new address scans from 0
+ * - language: the seed language, English by default
+ * - accountLookahead, subaddressLookahead: the accounts and the subaddresses of each that the
+ *   wallet scans. Both or none
+ *
+ * A seed and keys together fail, and so does "server": a light wallet has no daemon. "path" and
+ * "password" have no effect, since the wallet has no files, and a multisig wallet is not
+ * supported.
+ *
+ * @param config_json is the JSON-serialized monero_wallet_config
+ * @param connection is the connection to the light wallet server. It can be freed after the call
+ * @param out_wallet receives the handle, released with monero_wallet_free()
+ * @return MONERO_OK or MONERO_ERROR
+ */
+MONERO_EXPORT monero_result monero_wallet_light_create(const char* config_json, monero_rpc_connection* connection, monero_wallet** out_wallet);
+
+/**
+ * Open a light wallet from its light wallet server: a config with a seed restores the wallet
+ * from the seed, a config with its keys restores it from them, and a config with neither fails.
+ * The address is registered with the server again, so a wallet that monero_wallet_light_create()
+ * refused because the server has it opens here. The wallet lives in memory, so supply the
+ * restore height of its first scan, which no file keeps.
+ *
+ * @param config_json is the JSON-serialized monero_wallet_config, with the fields of monero_wallet_light_create()
+ * @param connection is the connection to the light wallet server. It can be freed after the call
+ * @param out_wallet receives the handle, released with monero_wallet_free()
+ * @return MONERO_OK or MONERO_ERROR
+ */
+MONERO_EXPORT monero_result monero_wallet_light_open(const char* config_json, monero_rpc_connection* connection, monero_wallet** out_wallet);
+
+/**
+ * Check if a light wallet server has a wallet. The config needs a seed, or the primary address
+ * and the private view key, and a seed is read as the address and the view key that it gives.
+ * A wallet that the server doesn't have is not an error, which a server that does not answer also
+ * answers: the false does not say which.
+ *
+ * @param config_json is the JSON-serialized monero_wallet_config, with the fields of monero_wallet_light_create()
+ * @param connection is the connection to the light wallet server. It can be freed after the call
+ * @param out_exists receives true if the server has the wallet, and false when it does not or when the server does not answer
+ * @return MONERO_OK or MONERO_ERROR
+ */
+MONERO_EXPORT monero_result monero_wallet_light_wallet_exists(const char* config_json, monero_rpc_connection* connection, bool* out_exists);
+
+/**
+ * Get the number of candidate spends that the last sync of a light wallet could not verify,
+ * which is greater than zero only for a view-only wallet without imported key images. While it
+ * is not zero, the total sent and the balances are the ones of the server, which the wallet
+ * can not refine.
+ *
+ * @param wallet is the wallet handle of a light wallet
+ * @param out_count receives the number of unrefined spends
+ * @return MONERO_OK or MONERO_ERROR
+ */
+MONERO_EXPORT monero_result monero_wallet_light_get_unrefined_spend_count(monero_wallet* wallet, uint64_t* out_count);
 
 #ifdef __cplusplus
 }
